@@ -1,14 +1,18 @@
-import bindy/dllapi, bindy/common, macros, strformat, tables
+import bindy/internal, bindy/common, macros, strformat, tables
 
 proc toggleBasicOnly*() =
   discard
 
-macro exportEnums*(syms: openarray[typed]) =
-  for sym in syms:
-    if sym.getImpl()[2].kind != nnkEnumTy:
-      quit(&"Enum export entry of unexpected kind {sym.getImpl()[2].kind}")
+macro exportEnums*(body: typed) =
+  for statement in body:
+    for sym in statement:
+      if sym.getImpl()[2].kind != nnkEnumTy:
+        error(
+          &"Enum export entry of unexpected kind {sym.getImpl()[2].kind}",
+          sym
+        )
 
-    exportEnumDllApi(sym)
+      exportEnumInternal(sym)
 
 macro exportProcs*(body: typed) =
   for statement in body:
@@ -18,47 +22,61 @@ macro exportProcs*(body: typed) =
     for procedure in statement:
       let procType = procedure.getTypeInst()
       if procType.kind != nnkProcTy:
-        quit(&"Proc exports statement of unexpected kind {procType.kind}")
+        error(
+          &"Proc exports statement of unexpected kind {procType.kind}",
+          statement
+        )
 
       if procType[0].len > 1:
         # Filter out overloads that are owned by objects
         let firstParam = procType[0][1][1]
-        if firstParam.kind != nnkBracketExpr:
-          let firstParamImpl = firstParam.getImpl()
-          if firstParamImpl.kind == nnkTypeDef and
-            firstParamImpl[2].kind != nnkEnumTy:
-            continue
+        if firstParam.kind == nnkBracketExpr:
+          continue
+        let firstParamImpl = firstParam.getImpl()
+        if firstParamImpl.kind == nnkTypeDef and
+          firstParamImpl[2].kind != nnkEnumTy:
+          continue
 
-      exportProcDllApi(procedure)
+      exportProcInternal(procedure)
       inc exported
 
     if exported == 0:
-      quit(&"Proc export statement {exportName} does not export anything")
+      error(
+        &"Proc export statement {exportName} does not export anything",
+        statement
+      )
 
-macro exportObjects*(syms: openarray[typed]) =
-  for sym in syms:
-    let objImpl = sym.getImpl()[2]
-    if objImpl.kind != nnkObjectTy:
-      quit(&"Unexpected export object impl kind {objImpl.kind}")
+macro exportObjects*(body: typed) =
+  for statement in body:
+    for sym in statement:
+      let objImpl = sym.getImpl()[2]
+      if objImpl.kind != nnkObjectTy:
+        error(&"Unexpected export object impl kind {objImpl.kind}", statement)
 
-    let objType = sym.getType()[1].getType()
-    for property in objType[2]:
-      if not property.isExported:
-        quit(&"Unexported property on {sym.repr}")
+      let objType = sym.getType()
+      for property in objType[2]:
+        if not property.isExported:
+          error(&"Unexported property on {sym.repr}", objType)
 
-      let propertyTypeImpl = property.getTypeImpl()
-      if propertyTypeImpl.repr notin basicTypes:
-        if propertyTypeImpl.kind notin {nnkEnumTy, nnkObjectTy}:
-          quit(&"Object cannot export property of type {property[^2].repr}")
+        let propertyTypeImpl = property.getTypeImpl()
+        if propertyTypeImpl.repr notin basicTypes:
+          if propertyTypeImpl.kind notin {nnkEnumTy, nnkObjectTy}:
+            error(
+              &"Object cannot export property of type {property[^2].repr}",
+              propertyTypeImpl
+            )
 
-    exportObjectDllApi(sym)
+      exportObjectInternal(sym)
 
 macro exportRefObject*(
   sym: typed, whitelist: static[openarray[string]], body: typed
 ) =
   let refImpl = sym.getImpl()[2]
   if refImpl.kind != nnkRefTy:
-    quit(&"Unexpected export ref object impl kind {refImpl.kind}")
+    error(
+      &"Unexpected export ref object impl kind {refImpl.kind}",
+      sym
+    )
 
   var
     exportProcs: seq[NimNode]
@@ -75,7 +93,10 @@ macro exportRefObject*(
     for procedure in statement:
       let procType = procedure.getTypeInst()
       if procType.kind != nnkProcTy:
-        quit(&"Ref object exports statement of unexpected kind {procType.kind}")
+        error(
+          &"Ref object exports statement of unexpected kind {procType.kind}",
+          procType
+        )
 
       if procType[0].len <= 1:
         continue
@@ -110,24 +131,25 @@ macro exportRefObject*(
       exportProcs.add(procedure)
 
     if exportProcs.len == 0:
-      quit(&"Ref object export statement {statement[0].repr} does not export anything")
+      error(
+        &"Ref object export statement {statement[0].repr} does not export anything",
+        statement
+      )
 
-  var overloads: Table[string, int]
+  var entries: CountTable[string]
   for exportProc in exportProcs:
-    if exportProc.repr notin overloads:
-      overloads[exportProc.repr] = 0
-    else:
-      inc overloads[exportProc.repr]
+    entries.inc(exportProc.repr)
 
-  exportRefObjectDllApi(sym, whitelist)
+  exportRefObjectInternal(sym, whitelist)
 
   for procedure in exportProcs:
     var prefixes = @[sym]
-    if overloads[procedure.repr] > 0:
+    if entries[procedure.repr] > 1:
+      # If there are more than one procs with this name, add a second prefix
       let procType = procedure.getTypeInst()
       if procType[0].len > 2:
         prefixes.add(procType[0][2][1])
-    exportProcDllApi(procedure, prefixes)
+    exportProcInternal(procedure, prefixes)
 
 macro exportSeq*(sym: typed, body: typed) =
   var exportProcs: seq[NimNode]
@@ -138,7 +160,10 @@ macro exportSeq*(sym: typed, body: typed) =
     for procedure in statement:
       let procType = procedure.getTypeInst()
       if procType.kind != nnkProcTy:
-        quit(&"Ref object exports statement of unexpected kind {procType.kind}")
+        error(
+          &"Ref object exports statement of unexpected kind {procType.kind}",
+          procType
+        )
 
       if procType[0].len <= 1:
         continue
@@ -149,10 +174,10 @@ macro exportSeq*(sym: typed, body: typed) =
       if procType[0][1][1][1].getSeqName() == sym.getSeqName():
         exportProcs.add(procedure)
 
-  exportSeqDllApi(sym)
+  exportSeqInternal(sym)
 
   for procedure in exportProcs:
-    exportProcDllApi(procedure, [sym])
+    exportProcInternal(procedure, [sym])
 
 macro writeFiles*(dir, lib: static[string]) =
-  writeDllApi(dir, lib)
+  writeInternal(dir, lib)

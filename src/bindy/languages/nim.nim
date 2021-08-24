@@ -3,7 +3,7 @@ import bindy/common, macros, strformat, strutils
 proc exportTypeNim*(sym: NimNode): string =
   if sym.kind == nnkBracketExpr:
     if sym[0].repr != "seq":
-      quit(&"Unexpected bracket expression {sym[0].repr}[")
+      error(&"Unexpected bracket expression {sym[0].repr}[", sym)
     result = sym.getSeqName()
   else:
     if sym.repr == "string":
@@ -27,7 +27,7 @@ proc convertExportFromNim*(sym: NimNode): string =
 proc convertImportToNim*(sym: NimNode): string =
   if sym.kind == nnkBracketExpr:
     if sym[0].repr != "seq":
-      quit(&"Unexpected bracket expression {sym[0].repr}[")
+      error(&"Unexpected bracket expression {sym[0].repr}[", sym)
     result = ".s"
   else:
     if sym.repr == "string":
