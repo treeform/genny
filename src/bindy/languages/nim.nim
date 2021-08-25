@@ -214,42 +214,42 @@ proc exportRefObjectNim*(sym: NimNode, whitelist: openarray[string]) =
     else:
       let getProcName = &"$lib_{objNameSnaked}_get_{propertyNameSnaked}"
 
-      types.add &"proc {getProcName}("
-      types.add &"{toVarCase(objName)}: {objName}): "
-      types.add exportTypeNim(propertyType)
-      types.add " {.importc: \""
-      types.add &"{getProcName}"
-      types.add "\", cdecl.}"
-      types.add "\n"
-      types.add "\n"
+      procs.add &"proc {getProcName}("
+      procs.add &"{toVarCase(objName)}: {objName}): "
+      procs.add exportTypeNim(propertyType)
+      procs.add " {.importc: \""
+      procs.add &"{getProcName}"
+      procs.add "\", cdecl.}"
+      procs.add "\n"
+      procs.add "\n"
 
-      types.add &"proc {propertyName}*("
-      types.add &"{toVarCase(objName)}: {objName}): "
-      types.add &"{exportTypeNim(propertyType)}"
-      types.add " {.inline.} =\n"
-      types.add &"  {getProcName}({toVarCase(objName)})"
-      types.add convertImportToNim(propertyType)
-      types.add "\n"
-      types.add "\n"
+      procs.add &"proc {propertyName}*("
+      procs.add &"{toVarCase(objName)}: {objName}): "
+      procs.add &"{exportTypeNim(propertyType)}"
+      procs.add " {.inline.} =\n"
+      procs.add &"  {getProcName}({toVarCase(objName)})"
+      procs.add convertImportToNim(propertyType)
+      procs.add "\n"
+      procs.add "\n"
 
       let setProcName = &"$lib_{objNameSnaked}_set_{propertyNameSnaked}"
 
-      types.add &"proc {setProcName}("
-      types.add &"{toVarCase(objName)}: {objName}, "
-      types.add &"{propertyName}: {exportTypeNim(propertyType)})"
-      types.add " {.importc: \""
-      types.add &"{setProcName}"
-      types.add "\", cdecl.}"
-      types.add "\n"
-      types.add "\n"
+      procs.add &"proc {setProcName}("
+      procs.add &"{toVarCase(objName)}: {objName}, "
+      procs.add &"{propertyName}: {exportTypeNim(propertyType)})"
+      procs.add " {.importc: \""
+      procs.add &"{setProcName}"
+      procs.add "\", cdecl.}"
+      procs.add "\n"
+      procs.add "\n"
 
-      types.add &"proc `{propertyName}=`*("
-      types.add &"{toVarCase(objName)}: {objName}, "
-      types.add &"{propertyName}: {propertyType.repr}) =\n"
-      types.add &"  {setProcName}({toVarCase(objName)}, "
-      types.add &"{propertyName}{convertExportFromNim(propertyType)})"
-      types.add "\n"
-      types.add "\n"
+      procs.add &"proc `{propertyName}=`*("
+      procs.add &"{toVarCase(objName)}: {objName}, "
+      procs.add &"{propertyName}: {propertyType.repr}) =\n"
+      procs.add &"  {setProcName}({toVarCase(objName)}, "
+      procs.add &"{propertyName}{convertExportFromNim(propertyType)})"
+      procs.add "\n"
+      procs.add "\n"
 
 proc exportSeqNim*(sym: NimNode) =
   let
