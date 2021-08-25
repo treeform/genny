@@ -79,36 +79,35 @@ proc exportProcNim*(sym: NimNode, prefixes: openarray[NimNode] = []) =
   procs.add "\n"
   procs.add "\n"
 
-  if sym.repr != "unref":
-    procs.add &"proc {procName}*("
-    for param in procParams:
-      for i in 0 .. param.len - 3:
-        var paramType = param[^2]
-        if paramType.repr.endsWith(":type"):
-          paramType = prefixes[0]
-        if param[^2].kind == nnkBracketExpr or paramType.repr.startsWith("Some"):
-          procs.add &"{param[i].repr}: {exportTypeNim(paramType)}, "
-        else:
-          procs.add &"{param[i].repr}: {paramType}, "
-    procs.removeSuffix ", "
-    procs.add ")"
-    if procReturn.kind != nnkEmpty:
-      procs.add &": {exportTypeNim(procReturn)}"
-    procs.add " {.inline.} =\n"
-    if procReturn.kind != nnkEmpty:
-      procs.add "  result = "
-    else:
-      procs.add "  "
-    procs.add &"{apiProcName}("
-    for param in procParams:
-      for i in 0 .. param.len - 3:
-        procs.add &"{param[i].repr}{convertExportFromNim(param[^2])}, "
-    procs.removeSuffix ", "
-    procs.add ")\n"
-    if procRaises:
-      procs.add "  if checkError():\n"
-      procs.add "    raise newException(PixieError, $takeError())\n"
-    procs.add "\n"
+  procs.add &"proc {procName}*("
+  for param in procParams:
+    for i in 0 .. param.len - 3:
+      var paramType = param[^2]
+      if paramType.repr.endsWith(":type"):
+        paramType = prefixes[0]
+      if param[^2].kind == nnkBracketExpr or paramType.repr.startsWith("Some"):
+        procs.add &"{param[i].repr}: {exportTypeNim(paramType)}, "
+      else:
+        procs.add &"{param[i].repr}: {paramType}, "
+  procs.removeSuffix ", "
+  procs.add ")"
+  if procReturn.kind != nnkEmpty:
+    procs.add &": {exportTypeNim(procReturn)}"
+  procs.add " {.inline.} =\n"
+  if procReturn.kind != nnkEmpty:
+    procs.add "  result = "
+  else:
+    procs.add "  "
+  procs.add &"{apiProcName}("
+  for param in procParams:
+    for i in 0 .. param.len - 3:
+      procs.add &"{param[i].repr}{convertExportFromNim(param[^2])}, "
+  procs.removeSuffix ", "
+  procs.add ")\n"
+  if procRaises:
+    procs.add "  if checkError():\n"
+    procs.add "    raise newException(PixieError, $takeError())\n"
+  procs.add "\n"
 
 proc exportObjectNim*(sym: NimNode) =
   let
@@ -281,7 +280,7 @@ import bumpy, chroma, unicode, vmath
 
 export bumpy, chroma, unicode, vmath
 
-{.push dynlib: "bindings/generated/$lib.dll".}
+{.push dynlib: "$lib.dll".}
 
 type PixieError = object of ValueError
 
