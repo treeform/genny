@@ -1,4 +1,4 @@
-import bindy/internal, bindy/common, macros, strformat, tables
+import bindy/internal, bindy/common, bindy/languages/nim, macros, strformat, tables
 
 proc toggleBasicOnly*() =
   discard
@@ -13,6 +13,7 @@ macro exportEnums*(body: typed) =
         )
 
       exportEnumInternal(sym)
+      exportEnumNim(sym)
 
 macro exportProcs*(body: typed) =
   for statement in body:
@@ -38,6 +39,8 @@ macro exportProcs*(body: typed) =
           continue
 
       exportProcInternal(procedure)
+      exportProcNim(procedure)
+
       inc exported
 
     if exported == 0:
@@ -67,6 +70,7 @@ macro exportObjects*(body: typed) =
             )
 
       exportObjectInternal(sym)
+      exportObjectNim(sym)
 
 macro exportRefObject*(
   sym: typed, whitelist: static[openarray[string]], body: typed
@@ -141,6 +145,7 @@ macro exportRefObject*(
     entries.inc(exportProc.repr)
 
   exportRefObjectInternal(sym, whitelist)
+  exportRefObjectNim(sym, whitelist)
 
   for procedure in exportProcs:
     var prefixes = @[sym]
@@ -150,6 +155,7 @@ macro exportRefObject*(
       if procType[0].len > 2:
         prefixes.add(procType[0][2][1])
     exportProcInternal(procedure, prefixes)
+    exportProcNim(procedure, prefixes)
 
 macro exportSeq*(sym: typed, body: typed) =
   var exportProcs: seq[NimNode]
@@ -175,9 +181,12 @@ macro exportSeq*(sym: typed, body: typed) =
         exportProcs.add(procedure)
 
   exportSeqInternal(sym)
+  exportSeqNim(sym)
 
   for procedure in exportProcs:
     exportProcInternal(procedure, [sym])
+    exportProcNim(procedure, [sym])
 
 macro writeFiles*(dir, lib: static[string]) =
   writeInternal(dir, lib)
+  writeNim(dir, lib)
