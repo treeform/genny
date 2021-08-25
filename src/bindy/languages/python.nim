@@ -63,22 +63,26 @@ proc exportProcPy*(sym: NimNode, prefixes: openarray[NimNode] = []) =
     procRaises = sym.raises()
     onClass = prefixes.len > 0
 
-  var apiProcName = &"$lib_"
+  var apiProcName = ""
   if prefixes.len > 0:
     for prefix in prefixes:
       apiProcName.add &"{toSnakeCase(prefix.getName())}_"
   apiProcName.add &"{procNameSnaked}"
 
   if onClass:
-    types.add "    "
-    types.add &"def {toSnakeCase(sym.repr)}("
+    types.add "    def "
+    if prefixes.len > 1:
+      if prefixes[1].getImpl().kind != nnkNilLIt:
+        if prefixes[1].getImpl()[2].kind != nnkEnumTy:
+          types.add &"{toSnakeCase(prefixes[1].repr)}_"
+    types.add &"{toSnakeCase(sym.repr)}("
   else:
     types.add &"def {apiProcName}("
   for i, param in procParams[0 .. ^1]:
     if onClass and i == 0:
       types.add "self"
     else:
-      types.add param[0].repr
+      types.add toSnakeCase(param[0].repr)
     types.add &", "
   types.removeSuffix ", "
   types.add "):\n"
@@ -87,23 +91,23 @@ proc exportProcPy*(sym: NimNode, prefixes: openarray[NimNode] = []) =
   types.add "    "
   if procReturn.kind != nnkEmpty:
     types.add "result = "
-  types.add &"dll.{apiProcName}("
+  types.add &"dll.$lib_{apiProcName}("
   for i, param in procParams[0 .. ^1]:
     if onClass and i == 0:
       types.add "self"
     else:
-      types.add &"{param[0].repr}{convertExportFromPy(param[1])}"
+      types.add &"{toSnakeCase(param[0].repr)}{convertExportFromPy(param[1])}"
     types.add &", "
   types.removeSuffix ", "
   types.add &"){convertImportToPy(procReturn)}\n"
   if procRaises:
     if onClass:
       types.add "    "
-    types.add &"    if $lib_check_error():\n"
+    types.add &"    if check_error():\n"
     if onClass:
       types.add "    "
     types.add "        raise PixieError("
-    types.add "$lib_take_error()"
+    types.add "take_error()"
     types.add ")\n"
   if procReturn.kind != nnkEmpty:
     if onClass:
@@ -111,7 +115,7 @@ proc exportProcPy*(sym: NimNode, prefixes: openarray[NimNode] = []) =
     types.add "    return result\n"
   types.add "\n"
 
-  procs.add &"dll.{apiProcName}.argtypes = ["
+  procs.add &"dll.$lib_{apiProcName}.argtypes = ["
   for param in procParams:
     for i in 0 .. param.len - 3:
       var paramType = param[^2]
@@ -120,7 +124,7 @@ proc exportProcPy*(sym: NimNode, prefixes: openarray[NimNode] = []) =
       procs.add &"{exportTypePy(paramType)}, "
   procs.removeSuffix ", "
   procs.add "]\n"
-  procs.add &"dll.{apiProcName}.restype = {exportTypePy(procReturn)}\n"
+  procs.add &"dll.$lib_{apiProcName}.restype = {exportTypePy(procReturn)}\n"
   procs.add "\n"
 
 proc exportObjectPy*(sym: NimNode) =
@@ -128,12 +132,14 @@ proc exportObjectPy*(sym: NimNode) =
     objName = sym.repr
     objType = sym.getType()
 
-  types.add &"class {objName} (Structure):\n"
+  types.add &"class {objName}(Structure):\n"
   types.add "    _fields_ = [\n"
   for property in objType[2]:
     types.add &"        (\"{toSnakeCase(property.repr)}\""
     types.add ", "
     types.add &"{exportTypePy(property.getTypeInst())}),\n"
+  types.removeSuffix ",\n"
+  types.add "\n"
   types.add "    ]\n"
   types.add "\n"
 
@@ -156,7 +162,7 @@ proc exportObjectPy*(sym: NimNode) =
   types.add "\n"
 
 proc genRefObject(objName: string) =
-  types.add &"class {objName} (Structure):\n"
+  types.add &"class {objName}(Structure):\n"
   types.add "    _fields_ = [(\"ref\", c_ulonglong)]\n"
   types.add "\n"
 
@@ -247,14 +253,14 @@ proc exportRefObjectPy*(sym: NimNode, whitelist: openarray[string]) =
     if propertyType.kind == nnkBracketExpr:
       discard
     else:
-      let getProcName = &"dll.$lib_{objNameSnaked}_get_{propertyNameSnaked}"
+      let getProcName = &"dll.{objNameSnaked}_get_{propertyNameSnaked}"
 
       types.add "    @property\n"
       types.add &"    def {propertyNameSnaked}(self):\n"
       types.add "        "
       types.add &"{getProcName}(self){convertImportToPy(propertyType)}\n"
 
-      let setProcName = &"dll.$lib_{objNameSnaked}_set_{propertyNameSnaked}"
+      let setProcName = &"dll.{objNameSnaked}_set_{propertyNameSnaked}"
 
       types.add "\n"
       types.add &"    @{propertyNameSnaked}.setter\n"
@@ -281,14 +287,14 @@ proc exportSeqPy*(sym: NimNode) =
   genRefObject(seqName)
   genSeqProcs(
     sym.getName(),
-    &"$lib_{seqNameSnaked}",
+    seqNameSnaked,
     sym[1]
   )
 
 const header = """
 from ctypes import *
 
-dll = cdll.LoadLibrary("bindings/generated/pixie.dll")
+dll = cdll.LoadLibrary("pixie.dll")
 
 class PixieError(Exception):
     pass
