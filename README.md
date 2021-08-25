@@ -9,6 +9,7 @@ So you made a cool Nim library but you want it to be available to other language
 Language      | Method        | Enums  | Objects | Ref Objects | Seqs   |
 ------------- | ------------- | ------ | ------- | ----------- | ------ |
 Nim           | {.importc.}   | ✅     | ✅     | ✅          | ✅    |
+Python        | ctypes        | ✅     | ✅     | ✅          | ✅    |
 
 ## Why add Nim support?
 
