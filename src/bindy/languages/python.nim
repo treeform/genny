@@ -253,14 +253,14 @@ proc exportRefObjectPy*(sym: NimNode, whitelist: openarray[string]) =
     if propertyType.kind == nnkBracketExpr:
       discard
     else:
-      let getProcName = &"dll.{objNameSnaked}_get_{propertyNameSnaked}"
+      let getProcName = &"dll.$lib_{objNameSnaked}_get_{propertyNameSnaked}"
 
       types.add "    @property\n"
       types.add &"    def {propertyNameSnaked}(self):\n"
       types.add "        "
       types.add &"{getProcName}(self){convertImportToPy(propertyType)}\n"
 
-      let setProcName = &"dll.{objNameSnaked}_set_{propertyNameSnaked}"
+      let setProcName = &"dll.$lib_{objNameSnaked}_set_{propertyNameSnaked}"
 
       types.add "\n"
       types.add &"    @{propertyNameSnaked}.setter\n"
@@ -287,7 +287,7 @@ proc exportSeqPy*(sym: NimNode) =
   genRefObject(seqName)
   genSeqProcs(
     sym.getName(),
-    seqNameSnaked,
+    &"$lib_{seqNameSnaked}",
     sym[1]
   )
 
