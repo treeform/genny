@@ -208,10 +208,7 @@ proc exportRefObjectNim*(sym: NimNode, whitelist: openarray[string]) =
       propertyNameSnaked = toSnakeCase(propertyName)
       propertyType = property.getTypeInst()
 
-    if propertyType.kind == nnkBracketExpr:
-      let procPrefix = &"$lib_{objNameSnaked}_{propertyNameSnaked}"
-      genSeqProcs(objName, procPrefix, propertyType[1].repr)
-    else:
+    if propertyType.kind != nnkBracketExpr:
       let getProcName = &"$lib_{objNameSnaked}_get_{propertyNameSnaked}"
 
       procs.add &"proc {getProcName}("
@@ -250,6 +247,9 @@ proc exportRefObjectNim*(sym: NimNode, whitelist: openarray[string]) =
       procs.add &"{propertyName}{convertExportFromNim(propertyType)})"
       procs.add "\n"
       procs.add "\n"
+    else:
+      let procPrefix = &"$lib_{objNameSnaked}_{propertyNameSnaked}"
+      genSeqProcs(objName, procPrefix, propertyType[1].repr)
 
 proc exportSeqNim*(sym: NimNode) =
   let
