@@ -283,6 +283,8 @@ proc exportRefObjectPy*(sym: NimNode, whitelist: openarray[string]) =
     else:
       var helperName = property.repr
       helperName[0] = toUpperAscii(helperName[0])
+      helperName = objName & helperName
+
       types.add &"    class {helperName}:\n"
       types.add "\n"
       types.add &"        def __init__(self, {toSnakeCase(objName)}):\n"
