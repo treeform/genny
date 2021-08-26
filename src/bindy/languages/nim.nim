@@ -318,13 +318,9 @@ proc exportSeqNim*(sym: NimNode) =
   procs.add "\n"
 
 const header = """
-import bumpy, chroma, os, unicode, vmath
+import bumpy, chroma, unicode, vmath
 
 export bumpy, chroma, unicode, vmath
-
-let
-  srcPath = currentSourcePath()
-  srcDir = srcPath.parentDir()
 
 when defined(windows):
   const dllPath = "$lib.dll"
@@ -333,7 +329,7 @@ elif defined(macosx):
 else:
   const dllPath = "lib$lib.so"
 
-{.push dynlib: srcDir / dllPath.}
+{.push dynlib: dllPath.}
 
 type PixieError = object of ValueError
 
