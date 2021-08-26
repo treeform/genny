@@ -216,7 +216,7 @@ proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   procs.add "\n"
 
   procs.add &"dll.{procPrefix}_get.argtypes = [{objName}, c_longlong]\n"
-  procs.add &"dll.{procPrefix}_get.restype = {objName}\n"
+  procs.add &"dll.{procPrefix}_get.restype = {exportTypePy(entryType)}\n"
   procs.add "\n"
 
   procs.add &"dll.{procPrefix}_set.argtypes = [{objName}, c_longlong, {exportTypePy(entryType)}]\n"
@@ -307,6 +307,17 @@ proc exportSeqPy*(sym: NimNode) =
     seqNameSnaked = toSnakeCase(seqName)
 
   genRefObject(seqName)
+
+  let newSeqProc = &"$lib_new_{toSnakeCase(seqName)}"
+
+  types.add "    def __init__(self):\n"
+  types.add &"        self.ref = dll.{newSeqProc}()\n"
+  types.add "\n"
+
+  procs.add &"dll.{newSeqProc}.argtypes = []\n"
+  procs.add &"dll.{newSeqProc}.restype = c_ulonglong\n"
+  procs.add "\n"
+
   genSeqProcs(
     sym.getName(),
     &"$lib_{seqNameSnaked}",
