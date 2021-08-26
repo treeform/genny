@@ -207,7 +207,9 @@ proc genSeqProcs(objName, niceName, procPrefix, objSuffix, entryName: string) =
   procs.add &"  {procPrefix}_clear(s{objSuffix})\n"
   procs.add "\n"
 
-proc exportRefObjectNim*(sym: NimNode, whitelist: openarray[string]) =
+proc exportRefObjectNim*(
+  sym: NimNode, whitelist: openarray[string], constructor: NimNode
+) =
   let
     objName = sym.getName()
     objNameSnaked = toSnakeCase(objName)
@@ -215,8 +217,8 @@ proc exportRefObjectNim*(sym: NimNode, whitelist: openarray[string]) =
 
   genRefObject(objName)
 
-  if sym.kind == nnkBracketExpr:
-    return
+  if constructor != nil:
+    exportProcNim(constructor)
 
   for property in objType[2]:
     if not property.isExported:

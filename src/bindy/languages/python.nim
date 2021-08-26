@@ -235,13 +235,47 @@ proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   procs.add &"dll.{procPrefix}_clear.restype = None\n"
   procs.add "\n"
 
-proc exportRefObjectPy*(sym: NimNode, whitelist: openarray[string]) =
+proc exportRefObjectPy*(
+  sym: NimNode, whitelist: openarray[string], constructor: NimNode
+) =
   let
     objName = sym.repr
     objNameSnaked = toSnakeCase(objName)
     objType = sym.getType()[1][1].getType()
 
   genRefObject(objName)
+
+  if constructor != nil:
+      let
+        constructorLibProc = &"$lib_{toSnakeCase(constructor.repr)}"
+        constructorType = constructor.getTypeInst()
+        constructorParams = constructorType[0][1 .. ^1]
+        constructorRaises = constructor.raises()
+
+      types.add "    def __init__(self, "
+      for i, param in constructorParams[0 .. ^1]:
+        types.add &"{toSnakeCase(param[0].repr)}"
+        types.add ", "
+      types.removeSuffix ", "
+      types.add "):\n"
+      types.add &"        result = "
+      types.add &"dll.{constructorLibProc}("
+      for i, param in constructorParams[0 .. ^1]:
+        types.add &"{toSnakeCase(param[0].repr)}{convertExportFromPy(param[1])}"
+        types.add ", "
+      types.removeSuffix ", "
+      types.add ")\n"
+      if constructorRaises:
+        types.add &"        if check_error():\n"
+        types.add "            raise PixieError("
+        types.add "take_error()"
+        types.add ")\n"
+      types.add "        self.ref = result\n"
+      types.add "\n"
+
+      procs.add &"dll.{constructorLibProc}.argtypes = []\n"
+      procs.add &"dll.{constructorLibProc}.restype = c_ulonglong\n"
+      procs.add "\n"
 
   for property in objType[2]:
     if not property.isExported:
