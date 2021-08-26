@@ -283,9 +283,9 @@ proc exportRefObjectPy*(sym: NimNode, whitelist: openarray[string]) =
     else:
       var helperName = property.repr
       helperName[0] = toUpperAscii(helperName[0])
-      helperName = objName & helperName
+      let helperClassName = objName & helperName
 
-      types.add &"    class {helperName}:\n"
+      types.add &"    class {helperClassName}:\n"
       types.add "\n"
       types.add &"        def __init__(self, {toSnakeCase(objName)}):\n"
       types.add &"            self.{toSnakeCase(objName)} = {toSnakeCase(objName)}\n"
@@ -300,7 +300,7 @@ proc exportRefObjectPy*(sym: NimNode, whitelist: openarray[string]) =
 
       types.add "    @property\n"
       types.add &"    def {toSnakeCase(helperName)}(self):\n"
-      types.add &"        return self.{helperName}(self)\n"
+      types.add &"        return self.{helperClassName}(self)\n"
       types.add "\n"
 
 proc exportSeqPy*(sym: NimNode) =
