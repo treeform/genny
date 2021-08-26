@@ -328,14 +328,18 @@ proc exportSeqPy*(sym: NimNode) =
 const header = """
 from ctypes import *
 import os, sys
+from pathlib import Path
+
+src_path = Path(__file__).resolve()
+src_dir = str(src_path.parent)
 
 if sys.platform == "win32":
-  dllPath = '$lib.dll'
+  dllPath = "pixie.dll"
 elif sys.platform == "darwin":
-  dllPath = os.getcwd() + '/lib$lib.dylib'
+  dllPath = "libpixie.dylib"
 else:
-  dllPath = os.getcwd() + '/lib$lib.so'
-dll = cdll.LoadLibrary(dllPath)
+  dllPath = "libpixie.so"
+dll = cdll.LoadLibrary(src_dir + "/" + dllPath)
 
 class PixieError(Exception):
     pass
