@@ -182,33 +182,37 @@ proc genRefObject(objName: string) =
   procs.add &"dll.$lib_{toSnakeCase(objName)}_unref.restype = None\n"
   procs.add "\n"
 
-proc genSeqProcs(objName, procPrefix: string, entryType: NimNode) =
-  types.add &"    def __len__(self):\n"
-  types.add &"        return dll.{procPrefix}_len(self)\n"
+proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
+  var baseIndent = "    "
+  if selfSuffix != "": # This is a bound seq
+    baseIndent = "        "
+
+  types.add &"{baseIndent}def __len__(self):\n"
+  types.add &"{baseIndent}    return dll.{procPrefix}_len(self{selfSuffix})\n"
   types.add "\n"
 
-  types.add &"    def __getitem__(self, index):\n"
-  types.add &"        return dll.{procPrefix}_get(self, index)\n"
+  types.add &"{baseIndent}def __getitem__(self, index):\n"
+  types.add &"{baseIndent}    return dll.{procPrefix}_get(self{selfSuffix}, index)\n"
   types.add "\n"
 
-  types.add &"    def __setitem__(self, index, value):\n"
-  types.add &"        dll.{procPrefix}_set(self, index, value)\n"
+  types.add &"{baseIndent}def __setitem__(self, index, value):\n"
+  types.add &"{baseIndent}    dll.{procPrefix}_set(self{selfSuffix}, index, value)\n"
   types.add "\n"
 
-  types.add &"    def __delitem__(self, index):\n"
-  types.add &"        dll.{procPrefix}_remove(self, index)\n"
+  types.add &"{baseIndent}def __delitem__(self, index):\n"
+  types.add &"{baseIndent}    dll.{procPrefix}_remove(self{selfSuffix}, index)\n"
   types.add "\n"
 
-  types.add &"    def append(self, value):\n"
-  types.add &"        dll.{procPrefix}_add(self, value)\n"
+  types.add &"{baseIndent}def append(self, value):\n"
+  types.add &"{baseIndent}    dll.{procPrefix}_add(self{selfSuffix}, value)\n"
   types.add "\n"
 
-  types.add &"    def clear(self):\n"
-  types.add &"        dll.{procPrefix}_clear(self)\n"
+  types.add &"{baseIndent}def clear(self):\n"
+  types.add &"{baseIndent}    dll.{procPrefix}_clear(self{selfSuffix})\n"
   types.add "\n"
 
   procs.add &"dll.{procPrefix}_len.argtypes = [{objName}]\n"
-  procs.add &"dll.{procPrefix}_len.restype = None\n"
+  procs.add &"dll.{procPrefix}_len.restype = c_longlong\n"
   procs.add "\n"
 
   procs.add &"dll.{procPrefix}_get.argtypes = [{objName}, c_longlong]\n"
@@ -250,9 +254,7 @@ proc exportRefObjectPy*(sym: NimNode, whitelist: openarray[string]) =
       propertyNameSnaked = toSnakeCase(propertyName)
       propertyType = property.getTypeInst()
 
-    if propertyType.kind == nnkBracketExpr:
-      discard
-    else:
+    if propertyType.kind != nnkBracketExpr:
       let getProcName = &"dll.$lib_{objNameSnaked}_get_{propertyNameSnaked}"
 
       types.add "    @property\n"
@@ -278,6 +280,26 @@ proc exportRefObjectPy*(sym: NimNode, whitelist: openarray[string]) =
       procs.add &"{setProcName}.argtypes = [{objName}, {exportTypePy(propertyType)}]\n"
       procs.add &"{setProcName}.restype = None\n"
       procs.add "\n"
+    else:
+      var helperName = property.repr
+      helperName[0] = toUpperAscii(helperName[0])
+      types.add &"    class {helperName}:\n"
+      types.add "\n"
+      types.add &"        def __init__(self, {toSnakeCase(objName)}):\n"
+      types.add &"            self.{toSnakeCase(objName)} = {toSnakeCase(objName)}\n"
+      types.add "\n"
+
+      genSeqProcs(
+        objName,
+        &"$lib_{objNameSnaked}_{propertyNameSnaked}",
+        &".{toSnakeCase(objName)}",
+        propertyType[1]
+      )
+
+      types.add "    @property\n"
+      types.add &"    def {toSnakeCase(helperName)}(self):\n"
+      types.add &"        return self.{helperName}(self)\n"
+      types.add "\n"
 
 proc exportSeqPy*(sym: NimNode) =
   let
@@ -288,6 +310,7 @@ proc exportSeqPy*(sym: NimNode) =
   genSeqProcs(
     sym.getName(),
     &"$lib_{seqNameSnaked}",
+    "",
     sym[1]
   )
 
