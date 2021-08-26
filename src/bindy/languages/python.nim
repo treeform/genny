@@ -184,11 +184,11 @@ proc genRefObject(objName: string) =
 
 proc genSeqProcs(objName, procPrefix: string, entryType: NimNode) =
   types.add &"    def __len__(self):\n"
-  types.add &"        dll.{procPrefix}_len(self)\n"
+  types.add &"        return dll.{procPrefix}_len(self)\n"
   types.add "\n"
 
   types.add &"    def __getitem__(self, index):\n"
-  types.add &"        dll.{procPrefix}_get(self, index)\n"
+  types.add &"        return dll.{procPrefix}_get(self, index)\n"
   types.add "\n"
 
   types.add &"    def __setitem__(self, index, value):\n"
@@ -258,7 +258,7 @@ proc exportRefObjectPy*(sym: NimNode, whitelist: openarray[string]) =
       types.add "    @property\n"
       types.add &"    def {propertyNameSnaked}(self):\n"
       types.add "        "
-      types.add &"{getProcName}(self){convertImportToPy(propertyType)}\n"
+      types.add &"return {getProcName}(self){convertImportToPy(propertyType)}\n"
 
       let setProcName = &"dll.$lib_{objNameSnaked}_set_{propertyNameSnaked}"
 
