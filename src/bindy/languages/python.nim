@@ -74,6 +74,12 @@ proc exportProcPy*(sym: NimNode, prefixes: openarray[NimNode] = []) =
       apiProcName.add &"{toSnakeCase(prefix.getName())}_"
   apiProcName.add &"{procNameSnaked}"
 
+  var defaults: seq[(string, NimNode)]
+  for identDefs in sym.getImpl()[3][1 .. ^1]:
+    let default = identDefs[^1]
+    for entry in identDefs[0 .. ^3]:
+      defaults.add((entry.repr, default))
+
   if onClass:
     types.add "    def "
     if prefixes.len > 1:
@@ -88,9 +94,39 @@ proc exportProcPy*(sym: NimNode, prefixes: openarray[NimNode] = []) =
       types.add "self"
     else:
       types.add toSnakeCase(param[0].repr)
+      if defaults[i][1].kind != nnkEmpty:
+        types.add &" = None"
     types.add &", "
   types.removeSuffix ", "
   types.add "):\n"
+  for i, param in procParams[0 .. ^1]:
+    if i == 0:
+      continue
+    if defaults[i][1].kind != nnkEmpty:
+      if onClass:
+          types.add "    "
+      types.add &"    if {toSnakeCase(param[0].repr)} is None:\n"
+      if onClass:
+          types.add "    "
+      types.add &"        {toSnakeCase(param[0].repr)} = "
+      case defaults[i][1].kind:
+      of nnkIntLit, nnkFloatLit:
+        types.add &"{defaults[i][1].repr}"
+      of nnkIdent:
+        if defaults[i][1].repr == "true":
+          types.add "True"
+        elif defaults[i][1].repr == "false":
+          types.add "False"
+        else:
+          types.add &"{toCapSnakeCase(defaults[i][1].repr)}"
+      else:
+        types.add &"{exportTypePy(param[1])}("
+        if defaults[i][1].kind == nnkCall:
+          for d in defaults[i][1][1 .. ^1]:
+            types.add &"{d.repr}, "
+          types.removeSuffix ", "
+        types.add ")"
+      types.add "\n"
   if onClass:
     types.add "    "
   types.add "    "
