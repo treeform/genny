@@ -39,6 +39,11 @@ proc convertImportToNim*(sym: NimNode): string =
     elif sym.repr == "Rune":
       result = ".Rune"
 
+proc exportConstNim*(sym: NimNode) =
+  let impl = sym.getImpl()
+  types.add &"const {sym.repr}* = {impl.repr}\n"
+  types.add "\n"
+
 proc exportEnumNim*(sym: NimNode) =
   let symImpl = sym.getImpl()[2]
 
@@ -123,7 +128,7 @@ proc exportObjectNim*(sym: NimNode) =
   types.add "\n"
 
 proc genRefObject(objName: string) =
-  types.add &"type {objName}Obj* = object\n"
+  types.add &"type {objName}Obj = object\n"
   types.add "  reference: pointer\n"
   types.add "\n"
 
@@ -187,14 +192,14 @@ proc genSeqProcs(objName, niceName, procPrefix, objSuffix, entryName: string) =
   procs.add &"  {procPrefix}_set(s{objSuffix}, i, v)\n"
   procs.add "\n"
 
-  procs.add &"proc {procPrefix}_remove(s: {objName}, i: int)"
+  procs.add &"proc {procPrefix}_delete(s: {objName}, i: int)"
   procs.add " {.importc: \""
-  procs.add &"{procPrefix}_remove"
+  procs.add &"{procPrefix}_delete"
   procs.add "\", cdecl.}\n"
   procs.add "\n"
 
-  procs.add &"proc remove*(s: {niceName}, i: int) =\n"
-  procs.add &"  {procPrefix}_remove(s{objSuffix}, i)\n"
+  procs.add &"proc delete*(s: {niceName}, i: int) =\n"
+  procs.add &"  {procPrefix}_delete(s{objSuffix}, i)\n"
   procs.add "\n"
 
   procs.add &"proc {procPrefix}_clear(s: {objName})"
@@ -325,13 +330,13 @@ import bumpy, chroma, unicode, vmath
 export bumpy, chroma, unicode, vmath
 
 when defined(windows):
-  const dllPath = "$lib.dll"
+  const libPath = "$lib.dll"
 elif defined(macosx):
-  const dllPath = "lib$lib.dll"
+  const libPath = "lib$lib.dylib"
 else:
-  const dllPath = "lib$lib.so"
+  const libPath = "lib$lib.so"
 
-{.push dynlib: dllPath.}
+{.push dynlib: libPath.}
 
 type PixieError = object of ValueError
 

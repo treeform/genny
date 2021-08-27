@@ -4,6 +4,13 @@ import bindy/internal, bindy/common, bindy/languages/nim, bindy/languages/python
 proc toggleBasicOnly*() =
   discard
 
+macro exportConsts*(body: typed) =
+  for statement in body:
+    for sym in statement:
+      exportConstInternal(sym)
+      exportConstNim(sym)
+      exportConstPy(sym)
+
 macro exportEnums*(body: typed) =
   for statement in body:
     for sym in statement:

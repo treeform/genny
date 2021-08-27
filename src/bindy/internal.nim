@@ -4,6 +4,9 @@ const exportProcPragmas = "{.raises: [], cdecl, exportc, dynlib.}"
 
 var internal {.compiletime.}: string
 
+proc exportConstInternal*(sym: NimNode) =
+  discard
+
 proc exportEnumInternal*(sym: NimNode) =
   discard
 
@@ -128,7 +131,7 @@ proc exportRefObjectInternal*(
       internal.add &"  {objNameSnaked}.{propertyName}[i] = v\n"
       internal.add "\n"
 
-      internal.add &"proc {prefix}_remove*({objNameSnaked}: {objName}, i: int)"
+      internal.add &"proc {prefix}_delete*({objNameSnaked}: {objName}, i: int)"
       internal.add &" {exportProcPragmas} =\n"
       internal.add &"  {objNameSnaked}.{propertyName}.delete(i)\n"
       internal.add "\n"
@@ -177,7 +180,7 @@ proc generateSeqs(sym: NimNode) =
   internal.add "  s.s[i] = v\n"
   internal.add "\n"
 
-  internal.add &"proc $lib_{seqNameSnaked}_remove*(s: {seqName}, i: int)"
+  internal.add &"proc $lib_{seqNameSnaked}_delete*(s: {seqName}, i: int)"
   internal.add &" {exportProcPragmas}"
   internal.add " =\n"
   internal.add "  s.s.delete(i)\n"

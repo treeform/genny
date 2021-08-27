@@ -45,6 +45,11 @@ proc convertImportToPy*(sym: NimNode): string =
   if sym.repr == "string":
     result = ".decode(\"utf8\")"
 
+proc exportConstPy*(sym: NimNode) =
+  let impl = sym.getImpl()
+  types.add &"{toCapSnakeCase(sym.repr)} = {impl.repr}\n"
+  types.add "\n"
+
 proc exportEnumPy*(sym: NimNode) =
   let symImpl = sym.getImpl()[2]
 
@@ -200,7 +205,7 @@ proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   types.add "\n"
 
   types.add &"{baseIndent}def __delitem__(self, index):\n"
-  types.add &"{baseIndent}    dll.{procPrefix}_remove(self{selfSuffix}, index)\n"
+  types.add &"{baseIndent}    dll.{procPrefix}_delete(self{selfSuffix}, index)\n"
   types.add "\n"
 
   types.add &"{baseIndent}def append(self, value):\n"
@@ -223,8 +228,8 @@ proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   procs.add &"dll.{procPrefix}_set.restype = None\n"
   procs.add "\n"
 
-  procs.add &"dll.{procPrefix}_remove.argtypes = [{objName}, c_longlong]\n"
-  procs.add &"dll.{procPrefix}_remove.restype = None\n"
+  procs.add &"dll.{procPrefix}_delete.argtypes = [{objName}, c_longlong]\n"
+  procs.add &"dll.{procPrefix}_delete.restype = None\n"
   procs.add "\n"
 
   procs.add &"dll.{procPrefix}_add.argtypes = [{objName}, {exportTypePy(entryType)}]\n"
@@ -370,12 +375,12 @@ src_path = Path(__file__).resolve()
 src_dir = str(src_path.parent)
 
 if sys.platform == "win32":
-  dllPath = "pixie.dll"
+  libPath = "pixie.dll"
 elif sys.platform == "darwin":
-  dllPath = "libpixie.dylib"
+  libPath = "libpixie.dylib"
 else:
-  dllPath = "libpixie.so"
-dll = cdll.LoadLibrary(src_dir + "/" + dllPath)
+  libPath = "libpixie.so"
+dll = cdll.LoadLibrary(src_dir + "/" + libPath)
 
 class PixieError(Exception):
     pass
