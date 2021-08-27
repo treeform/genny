@@ -332,13 +332,13 @@ import bumpy, chroma, unicode, vmath
 export bumpy, chroma, unicode, vmath
 
 when defined(windows):
-  const libPath = "$lib.dll"
+  const libName = "$lib.dll"
 elif defined(macosx):
-  const libPath = "lib$lib.dylib"
+  const libName = "lib$lib.dylib"
 else:
-  const libPath = "lib$lib.so"
+  const libName = "lib$lib.so"
 
-{.push dynlib: libPath.}
+{.push dynlib: libName.}
 
 type PixieError = object of ValueError
 
