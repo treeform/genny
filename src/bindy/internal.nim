@@ -59,7 +59,9 @@ proc exportProcInternal*(sym: NimNode, prefixes: openarray[NimNode] = []) =
 proc exportObjectInternal*(sym: NimNode) =
   discard
 
-proc exportRefObjectInternal*(sym: NimNode, whitelist: openarray[string]) =
+proc exportRefObjectInternal*(
+  sym: NimNode, whitelist: openarray[string], constructor: NimNode
+) =
   let
     objName = sym.repr
     objNameSnaked = toSnakeCase(objName)
@@ -69,6 +71,9 @@ proc exportRefObjectInternal*(sym: NimNode, whitelist: openarray[string]) =
   internal.add " =\n"
   internal.add "  GC_unref(x)\n"
   internal.add "\n"
+
+  if constructor != nil:
+    exportProcInternal(constructor)
 
   for property in objType[2]:
     if not property.isExported:

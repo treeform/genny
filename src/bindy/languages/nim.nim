@@ -123,36 +123,45 @@ proc exportObjectNim*(sym: NimNode) =
   types.add "\n"
 
 proc genRefObject(objName: string) =
-  types.add &"type {objName}* = object\n"
+  types.add &"type {objName}Obj* = object\n"
   types.add "  reference: pointer\n"
   types.add "\n"
 
+  types.add &"type {objName}* = ref {objName}Obj\n"
+  types.add "\n"
+
   let apiProcName = &"$lib_{toSnakeCase(objName)}_unref"
-  types.add &"proc {apiProcName}*(x: {objName})"
+  types.add &"proc {apiProcName}(x: {objName}Obj)"
   types.add " {.importc: \""
   types.add &"{apiProcName}"
   types.add "\", cdecl.}"
   types.add "\n"
   types.add "\n"
 
-  types.add &"proc `=destroy`(x: var {objName}) =\n"
+  types.add &"proc `=destroy`(x: var {objName}Obj) =\n"
   types.add &"  $lib_{toSnakeCase(objName)}_unref(x)\n"
   types.add "\n"
 
-proc genSeqProcs(objName, procPrefix, entryName: string) =
+proc genSeqProcs(objName, niceName, procPrefix, objSuffix, entryName: string) =
   procs.add &"proc {procPrefix}_len(s: {objName}): int"
   procs.add " {.importc: \""
   procs.add &"{procPrefix}_len"
-  procs.add "\", cdecl.}"
+  procs.add "\", cdecl.}\n"
   procs.add "\n"
+
+  procs.add &"proc len*(s: {niceName}): int =\n"
+  procs.add &"  {procPrefix}_len(s{objSuffix})\n"
   procs.add "\n"
 
   procs.add &"proc {procPrefix}_add"
   procs.add &"(s: {objName}, v: {entryName})"
   procs.add " {.importc: \""
   procs.add &"{procPrefix}_add"
-  procs.add "\", cdecl.}"
+  procs.add "\", cdecl.}\n"
   procs.add "\n"
+
+  procs.add &"proc add*(s: {niceName}, v: {entryName}) =\n"
+  procs.add &"  {procPrefix}_add(s{objSuffix}, v)\n"
   procs.add "\n"
 
   procs.add &"proc {procPrefix}_get"
@@ -160,33 +169,47 @@ proc genSeqProcs(objName, procPrefix, entryName: string) =
   procs.add &": {entryName}"
   procs.add " {.importc: \""
   procs.add &"{procPrefix}_get"
-  procs.add "\", cdecl.}"
+  procs.add "\", cdecl.}\n"
   procs.add "\n"
+
+  procs.add &"proc `[]`*(s: {niceName}, i: int): {entryName} =\n"
+  procs.add &"  {procPrefix}_get(s{objSuffix}, i)\n"
   procs.add "\n"
 
   procs.add &"proc {procPrefix}_set(s: {objName}, "
   procs.add &"i: int, v: {entryName})"
   procs.add " {.importc: \""
   procs.add &"{procPrefix}_set"
-  procs.add "\", cdecl.}"
+  procs.add "\", cdecl.}\n"
   procs.add "\n"
+
+  procs.add &"proc `[]=`*(s: {niceName}, i: int, v: {entryName}) =\n"
+  procs.add &"  {procPrefix}_set(s{objSuffix}, i, v)\n"
   procs.add "\n"
 
   procs.add &"proc {procPrefix}_remove(s: {objName}, i: int)"
   procs.add " {.importc: \""
   procs.add &"{procPrefix}_remove"
-  procs.add "\", cdecl.}"
+  procs.add "\", cdecl.}\n"
   procs.add "\n"
+
+  procs.add &"proc remove*(s: {niceName}, i: int) =\n"
+  procs.add &"  {procPrefix}_remove(s{objSuffix}, i)\n"
   procs.add "\n"
 
   procs.add &"proc {procPrefix}_clear(s: {objName})"
   procs.add " {.importc: \""
   procs.add &"{procPrefix}_clear"
-  procs.add "\", cdecl.}"
-  procs.add "\n"
+  procs.add "\", cdecl.}\n"
   procs.add "\n"
 
-proc exportRefObjectNim*(sym: NimNode, whitelist: openarray[string]) =
+  procs.add &"proc clear*(s: {niceName}) =\n"
+  procs.add &"  {procPrefix}_clear(s{objSuffix})\n"
+  procs.add "\n"
+
+proc exportRefObjectNim*(
+  sym: NimNode, whitelist: openarray[string], constructor: NimNode
+) =
   let
     objName = sym.getName()
     objNameSnaked = toSnakeCase(objName)
@@ -194,8 +217,8 @@ proc exportRefObjectNim*(sym: NimNode, whitelist: openarray[string]) =
 
   genRefObject(objName)
 
-  if sym.kind == nnkBracketExpr:
-    return
+  if constructor != nil:
+    exportProcNim(constructor)
 
   for property in objType[2]:
     if not property.isExported:
@@ -248,8 +271,27 @@ proc exportRefObjectNim*(sym: NimNode, whitelist: openarray[string]) =
       procs.add "\n"
       procs.add "\n"
     else:
-      let procPrefix = &"$lib_{objNameSnaked}_{propertyNameSnaked}"
-      genSeqProcs(objName, procPrefix, propertyType[1].repr)
+      var helperName = property.repr
+      helperName[0] = toUpperAscii(helperName[0])
+      helperName = objName & helperName
+
+      procs.add &"type {helperName} = object\n"
+      procs.add &"    {toVarCase(objName)}: {objName}\n"
+      procs.add "\n"
+
+      procs.add &"proc {propertyName}*("
+      procs.add &"{toVarCase(objName)}: {objName}"
+      procs.add &"): {helperName} =\n"
+      procs.add &"  {helperName}({toVarCase(objName)}: {toVarCase(objName)})\n"
+      procs.add "\n"
+
+      genSeqProcs(
+        objName,
+        helperName,
+        &"$lib_{objNameSnaked}_{propertyNameSnaked}",
+        &".{toVarCase(objName)}",
+        propertyType[1].repr
+      )
 
 proc exportSeqNim*(sym: NimNode) =
   let
@@ -259,7 +301,9 @@ proc exportSeqNim*(sym: NimNode) =
   genRefObject(seqName)
   genSeqProcs(
     seqName,
+    seqName,
     &"$lib_{seqNameSnaked}",
+    "",
     sym[1].repr
   )
 
@@ -280,7 +324,14 @@ import bumpy, chroma, unicode, vmath
 
 export bumpy, chroma, unicode, vmath
 
-{.push dynlib: "$lib.dll".}
+when defined(windows):
+  const dllPath = "$lib.dll"
+elif defined(macosx):
+  const dllPath = "lib$lib.dll"
+else:
+  const dllPath = "lib$lib.so"
+
+{.push dynlib: dllPath.}
 
 type PixieError = object of ValueError
 

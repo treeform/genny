@@ -89,7 +89,20 @@ macro exportRefObject*(
   var
     exportProcs: seq[NimNode]
     basicOnly = false
-  for statement in body:
+
+  if body[0].kind != nnkDiscardStmt:
+    error(
+      "First statement in export ref object must be a constructor call or discard",
+      body[0]
+    )
+
+  let constructor =
+    if body[0][0].len > 0:
+      body[0][0][0]
+    else:
+      nil
+
+  for statement in body[1 .. ^1]:
     if statement.kind == nnkDiscardStmt:
       continue
 
@@ -148,9 +161,9 @@ macro exportRefObject*(
   for exportProc in exportProcs:
     entries.inc(exportProc.repr)
 
-  exportRefObjectInternal(sym, whitelist)
-  exportRefObjectNim(sym, whitelist)
-  exportRefObjectPy(sym, whitelist)
+  exportRefObjectInternal(sym, whitelist, constructor)
+  exportRefObjectNim(sym, whitelist, constructor)
+  exportRefObjectPy(sym, whitelist, constructor)
 
   for procedure in exportProcs:
     var prefixes = @[sym]
