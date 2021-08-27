@@ -59,8 +59,25 @@ proc exportProcInternal*(sym: NimNode, prefixes: openarray[NimNode] = []) =
   internal.add "\n"
   internal.add "\n"
 
-proc exportObjectInternal*(sym: NimNode) =
-  discard
+proc exportObjectInternal*(sym: NimNode, constructor: NimNode) =
+  let
+    objName = sym.repr
+    objNameSnaked = toSnakeCase(objName)
+
+  if constructor != nil:
+    let constructorType = constructor.getTypeInst()
+
+    internal.add &"proc $lib_{objNameSnaked}*("
+    for param in constructorType[0][1 .. ^1]:
+      internal.add &"{param[0].repr.split('`')[0]}: {param[1].repr}, "
+    internal.removeSuffix ", "
+    internal.add &"): {objName} {exportProcPragmas} =\n"
+    internal.add &"  {constructor.repr}("
+    for param in constructorType[0][1 .. ^1]:
+      internal.add &"{param[0].repr.split('`')[0]}, "
+    internal.removeSuffix ", "
+    internal.add ")\n"
+    internal.add "\n"
 
 proc exportRefObjectInternal*(
   sym: NimNode, whitelist: openarray[string], constructor: NimNode

@@ -114,18 +114,20 @@ proc exportProcNim*(sym: NimNode, prefixes: openarray[NimNode] = []) =
     procs.add "    raise newException(PixieError, $takeError())\n"
   procs.add "\n"
 
-proc exportObjectNim*(sym: NimNode) =
-  let
-    objName = sym.repr
-    objType = sym.getType()
+proc exportObjectNim*(sym: NimNode, constructor: NimNode) =
+  let objName = sym.repr
 
-  if objName in ["Vector2", "Matrix3", "Rectangle", "Color"]:
+  if objName in ["Vector2", "Matrix3", "Rect", "Color"]:
     return
 
   types.add &"type {objName}* = object\n"
-  for property in objType[2]:
-    types.add &"  {property.repr}*: {property.getTypeInst().repr}\n"
+  for identDefs in sym.getImpl()[2][2]:
+    for property in identDefs[0 .. ^3]:
+      types.add &"  {property.repr}: {identDefs[^2].repr}\n"
   types.add "\n"
+
+  if constructor != nil:
+    exportProcNim(constructor)
 
 proc genRefObject(objName: string) =
   types.add &"type {objName}Obj = object\n"

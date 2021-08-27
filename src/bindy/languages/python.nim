@@ -132,36 +132,56 @@ proc exportProcPy*(sym: NimNode, prefixes: openarray[NimNode] = []) =
   procs.add &"dll.$lib_{apiProcName}.restype = {exportTypePy(procReturn)}\n"
   procs.add "\n"
 
-proc exportObjectPy*(sym: NimNode) =
-  let
-    objName = sym.repr
-    objType = sym.getType()
+proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
+  let objName = sym.repr
 
   types.add &"class {objName}(Structure):\n"
   types.add "    _fields_ = [\n"
-  for property in objType[2]:
-    types.add &"        (\"{toSnakeCase(property.repr)}\""
-    types.add ", "
-    types.add &"{exportTypePy(property.getTypeInst())}),\n"
+  for identDefs in sym.getImpl()[2][2]:
+    for property in identDefs[0 .. ^3]:
+      types.add &"        (\"{toSnakeCase(property[1].repr)}\""
+      types.add ", "
+      types.add &"{exportTypePy(identDefs[^2])}),\n"
   types.removeSuffix ",\n"
   types.add "\n"
   types.add "    ]\n"
   types.add "\n"
 
-  types.add "    def __init__(self, "
-  for property in objType[2]:
-    types.add &"{toSnakeCase(property.repr)}, "
-  types.removeSuffix ", "
-  types.add "):\n"
-  for property in objType[2]:
-    types.add "        "
-    types.add &"self.{toSnakeCase(property.repr)} = {toSnakeCase(property.repr)}\n"
-  types.add "\n"
+  if constructor != nil:
+    let
+      constructorType = constructor.getTypeInst()
+      constructorParams = constructorType[0][1 .. ^1]
+    types.add "    def __init__(self, "
+    for param in constructorParams:
+      types.add &"{toSnakeCase(param[0].repr)}"
+      types.add ", "
+    types.removeSuffix ", "
+    types.add "):\n"
+    types.add &"        tmp = dll.$lib_{toSnakeCase(objName)}("
+    for param in constructorParams:
+      types.add &"{toSnakeCase(param[0].repr)}"
+      types.add ", "
+    types.removeSuffix ", "
+    types.add ")\n"
+    for identDefs in sym.getImpl()[2][2]:
+      for property in identDefs[0 .. ^3]:
+        types.add &"        self.{toSnakeCase(property[1].repr)} = "
+        types.add &"tmp.{toSnakeCase(property[1].repr)}\n"
+    types.add "\n"
+
+    procs.add &"dll.$lib_{toSnakeCase(objName)}.argtypes = ["
+    for param in constructorParams:
+      procs.add &"{exportTypePy(param[1])}, "
+    procs.removeSuffix ", "
+    procs.add "]\n"
+    procs.add &"dll.$lib_{toSnakeCase(objName)}.restype = {objName}\n"
+    procs.add "\n"
 
   types.add "    def __eq__(self, obj):\n"
   types.add "        "
-  for property in objType[2]:
-    types.add &"self.{toSnakeCase(property.repr)} == obj.{toSnakeCase(property.repr)} and "
+  for identDefs in sym.getImpl()[2][2]:
+    for property in identDefs[0 .. ^3]:
+      types.add &"self.{toSnakeCase(property[1].repr)} == obj.{toSnakeCase(property[1].repr)} and "
   types.removeSuffix " and "
   types.add "\n"
   types.add "\n"
