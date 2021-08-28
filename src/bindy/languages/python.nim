@@ -45,6 +45,11 @@ proc convertImportToPy*(sym: NimNode): string =
   if sym.repr == "string":
     result = ".decode(\"utf8\")"
 
+proc exportConstPy*(sym: NimNode) =
+  let impl = sym.getImpl()
+  types.add &"{toCapSnakeCase(sym.repr)} = {impl.repr}\n"
+  types.add "\n"
+
 proc exportEnumPy*(sym: NimNode) =
   let symImpl = sym.getImpl()[2]
 
@@ -69,6 +74,12 @@ proc exportProcPy*(sym: NimNode, prefixes: openarray[NimNode] = []) =
       apiProcName.add &"{toSnakeCase(prefix.getName())}_"
   apiProcName.add &"{procNameSnaked}"
 
+  var defaults: seq[(string, NimNode)]
+  for identDefs in sym.getImpl()[3][1 .. ^1]:
+    let default = identDefs[^1]
+    for entry in identDefs[0 .. ^3]:
+      defaults.add((entry.repr, default))
+
   if onClass:
     types.add "    def "
     if prefixes.len > 1:
@@ -83,9 +94,39 @@ proc exportProcPy*(sym: NimNode, prefixes: openarray[NimNode] = []) =
       types.add "self"
     else:
       types.add toSnakeCase(param[0].repr)
+      if defaults[i][1].kind != nnkEmpty:
+        types.add &" = None"
     types.add &", "
   types.removeSuffix ", "
   types.add "):\n"
+  for i, param in procParams[0 .. ^1]:
+    if i == 0:
+      continue
+    if defaults[i][1].kind != nnkEmpty:
+      if onClass:
+          types.add "    "
+      types.add &"    if {toSnakeCase(param[0].repr)} is None:\n"
+      if onClass:
+          types.add "    "
+      types.add &"        {toSnakeCase(param[0].repr)} = "
+      case defaults[i][1].kind:
+      of nnkIntLit, nnkFloatLit:
+        types.add &"{defaults[i][1].repr}"
+      of nnkIdent:
+        if defaults[i][1].repr == "true":
+          types.add "True"
+        elif defaults[i][1].repr == "false":
+          types.add "False"
+        else:
+          types.add &"{toCapSnakeCase(defaults[i][1].repr)}"
+      else:
+        types.add &"{exportTypePy(param[1])}("
+        if defaults[i][1].kind == nnkCall:
+          for d in defaults[i][1][1 .. ^1]:
+            types.add &"{d.repr}, "
+          types.removeSuffix ", "
+        types.add ")"
+      types.add "\n"
   if onClass:
     types.add "    "
   types.add "    "
@@ -127,36 +168,56 @@ proc exportProcPy*(sym: NimNode, prefixes: openarray[NimNode] = []) =
   procs.add &"dll.$lib_{apiProcName}.restype = {exportTypePy(procReturn)}\n"
   procs.add "\n"
 
-proc exportObjectPy*(sym: NimNode) =
-  let
-    objName = sym.repr
-    objType = sym.getType()
+proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
+  let objName = sym.repr
 
   types.add &"class {objName}(Structure):\n"
   types.add "    _fields_ = [\n"
-  for property in objType[2]:
-    types.add &"        (\"{toSnakeCase(property.repr)}\""
-    types.add ", "
-    types.add &"{exportTypePy(property.getTypeInst())}),\n"
+  for identDefs in sym.getImpl()[2][2]:
+    for property in identDefs[0 .. ^3]:
+      types.add &"        (\"{toSnakeCase(property[1].repr)}\""
+      types.add ", "
+      types.add &"{exportTypePy(identDefs[^2])}),\n"
   types.removeSuffix ",\n"
   types.add "\n"
   types.add "    ]\n"
   types.add "\n"
 
-  types.add "    def __init__(self, "
-  for property in objType[2]:
-    types.add &"{toSnakeCase(property.repr)}, "
-  types.removeSuffix ", "
-  types.add "):\n"
-  for property in objType[2]:
-    types.add "        "
-    types.add &"self.{toSnakeCase(property.repr)} = {toSnakeCase(property.repr)}\n"
-  types.add "\n"
+  if constructor != nil:
+    let
+      constructorType = constructor.getTypeInst()
+      constructorParams = constructorType[0][1 .. ^1]
+    types.add "    def __init__(self, "
+    for param in constructorParams:
+      types.add &"{toSnakeCase(param[0].repr)}"
+      types.add ", "
+    types.removeSuffix ", "
+    types.add "):\n"
+    types.add &"        tmp = dll.$lib_{toSnakeCase(objName)}("
+    for param in constructorParams:
+      types.add &"{toSnakeCase(param[0].repr)}"
+      types.add ", "
+    types.removeSuffix ", "
+    types.add ")\n"
+    for identDefs in sym.getImpl()[2][2]:
+      for property in identDefs[0 .. ^3]:
+        types.add &"        self.{toSnakeCase(property[1].repr)} = "
+        types.add &"tmp.{toSnakeCase(property[1].repr)}\n"
+    types.add "\n"
+
+    procs.add &"dll.$lib_{toSnakeCase(objName)}.argtypes = ["
+    for param in constructorParams:
+      procs.add &"{exportTypePy(param[1])}, "
+    procs.removeSuffix ", "
+    procs.add "]\n"
+    procs.add &"dll.$lib_{toSnakeCase(objName)}.restype = {objName}\n"
+    procs.add "\n"
 
   types.add "    def __eq__(self, obj):\n"
   types.add "        "
-  for property in objType[2]:
-    types.add &"self.{toSnakeCase(property.repr)} == obj.{toSnakeCase(property.repr)} and "
+  for identDefs in sym.getImpl()[2][2]:
+    for property in identDefs[0 .. ^3]:
+      types.add &"self.{toSnakeCase(property[1].repr)} == obj.{toSnakeCase(property[1].repr)} and "
   types.removeSuffix " and "
   types.add "\n"
   types.add "\n"
@@ -200,7 +261,7 @@ proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   types.add "\n"
 
   types.add &"{baseIndent}def __delitem__(self, index):\n"
-  types.add &"{baseIndent}    dll.{procPrefix}_remove(self{selfSuffix}, index)\n"
+  types.add &"{baseIndent}    dll.{procPrefix}_delete(self{selfSuffix}, index)\n"
   types.add "\n"
 
   types.add &"{baseIndent}def append(self, value):\n"
@@ -223,8 +284,8 @@ proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   procs.add &"dll.{procPrefix}_set.restype = None\n"
   procs.add "\n"
 
-  procs.add &"dll.{procPrefix}_remove.argtypes = [{objName}, c_longlong]\n"
-  procs.add &"dll.{procPrefix}_remove.restype = None\n"
+  procs.add &"dll.{procPrefix}_delete.argtypes = [{objName}, c_longlong]\n"
+  procs.add &"dll.{procPrefix}_delete.restype = None\n"
   procs.add "\n"
 
   procs.add &"dll.{procPrefix}_add.argtypes = [{objName}, {exportTypePy(entryType)}]\n"
@@ -370,12 +431,12 @@ src_path = Path(__file__).resolve()
 src_dir = str(src_path.parent)
 
 if sys.platform == "win32":
-  dllPath = "pixie.dll"
+  libName = "pixie.dll"
 elif sys.platform == "darwin":
-  dllPath = "libpixie.dylib"
+  libName = "libpixie.dylib"
 else:
-  dllPath = "libpixie.so"
-dll = cdll.LoadLibrary(src_dir + "/" + dllPath)
+  libName = "libpixie.so"
+dll = cdll.LoadLibrary(src_dir + "/" + libName)
 
 class PixieError(Exception):
     pass

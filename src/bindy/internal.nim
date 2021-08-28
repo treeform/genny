@@ -4,6 +4,9 @@ const exportProcPragmas = "{.raises: [], cdecl, exportc, dynlib.}"
 
 var internal {.compiletime.}: string
 
+proc exportConstInternal*(sym: NimNode) =
+  discard
+
 proc exportEnumInternal*(sym: NimNode) =
   discard
 
@@ -56,8 +59,25 @@ proc exportProcInternal*(sym: NimNode, prefixes: openarray[NimNode] = []) =
   internal.add "\n"
   internal.add "\n"
 
-proc exportObjectInternal*(sym: NimNode) =
-  discard
+proc exportObjectInternal*(sym: NimNode, constructor: NimNode) =
+  let
+    objName = sym.repr
+    objNameSnaked = toSnakeCase(objName)
+
+  if constructor != nil:
+    let constructorType = constructor.getTypeInst()
+
+    internal.add &"proc $lib_{objNameSnaked}*("
+    for param in constructorType[0][1 .. ^1]:
+      internal.add &"{param[0].repr.split('`')[0]}: {param[1].repr}, "
+    internal.removeSuffix ", "
+    internal.add &"): {objName} {exportProcPragmas} =\n"
+    internal.add &"  {constructor.repr}("
+    for param in constructorType[0][1 .. ^1]:
+      internal.add &"{param[0].repr.split('`')[0]}, "
+    internal.removeSuffix ", "
+    internal.add ")\n"
+    internal.add "\n"
 
 proc exportRefObjectInternal*(
   sym: NimNode, whitelist: openarray[string], constructor: NimNode
@@ -128,7 +148,7 @@ proc exportRefObjectInternal*(
       internal.add &"  {objNameSnaked}.{propertyName}[i] = v\n"
       internal.add "\n"
 
-      internal.add &"proc {prefix}_remove*({objNameSnaked}: {objName}, i: int)"
+      internal.add &"proc {prefix}_delete*({objNameSnaked}: {objName}, i: int)"
       internal.add &" {exportProcPragmas} =\n"
       internal.add &"  {objNameSnaked}.{propertyName}.delete(i)\n"
       internal.add "\n"
@@ -177,7 +197,7 @@ proc generateSeqs(sym: NimNode) =
   internal.add "  s.s[i] = v\n"
   internal.add "\n"
 
-  internal.add &"proc $lib_{seqNameSnaked}_remove*(s: {seqName}, i: int)"
+  internal.add &"proc $lib_{seqNameSnaked}_delete*(s: {seqName}, i: int)"
   internal.add &" {exportProcPragmas}"
   internal.add " =\n"
   internal.add "  s.s.delete(i)\n"

@@ -39,6 +39,11 @@ proc convertImportToNim*(sym: NimNode): string =
     elif sym.repr == "Rune":
       result = ".Rune"
 
+proc exportConstNim*(sym: NimNode) =
+  let impl = sym.getImpl()
+  types.add &"const {sym.repr}* = {impl.repr}\n"
+  types.add "\n"
+
 proc exportEnumNim*(sym: NimNode) =
   let symImpl = sym.getImpl()[2]
 
@@ -109,21 +114,23 @@ proc exportProcNim*(sym: NimNode, prefixes: openarray[NimNode] = []) =
     procs.add "    raise newException(PixieError, $takeError())\n"
   procs.add "\n"
 
-proc exportObjectNim*(sym: NimNode) =
-  let
-    objName = sym.repr
-    objType = sym.getType()
+proc exportObjectNim*(sym: NimNode, constructor: NimNode) =
+  let objName = sym.repr
 
-  if objName in ["Vector2", "Matrix3", "Rectangle", "Color"]:
+  if objName in ["Vector2", "Matrix3", "Rect", "Color"]:
     return
 
   types.add &"type {objName}* = object\n"
-  for property in objType[2]:
-    types.add &"  {property.repr}*: {property.getTypeInst().repr}\n"
+  for identDefs in sym.getImpl()[2][2]:
+    for property in identDefs[0 .. ^3]:
+      types.add &"  {property.repr}: {identDefs[^2].repr}\n"
   types.add "\n"
 
+  if constructor != nil:
+    exportProcNim(constructor)
+
 proc genRefObject(objName: string) =
-  types.add &"type {objName}Obj* = object\n"
+  types.add &"type {objName}Obj = object\n"
   types.add "  reference: pointer\n"
   types.add "\n"
 
@@ -187,14 +194,14 @@ proc genSeqProcs(objName, niceName, procPrefix, objSuffix, entryName: string) =
   procs.add &"  {procPrefix}_set(s{objSuffix}, i, v)\n"
   procs.add "\n"
 
-  procs.add &"proc {procPrefix}_remove(s: {objName}, i: int)"
+  procs.add &"proc {procPrefix}_delete(s: {objName}, i: int)"
   procs.add " {.importc: \""
-  procs.add &"{procPrefix}_remove"
+  procs.add &"{procPrefix}_delete"
   procs.add "\", cdecl.}\n"
   procs.add "\n"
 
-  procs.add &"proc remove*(s: {niceName}, i: int) =\n"
-  procs.add &"  {procPrefix}_remove(s{objSuffix}, i)\n"
+  procs.add &"proc delete*(s: {niceName}, i: int) =\n"
+  procs.add &"  {procPrefix}_delete(s{objSuffix}, i)\n"
   procs.add "\n"
 
   procs.add &"proc {procPrefix}_clear(s: {objName})"
@@ -325,13 +332,13 @@ import bumpy, chroma, unicode, vmath
 export bumpy, chroma, unicode, vmath
 
 when defined(windows):
-  const dllPath = "$lib.dll"
+  const libName = "$lib.dll"
 elif defined(macosx):
-  const dllPath = "lib$lib.dll"
+  const libName = "lib$lib.dylib"
 else:
-  const dllPath = "lib$lib.so"
+  const libName = "lib$lib.so"
 
-{.push dynlib: dllPath.}
+{.push dynlib: libName.}
 
 type PixieError = object of ValueError
 

@@ -4,6 +4,13 @@ import bindy/internal, bindy/common, bindy/languages/nim, bindy/languages/python
 proc toggleBasicOnly*() =
   discard
 
+macro exportConsts*(body: typed) =
+  for statement in body:
+    for sym in statement:
+      exportConstInternal(sym)
+      exportConstNim(sym)
+      exportConstPy(sym)
+
 macro exportEnums*(body: typed) =
   for statement in body:
     for sym in statement:
@@ -52,29 +59,39 @@ macro exportProcs*(body: typed) =
         statement
       )
 
-macro exportObjects*(body: typed) =
-  for statement in body:
-    for sym in statement:
-      let objImpl = sym.getImpl()[2]
-      if objImpl.kind != nnkObjectTy:
-        error(&"Unexpected export object impl kind {objImpl.kind}", statement)
+macro exportObject*(sym, body: typed) =
+  let objImpl = sym.getImpl()[2]
+  if objImpl.kind != nnkObjectTy:
+    error(&"Unexpected export object impl kind {objImpl.kind}", sym)
 
-      let objType = sym.getType()
-      for property in objType[2]:
-        if not property.isExported:
-          error(&"Unexported property on {sym.repr}", objType)
+  if body[0].kind != nnkDiscardStmt:
+    error(
+      "First statement in export ref object must be a constructor call or discard",
+      body[0]
+    )
 
-        let propertyTypeImpl = property.getTypeImpl()
-        if propertyTypeImpl.repr notin basicTypes:
-          if propertyTypeImpl.kind notin {nnkEnumTy, nnkObjectTy}:
-            error(
-              &"Object cannot export property of type {property[^2].repr}",
-              propertyTypeImpl
-            )
+  let constructor =
+    if body[0][0].len > 0:
+      body[0][0][0]
+    else:
+      nil
 
-      exportObjectInternal(sym)
-      exportObjectNim(sym)
-      exportObjectPy(sym)
+  for identDefs in objImpl[2]:
+    for property in identDefs[0 .. ^3]:
+      if property.kind != nnkPostfix and property[0].repr != "*":
+        error(&"Unexported property on {sym.repr}", property)
+
+      let propertyTypeImpl = identDefs[^2].getTypeImpl()
+      if propertyTypeImpl.repr notin basicTypes:
+        if propertyTypeImpl.kind notin {nnkEnumTy, nnkObjectTy}:
+          error(
+            &"Object cannot export property of type {property[^2].repr}",
+            propertyTypeImpl
+          )
+
+  exportObjectInternal(sym, constructor)
+  exportObjectNim(sym, constructor)
+  exportObjectPy(sym, constructor)
 
 macro exportRefObject*(
   sym: typed, whitelist: static[openarray[string]], body: typed
