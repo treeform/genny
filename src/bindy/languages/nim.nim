@@ -136,6 +136,18 @@ proc exportObjectNim*(sym: NimNode, constructor: NimNode) =
 
   if constructor != nil:
     exportProcNim(constructor)
+  else:
+    types.add &"proc {toVarCase(objName)}*("
+    for identDefs in sym.getImpl()[2][2]:
+      for property in identDefs[0 .. ^3]:
+        types.add &"{toSnakeCase(property[1].repr)}: {identDefs[^2].repr}, "
+    types.removeSuffix ", "
+    types.add &"): {objName} =\n"
+    for identDefs in sym.getImpl()[2][2]:
+      for property in identDefs[0 .. ^3]:
+        types.add &"  result.{toSnakeCase(property[1].repr)} = "
+        types.add &"{toSnakeCase(property[1].repr)}\n"
+    types.add "\n"
 
 proc genRefObject(objName: string) =
   types.add &"type {objName}Obj = object\n"

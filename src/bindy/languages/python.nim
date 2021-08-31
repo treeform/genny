@@ -210,6 +210,19 @@ proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
     procs.add "]\n"
     procs.add &"dll.$lib_{toSnakeCase(objName)}.restype = {objName}\n"
     procs.add "\n"
+  else:
+    types.add "    def __init__(self, "
+    for identDefs in sym.getImpl()[2][2]:
+      for property in identDefs[0 .. ^3]:
+        types.add &"{toSnakeCase(property[1].repr)}, "
+    types.removeSuffix ", "
+    types.add "):\n"
+    for identDefs in sym.getImpl()[2][2]:
+      for property in identDefs[0 .. ^3]:
+        types.add "        "
+        types.add &"self.{toSnakeCase(property[1].repr)} = "
+        types.add &"{toSnakeCase(property[1].repr)}\n"
+    types.add "\n"
 
   types.add "    def __eq__(self, obj):\n"
   types.add "        "
