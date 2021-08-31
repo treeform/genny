@@ -1,229 +1,255 @@
 import bindy/internal, bindy/common, bindy/languages/nim, bindy/languages/python,
     macros, strformat, tables
 
-proc toggleBasicOnly*() =
-  discard
+template discard2(f: untyped): untyped =
+  when(compiles do: discard f):
+    discard f
+  else:
+    f
 
-macro exportConsts*(body: typed) =
-  for statement in body:
-    for sym in statement:
-      exportConstInternal(sym)
-      exportConstNim(sym)
-      exportConstPy(sym)
+proc emptyBlockStmt(): NimNode =
+  result = quote do:
+    block:
+      discard
+  result[1].del(0)
 
-macro exportEnums*(body: typed) =
-  for statement in body:
-    for sym in statement:
-      if sym.getImpl()[2].kind != nnkEnumTy:
-        error(
-          &"Enum export entry of unexpected kind {sym.getImpl()[2].kind}",
-          sym
-        )
+macro exportConstsUntyped(body: untyped) =
+  result = newNimNode(nnkStmtList)
+  for ident in body:
+    let varSection = quote do:
+      var `ident` = `ident`
+    result.add varSection
 
-      exportEnumInternal(sym)
-      exportEnumNim(sym)
-      exportEnumPy(sym)
+macro exportConstsTyped(body: typed) =
+  for varSection in body:
+    let sym = varSection[0][0]
+    exportConstInternal(sym)
+    exportConstNim(sym)
+    exportConstPy(sym)
 
-macro exportProcs*(body: typed) =
-  for statement in body:
-    let exportName = statement[0].repr
+template exportConsts*(body: untyped) =
+  exportConstsTyped(exportConstsUntyped(body))
 
-    var exported: int
-    for procedure in statement:
-      let procType = procedure.getTypeInst()
-      if procType.kind != nnkProcTy:
-        error(
-          &"Proc exports statement of unexpected kind {procType.kind}",
-          statement
-        )
+macro exportEnumsUntyped(body: untyped) =
+  result = newNimNode(nnkStmtList)
+  for i, ident in body:
+    let
+      name = ident(&"enum{i}")
+      varSection = quote do:
+        var `name`: `ident`
+    result.add varSection
 
-      if procType[0].len > 1:
-        # Filter out overloads that are owned by objects
-        let firstParam = procType[0][1][1]
-        if firstParam.kind == nnkBracketExpr:
-          continue
-        let firstParamImpl = firstParam.getImpl()
-        if firstParamImpl.kind == nnkTypeDef and
-          firstParamImpl[2].kind != nnkEnumTy:
-          continue
+macro exportEnumsTyped(body: typed) =
+  for varSection in body:
+    let sym = varSection[0][1]
+    exportEnumInternal(sym)
+    exportEnumNim(sym)
+    exportEnumPy(sym)
 
-      exportProcInternal(procedure)
-      exportProcNim(procedure)
-      exportProcPy(procedure)
+template exportEnums*(body: untyped) =
+  exportEnumsTyped(exportEnumsUntyped(body))
 
-      inc exported
+proc procUntyped(clause: NimNode): NimNode =
+  result = emptyBlockStmt()
 
-    if exported == 0:
-      error(
-        &"Proc export statement {exportName} does not export anything",
-        statement
-      )
+  if clause.kind == nnkIdent:
+    let
+      name = clause
+      varSection = quote do:
+        var p = `name`
+    result[1].add varSection
+  else:
+    var
+      name = clause[0]
+      endStmt = quote do:
+        discard2 `name`()
+    for i in 1 ..< clause.len:
+      var
+        argType = clause[i]
+        argName = ident(&"arg{i}")
+      result[1].add quote do:
+        var `argName`: `argType`
+      endStmt[1].add argName
+    result[1].add endStmt
 
-macro exportObject*(sym, body: typed) =
-  let objImpl = sym.getImpl()[2]
-  if objImpl.kind != nnkObjectTy:
-    error(&"Unexpected export object impl kind {objImpl.kind}", sym)
-
-  if body[0].kind != nnkDiscardStmt:
-    error(
-      "First statement in export ref object must be a constructor call or discard",
-      body[0]
-    )
-
-  let constructor =
-    if body[0][0].len > 0:
-      body[0][0][0]
+proc procTypedSym(entry: NimNode): NimNode =
+  result =
+    if entry[1].kind == nnkVarSection:
+      entry[1][0][2]
     else:
-      nil
+      if entry[1][^1].kind != nnkDiscardStmt:
+        entry[1][^1][0]
+      else:
+        entry[1][^1][0][0]
 
-  for identDefs in objImpl[2]:
-    for property in identDefs[0 .. ^3]:
-      if property.kind != nnkPostfix and property[0].repr != "*":
-        error(&"Unexported property on {sym.repr}", property)
+proc procTyped(entry: NimNode, prefixes: openarray[NimNode] = []) =
+  let procSym = procTypedSym(entry)
+  exportProcInternal(procSym, prefixes)
+  exportProcNim(procSym, prefixes)
+  exportProcPy(procSym, prefixes)
 
-      let propertyTypeImpl = identDefs[^2].getTypeImpl()
-      if propertyTypeImpl.repr notin basicTypes:
-        if propertyTypeImpl.kind notin {nnkEnumTy, nnkObjectTy}:
-          error(
-            &"Object cannot export property of type {property[^2].repr}",
-            propertyTypeImpl
-          )
+macro exportProcsUntyped(body: untyped) =
+  result = newNimNode(nnkStmtList)
+  for clause in body:
+    result.add procUntyped(clause)
+
+macro exportProcsTyped(body: typed) =
+  for entry in body:
+    procTyped(entry)
+
+template exportProcs*(body: untyped) =
+  exportProcsTyped(exportProcsUntyped(body))
+
+macro exportObjectUntyped(sym, body: untyped) =
+  result = newNimNode(nnkStmtList)
+
+  let varSection = quote do:
+    var obj: `sym`
+  result.add varSection
+
+  for section in body:
+    if section.kind == nnkDiscardStmt:
+      continue
+
+    case section[0].repr:
+    of "constructor":
+      result.add procUntyped(section[1][0])
+    else:
+      error("Invalid section", section)
+
+  result.add quote do:
+    discard
+
+macro exportObjectTyped(body: typed) =
+  let
+    sym = body[0][0][1]
+    constructor =
+      if body[1].kind != nnkDiscardStmt:
+        procTypedSym(body[1])
+      else:
+        nil
 
   exportObjectInternal(sym, constructor)
   exportObjectNim(sym, constructor)
   exportObjectPy(sym, constructor)
 
-macro exportRefObject*(
-  sym: typed, whitelist: static[openarray[string]], body: typed
-) =
-  let refImpl = sym.getImpl()[2]
-  if refImpl.kind != nnkRefTy:
-    error(
-      &"Unexpected export ref object impl kind {refImpl.kind}",
-      sym
-    )
+template exportObject*(sym, body: untyped) =
+  exportObjectTyped(exportObjectUntyped(sym, body))
 
-  var
-    exportProcs: seq[NimNode]
-    basicOnly = false
+macro exportSeqUntyped(sym, body: untyped) =
+  result = newNimNode(nnkStmtList)
 
-  if body[0].kind != nnkDiscardStmt:
-    error(
-      "First statement in export ref object must be a constructor call or discard",
-      body[0]
-    )
+  let varSection = quote do:
+    var s: `sym`
+  result.add varSection
 
-  let constructor =
-    if body[0][0].len > 0:
-      body[0][0][0]
+  for section in body:
+    if section.kind == nnkDiscardStmt:
+      continue
+
+    case section[0].repr:
+    of "procs":
+      for clause in section[1]:
+        result.add procUntyped(clause)
     else:
-      nil
+      error("Invalid section", section)
 
-  for statement in body[1 .. ^1]:
-    if statement.kind == nnkDiscardStmt:
-      continue
+  result.add quote do:
+    discard
 
-    if statement.kind == nnkCall:
-      if statement[0].repr == "toggleBasicOnly":
-        basicOnly = not basicOnly
-        continue
-
-    for procedure in statement:
-      let procType = procedure.getTypeInst()
-      if procType.kind != nnkProcTy:
-        error(
-          &"Ref object exports statement of unexpected kind {procType.kind}",
-          procType
-        )
-
-      if procType[0].len <= 1:
-        continue
-
-      if procType[0][1][1].repr != sym.repr:
-        var found = false
-
-        let procImpl = procedure.getImpl()
-        if procImpl[3][1][1].kind == nnkInfix:
-          for choice in procImpl[3][1][1][1 .. ^1]:
-            if choice.repr == sym.repr:
-              found = true
-
-        if not found:
-          continue
-
-      if basicOnly:
-        var skip = false
-        for paramType in procType[0][2 .. ^1]:
-          if paramType[1].repr == "bool":
-            continue
-          if paramType[1].getImpl().kind == nnkNilLit:
-            continue
-          if paramType[1].getImpl().kind == nnkTypeDef:
-            if paramType[1].getImpl()[2].kind == nnkEnumTy:
-              continue
-          skip = true
-          break
-        if skip:
-          continue
-
-      exportProcs.add(procedure)
-
-    if exportProcs.len == 0:
-      error(
-        &"Ref object export statement {statement[0].repr} does not export anything",
-        statement
-      )
-
-  var entries: CountTable[string]
-  for exportProc in exportProcs:
-    entries.inc(exportProc.repr)
-
-  exportRefObjectInternal(sym, whitelist, constructor)
-  exportRefObjectNim(sym, whitelist, constructor)
-  exportRefObjectPy(sym, whitelist, constructor)
-
-  for procedure in exportProcs:
-    var prefixes = @[sym]
-    if entries[procedure.repr] > 1:
-      # If there are more than one procs with this name, add a second prefix
-      let procType = procedure.getTypeInst()
-      if procType[0].len > 2:
-        prefixes.add(procType[0][2][1])
-    exportProcInternal(procedure, prefixes)
-    exportProcNim(procedure, prefixes)
-    exportProcPy(procedure, prefixes)
-
-macro exportSeq*(sym: typed, body: typed) =
-  var exportProcs: seq[NimNode]
-  for statement in body:
-    if statement.kind == nnkDiscardStmt:
-      continue
-
-    for procedure in statement:
-      let procType = procedure.getTypeInst()
-      if procType.kind != nnkProcTy:
-        error(
-          &"Ref object exports statement of unexpected kind {procType.kind}",
-          procType
-        )
-
-      if procType[0].len <= 1:
-        continue
-
-      if procType[0][1][1].kind != nnkBracketExpr:
-        continue
-
-      if procType[0][1][1][1].getSeqName() == sym.getSeqName():
-        exportProcs.add(procedure)
+macro exportSeqTyped(body: typed) =
+  let sym = body[0][0][1]
 
   exportSeqInternal(sym)
   exportSeqNim(sym)
   exportSeqPy(sym)
 
-  for procedure in exportProcs:
-    exportProcInternal(procedure, [sym])
-    exportProcNim(procedure, [sym])
-    exportProcPy(procedure, [sym])
+  for entry in body[1 .. ^2]:
+    procTyped(entry, [sym])
+
+template exportSeq*(sym, body: untyped) =
+  exportSeqTyped(exportSeqUntyped(sym, body))
+
+macro exportRefObjectUntyped(sym, body: untyped) =
+  result = newNimNode(nnkStmtList)
+
+  let varSection = quote do:
+    var refObj: `sym`
+  result.add varSection
+
+  var
+    fieldsBlock = emptyBlockStmt()
+    constructorBlock = emptyBlockStmt()
+    procsBlock = emptyBlockStmt()
+
+
+  for section in body:
+    if section.kind == nnkDiscardStmt:
+      continue
+
+    case section[0].repr:
+    of "fields":
+      var
+        seqIdent = ident("allowedFields")
+        allowedFields = quote do:
+          var `seqIdent`: seq[string] = @[]
+      for field in section[1]:
+        allowedFields[0][2][1].add newStrLitNode(field.repr)
+      fieldsBlock[1].add allowedFields
+    of "constructor":
+      constructorBlock[1].add procUntyped(section[1][0])
+    of "procs":
+      for clause in section[1]:
+        procsBlock[1].add procUntyped(clause)
+      procsBlock[1].add quote do:
+        discard
+    else:
+      error("Invalid section", section)
+
+  result.add fieldsBlock
+  result.add constructorBlock
+  result.add procsBlock
+
+macro exportRefObjectTyped(body: typed) =
+  let
+    sym = body[0][0][1]
+    fieldsBlock = body[1]
+    constructorBlock = body[2]
+    procsBlock = body[3]
+
+  var allowedFields: seq[string]
+  if fieldsBlock[1].len > 0:
+    for entry in fieldsBlock[1][0][2][1]:
+      allowedFields.add entry.strVal
+
+  let constructor =
+    if constructorBlock[1].len > 0:
+      procTypedSym(constructorBlock[1])
+    else:
+      nil
+
+  exportRefObjectInternal(sym, allowedFields, constructor)
+  exportRefObjectNim(sym, allowedFields, constructor)
+  exportRefObjectPy(sym, allowedFields, constructor)
+
+  if procsBlock[1].len > 0:
+    var procsSeen: seq[string]
+    for entry in procsBlock[1][0 .. ^2]:
+      var
+        procSym = procTypedSym(entry)
+        prefixes = @[sym]
+      if procSym.repr notin procsSeen:
+        procsSeen.add procSym.repr
+      else:
+        let procType = procSym.getTypeInst()
+        if procType[0].len > 2:
+          prefixes.add(procType[0][2][1])
+      exportProcInternal(procSym, prefixes)
+      exportProcNim(procSym, prefixes)
+      exportProcPy(procSym, prefixes)
+
+template exportRefObject*(sym, body: untyped) =
+  exportRefObjecTtyped(exportRefObjectUntyped(sym, body))
 
 macro writeFiles*(dir, lib: static[string]) =
   writeInternal(dir, lib)

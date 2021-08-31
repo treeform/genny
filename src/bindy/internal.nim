@@ -80,12 +80,12 @@ proc exportObjectInternal*(sym: NimNode, constructor: NimNode) =
     internal.add "\n"
 
 proc exportRefObjectInternal*(
-  sym: NimNode, whitelist: openarray[string], constructor: NimNode
+  sym: NimNode, allowedFields: openarray[string], constructor: NimNode
 ) =
   let
     objName = sym.repr
     objNameSnaked = toSnakeCase(objName)
-    objType = sym.getType()[1][1].getType()
+    objType = sym.getType()[1].getType()
 
   internal.add &"proc $lib_{objNameSnaked}_unref*(x: {objName}) {exportProcPragmas}"
   internal.add " =\n"
@@ -96,9 +96,7 @@ proc exportRefObjectInternal*(
     exportProcInternal(constructor)
 
   for property in objType[2]:
-    if not property.isExported:
-      continue
-    if whitelist != ["*"] and property.repr notin whitelist:
+    if property.repr notin allowedFields:
       continue
 
     let
