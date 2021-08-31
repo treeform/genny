@@ -32,10 +32,7 @@ proc exportTypePy(sym: NimNode): string =
       of "Mat3": "Matrix3"
       of "": "None"
       else:
-        if sym.repr.startsWith("Some"):
-          sym.repr.replace("Some", "")
-        else:
-          sym.repr
+        sym.repr
 
 proc convertExportFromPy*(sym: NimNode): string =
   if sym.repr == "string":
@@ -47,7 +44,7 @@ proc convertImportToPy*(sym: NimNode): string =
 
 proc exportConstPy*(sym: NimNode) =
   let impl = sym.getImpl()
-  types.add &"{toCapSnakeCase(sym.repr)} = {impl.repr}\n"
+  types.add &"{toCapSnakeCase(sym.repr)} = {impl[2].repr}\n"
   types.add "\n"
 
 proc exportEnumPy*(sym: NimNode) =
@@ -308,12 +305,12 @@ proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   procs.add "\n"
 
 proc exportRefObjectPy*(
-  sym: NimNode, whitelist: openarray[string], constructor: NimNode
+  sym: NimNode, allowedFields: openarray[string], constructor: NimNode
 ) =
   let
     objName = sym.repr
     objNameSnaked = toSnakeCase(objName)
-    objType = sym.getType()[1][1].getType()
+    objType = sym.getType()[1].getType()
 
   genRefObject(objName)
 
@@ -350,9 +347,7 @@ proc exportRefObjectPy*(
       procs.add "\n"
 
   for property in objType[2]:
-    if not property.isExported:
-      continue
-    if whitelist != ["*"] and property.repr notin whitelist:
+    if property.repr notin allowedFields:
       continue
 
     let

@@ -14,8 +14,6 @@ proc exportTypeNim*(sym: NimNode): string =
       result = "cstring"
     elif sym.repr == "Rune":
       result = "int32"
-    elif sym.repr.startsWith("Some"):
-      result = sym.repr.replace("Some", "")
     else:
       result = sym.repr
 
@@ -41,12 +39,11 @@ proc convertImportToNim*(sym: NimNode): string =
 
 proc exportConstNim*(sym: NimNode) =
   let impl = sym.getImpl()
-  types.add &"const {sym.repr}* = {impl.repr}\n"
+  types.add &"const {sym.repr}* = {impl[2].repr}\n"
   types.add "\n"
 
 proc exportEnumNim*(sym: NimNode) =
   let symImpl = sym.getImpl()[2]
-
   types.add &"type {sym.repr}* = enum\n"
   for i, entry in symImpl[1 .. ^1]:
     types.add &"  {entry.repr}\n"
@@ -235,12 +232,12 @@ proc genSeqProcs(objName, niceName, procPrefix, objSuffix, entryName: string) =
   procs.add "\n"
 
 proc exportRefObjectNim*(
-  sym: NimNode, whitelist: openarray[string], constructor: NimNode
+  sym: NimNode, allowedFields: openarray[string], constructor: NimNode
 ) =
   let
     objName = sym.getName()
     objNameSnaked = toSnakeCase(objName)
-    objType = sym.getType()[1][1].getType()
+    objType = sym.getType()[1].getType()
 
   genRefObject(objName)
 
@@ -248,9 +245,7 @@ proc exportRefObjectNim*(
     exportProcNim(constructor)
 
   for property in objType[2]:
-    if not property.isExported:
-      continue
-    if whitelist != ["*"] and property.repr notin whitelist:
+    if property.repr notin allowedFields:
       continue
 
     let
