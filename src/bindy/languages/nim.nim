@@ -67,6 +67,12 @@ proc exportProcNim*(sym: NimNode, prefixes: openarray[NimNode] = []) =
       apiProcName.add &"{toSnakeCase(prefix.getName())}_"
   apiProcName.add &"{procNameSnaked}"
 
+  var defaults: seq[(string, NimNode)]
+  for identDefs in sym.getImpl()[3][1 .. ^1]:
+    let default = identDefs[^1]
+    for entry in identDefs[0 .. ^3]:
+      defaults.add((entry.repr, default))
+
   procs.add &"proc {apiProcName}("
   for param in procParams:
     for i in 0 .. param.len - 3:
@@ -85,15 +91,17 @@ proc exportProcNim*(sym: NimNode, prefixes: openarray[NimNode] = []) =
   procs.add "\n"
 
   procs.add &"proc {procName}*("
-  for param in procParams:
-    for i in 0 .. param.len - 3:
-      var paramType = param[^2]
-      if paramType.repr.endsWith(":type"):
-        paramType = prefixes[0]
-      if param[^2].kind == nnkBracketExpr or paramType.repr.startsWith("Some"):
-        procs.add &"{param[i].repr}: {exportTypeNim(paramType)}, "
-      else:
-        procs.add &"{param[i].repr}: {paramType}, "
+  for i, param in procParams:
+    var paramType = param[1]
+    if paramType.repr.endsWith(":type"):
+      paramType = prefixes[0]
+    if param[^2].kind == nnkBracketExpr or paramType.repr.startsWith("Some"):
+      procs.add &"{param[0].repr}: {exportTypeNim(paramType)}, "
+    else:
+      procs.add &"{param[0].repr}: {paramType}"
+      if defaults[i][1].kind != nnkEmpty:
+        procs.add &" = {defaults[i][1].repr}"
+      procs.add ", "
   procs.removeSuffix ", "
   procs.add ")"
   if procReturn.kind != nnkEmpty:
@@ -128,6 +136,18 @@ proc exportObjectNim*(sym: NimNode, constructor: NimNode) =
 
   if constructor != nil:
     exportProcNim(constructor)
+  else:
+    types.add &"proc {toVarCase(objName)}*("
+    for identDefs in sym.getImpl()[2][2]:
+      for property in identDefs[0 .. ^3]:
+        types.add &"{toSnakeCase(property[1].repr)}: {identDefs[^2].repr}, "
+    types.removeSuffix ", "
+    types.add &"): {objName} =\n"
+    for identDefs in sym.getImpl()[2][2]:
+      for property in identDefs[0 .. ^3]:
+        types.add &"  result.{toSnakeCase(property[1].repr)} = "
+        types.add &"{toSnakeCase(property[1].repr)}\n"
+    types.add "\n"
 
 proc genRefObject(objName: string) =
   types.add &"type {objName}Obj = object\n"
