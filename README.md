@@ -10,6 +10,7 @@ Language      | Method        | Enums  | Objects | Ref Objects | Seqs   |
 ------------- | ------------- | ------ | ------- | ----------- | ------ |
 Nim           | {.importc.}   | ✅     | ✅     | ✅          | ✅    |
 Python        | ctypes        | ✅     | ✅     | ✅          | ✅    |
+Node.js       | ffi-napi      | ✅     | ✅     | ✅          | ✅    |
 
 ## Genny is experimental and opinionated
 
