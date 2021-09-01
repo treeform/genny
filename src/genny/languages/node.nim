@@ -5,7 +5,7 @@ var
   procs {.compiletime.}: string
   exports {.compiletime.}: string
 
-proc exportTypeJs(sym: NimNode): string =
+proc exportTypeNode(sym: NimNode): string =
   if sym.kind == nnkBracketExpr:
     if sym[0].repr != "seq":
       quit(&"Unexpected bracket expression {sym[0].repr}[")
@@ -38,17 +38,17 @@ proc exportTypeJs(sym: NimNode): string =
       else:
         sym.repr
 
-proc convertExportFromJs*(sym: NimNode): string =
+proc convertExportFromNode*(sym: NimNode): string =
   discard
 
-proc convertImportToJs*(sym: NimNode): string =
+proc convertImportToNode*(sym: NimNode): string =
   discard
 
-proc exportConstJs*(sym: NimNode) =
+proc exportConstNode*(sym: NimNode) =
   let impl = sym.getImpl()
   exports.add &"exports.{toCapSnakeCase(sym.repr)} = {impl[2].repr}\n"
 
-proc exportEnumJs*(sym: NimNode) =
+proc exportEnumNode*(sym: NimNode) =
   let symImpl = sym.getImpl()[2]
 
   types.add &"const {sym.repr} = 'int8'\n"
@@ -62,11 +62,11 @@ proc dllProc(proName: string, procParams: seq[NimNode], returnType: string) =
   for param in procParams:
     for i in 0 .. param.len - 3:
       var paramType = param[^2]
-      procs.add &"{exportTypeJs(paramType)}, "
+      procs.add &"{exportTypeNode(paramType)}, "
   procs.removeSuffix ", "
   procs.add "]],\n"
 
-proc exportProcJs*(sym: NimNode, prefixes: openarray[NimNode] = [], ownClass = "") =
+proc exportProcNode*(sym: NimNode, prefixes: openarray[NimNode] = [], ownClass = "") =
   let
     procName = sym.repr
     procNameSnaked = toSnakeCase(procName)
@@ -119,7 +119,7 @@ proc exportProcJs*(sym: NimNode, prefixes: openarray[NimNode] = [], ownClass = "
       else:
         if defaults[i][1].kind != nnkEmpty:
           types.add &" = "
-          types.add &"{exportTypeJs(param[1])}("
+          types.add &"{exportTypeNode(param[1])}("
           for d in defaults[i][1][1 .. ^1]:
             types.add &"{d.repr}, "
           types.removeSuffix ", "
@@ -135,10 +135,10 @@ proc exportProcJs*(sym: NimNode, prefixes: openarray[NimNode] = [], ownClass = "
     if onClass and i == 0:
       types.add "this"
     else:
-      types.add &"{toSnakeCase(param[0].repr)}{convertExportFromJs(param[1])}"
+      types.add &"{toSnakeCase(param[0].repr)}{convertExportFromNode(param[1])}"
     types.add &", "
   types.removeSuffix ", "
-  types.add &"){convertImportToJs(procReturn)}\n"
+  types.add &"){convertImportToNode(procReturn)}\n"
   if procRaises:
     types.add &"  if(checkError()) "
     types.add "throw new PixieException("
@@ -148,9 +148,9 @@ proc exportProcJs*(sym: NimNode, prefixes: openarray[NimNode] = [], ownClass = "
     types.add "  return result\n"
   types.add "}\n\n"
 
-  dllProc(apiProcName, procParams, exportTypeJs(procReturn))
+  dllProc(apiProcName, procParams, exportTypeNode(procReturn))
 
-proc exportObjectJs*(sym: NimNode, constructor: NimNode) =
+proc exportObjectNode*(sym: NimNode, constructor: NimNode) =
   let objName = sym.repr
 
   exports.add &"exports.{objName} = {objName};\n"
@@ -158,7 +158,7 @@ proc exportObjectJs*(sym: NimNode, constructor: NimNode) =
   for identDefs in sym.getImpl()[2][2]:
     for property in identDefs[0 .. ^3]:
       types.add &"  '{property[1].repr}':"
-      types.add &"{exportTypeJs(identDefs[^2])},\n"
+      types.add &"{exportTypeNode(identDefs[^2])},\n"
   types.removeSuffix ",\n"
   types.add "\n})\n"
 
@@ -240,12 +240,12 @@ proc genSeqProcs(objName, ownObjName, procPrefix, selfSuffix: string, entryType:
   types.add &"{ownObjName}.prototype.get = function(index){{\n"
   types.add &"  return dll.{procPrefix}_get(this{selfSuffix}, index)\n"
   types.add "};\n"
-  procs.add &"  '{procPrefix}_get': [{exportTypeJs(entryType)}, [{objName}, 'uint64']],\n"
+  procs.add &"  '{procPrefix}_get': [{exportTypeNode(entryType)}, [{objName}, 'uint64']],\n"
 
   types.add &"{ownObjName}.prototype.set = function(index, value){{\n"
   types.add &"  dll.{procPrefix}_set(this{selfSuffix}, index, value)\n"
   types.add "};\n"
-  procs.add &"  '{procPrefix}_set': ['void', [{objName}, 'uint64', {exportTypeJs(entryType)}]],\n"
+  procs.add &"  '{procPrefix}_set': ['void', [{objName}, 'uint64', {exportTypeNode(entryType)}]],\n"
 
   types.add &"{ownObjName}.prototype.delete = function(index){{\n"
   types.add &"  dll.{procPrefix}_delete(this{selfSuffix}, index)\n"
@@ -255,14 +255,14 @@ proc genSeqProcs(objName, ownObjName, procPrefix, selfSuffix: string, entryType:
   types.add &"{ownObjName}.prototype.add = function(value){{\n"
   types.add &"  dll.{procPrefix}_add(this{selfSuffix}, value)\n"
   types.add "};\n"
-  procs.add &"  '{procPrefix}_add': ['void', [{objName}, {exportTypeJs(entryType)}]],\n"
+  procs.add &"  '{procPrefix}_add': ['void', [{objName}, {exportTypeNode(entryType)}]],\n"
 
   types.add &"{ownObjName}.prototype.clear = function(){{\n"
   types.add &"  dll.{procPrefix}_clear(this{selfSuffix})\n"
   types.add "};\n"
   procs.add &"  '{procPrefix}_clear': ['void', [{objName}]],\n"
 
-proc exportRefObjectJs*(
+proc exportRefObjectNode*(
   sym: NimNode, allowedFields: openarray[string], constructor: NimNode
 ) =
   let
@@ -289,7 +289,7 @@ proc exportRefObjectJs*(
     types.add &"  var result = "
     types.add &"dll.{constructorLibProc}("
     for i, param in constructorParams[0 .. ^1]:
-      types.add &"{toSnakeCase(param[0].repr)}{convertExportFromJs(param[1])}"
+      types.add &"{toSnakeCase(param[0].repr)}{convertExportFromNode(param[1])}"
       types.add ", "
     types.removeSuffix ", "
     types.add ")\n"
@@ -321,8 +321,8 @@ proc exportRefObjectJs*(
       types.add &"  set: function(v) {{dll.{setProcName}(this, v)}}\n"
       types.add "});\n"
 
-      procs.add &"  '{getProcName}': [{exportTypeJs(propertyType)}, [{objName}]],\n"
-      procs.add &"  '{setProcName}': ['void', [{objName}, {exportTypeJs(propertyType)}]],\n"
+      procs.add &"  '{getProcName}': [{exportTypeNode(propertyType)}, [{objName}]],\n"
+      procs.add &"  '{setProcName}': ['void', [{objName}, {exportTypeNode(propertyType)}]],\n"
 
     else:
       discard
@@ -348,7 +348,7 @@ proc exportRefObjectJs*(
 
   types.add "\n"
 
-proc exportSeqJs*(sym: NimNode) =
+proc exportSeqNode*(sym: NimNode) =
   let
     seqName = sym.getName()
     seqNameSnaked = toSnakeCase(seqName)
@@ -401,7 +401,7 @@ const footer = """
 
 """
 
-proc writeJs*(dir, lib: string) =
+proc writeNode*(dir, lib: string) =
   writeFile(
     &"{dir}/{lib}.js",
     (header & types & loader & procs & footer & exports).replace("$lib", lib).replace("$Lib", lib.capitalizeAscii())

@@ -1,4 +1,4 @@
-import genny/internal, genny/common, genny/languages/nim, genny/languages/python, genny/languages/javascript,
+import genny/internal, genny/common, genny/languages/nim, genny/languages/python, genny/languages/node,
     macros, strformat, tables
 
 template discard2(f: untyped): untyped =
@@ -26,7 +26,7 @@ macro exportConstsTyped(body: typed) =
     exportConstInternal(sym)
     exportConstNim(sym)
     exportConstPy(sym)
-    exportConstJs(sym)
+    exportConstNode(sym)
 
 template exportConsts*(body: untyped) =
   exportConstsTyped(exportConstsUntyped(body))
@@ -46,7 +46,7 @@ macro exportEnumsTyped(body: typed) =
     exportEnumInternal(sym)
     exportEnumNim(sym)
     exportEnumPy(sym)
-    exportEnumJs(sym)
+    exportEnumNode(sym)
 
 template exportEnums*(body: untyped) =
   exportEnumsTyped(exportEnumsUntyped(body))
@@ -89,7 +89,7 @@ proc procTyped(entry: NimNode, prefixes: openarray[NimNode] = [], ownerSym = "")
   exportProcInternal(procSym, prefixes)
   exportProcNim(procSym, prefixes)
   exportProcPy(procSym, prefixes)
-  exportProcJs(procSym, prefixes, ownerSym)
+  exportProcNode(procSym, prefixes, ownerSym)
 
 macro exportProcsUntyped(body: untyped) =
   result = newNimNode(nnkStmtList)
@@ -135,7 +135,7 @@ macro exportObjectTyped(body: typed) =
   exportObjectInternal(sym, constructor)
   exportObjectNim(sym, constructor)
   exportObjectPy(sym, constructor)
-  exportObjectJs(sym, constructor)
+  exportObjectNode(sym, constructor)
 
 template exportObject*(sym, body: untyped) =
   exportObjectTyped(exportObjectUntyped(sym, body))
@@ -167,7 +167,7 @@ macro exportSeqTyped(body: typed) =
   exportSeqInternal(sym)
   exportSeqNim(sym)
   exportSeqPy(sym)
-  exportSeqJs(sym)
+  exportSeqNode(sym)
 
   for entry in body[1 .. ^2]:
     procTyped(entry, [sym], sym.getName())
@@ -236,7 +236,7 @@ macro exportRefObjectTyped(body: typed) =
   exportRefObjectInternal(sym, allowedFields, constructor)
   exportRefObjectNim(sym, allowedFields, constructor)
   exportRefObjectPy(sym, allowedFields, constructor)
-  exportRefObjectJs(sym, allowedFields, constructor)
+  exportRefObjectNode(sym, allowedFields, constructor)
 
   if procsBlock[1].len > 0:
     var procsSeen: seq[string]
@@ -253,7 +253,7 @@ macro exportRefObjectTyped(body: typed) =
       exportProcInternal(procSym, prefixes)
       exportProcNim(procSym, prefixes)
       exportProcPy(procSym, prefixes)
-      exportProcJs(procSym, prefixes, sym.repr)
+      exportProcNode(procSym, prefixes, sym.repr)
 
 template exportRefObject*(sym, body: untyped) =
   exportRefObjecTtyped(exportRefObjectUntyped(sym, body))
@@ -262,4 +262,4 @@ macro writeFiles*(dir, lib: static[string]) =
   writeInternal(dir, lib)
   writeNim(dir, lib)
   writePy(dir, lib)
-  writeJs(dir, lib)
+  writeNode(dir, lib)
