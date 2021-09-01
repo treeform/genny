@@ -110,7 +110,7 @@ proc exportProcPy*(sym: NimNode, prefixes: openarray[NimNode] = []) =
   for i, param in procParams[0 .. ^1]:
     if i == 0:
       continue
-    if defaults[i][1].kind == nnkCall:
+    if defaults[i][1].kind notin {nnkEmpty, nnkIntLit, nnkFloatLit, nnkIdent}:
       if onClass:
           types.add "    "
       types.add &"    if {toSnakeCase(param[0].repr)} is None:\n"
@@ -118,10 +118,12 @@ proc exportProcPy*(sym: NimNode, prefixes: openarray[NimNode] = []) =
           types.add "    "
       types.add &"        {toSnakeCase(param[0].repr)} = "
       types.add &"{exportTypePy(param[1])}("
-      for d in defaults[i][1][1 .. ^1]:
-        types.add &"{d.repr}, "
+      if defaults[i][1].kind == nnkCall:
+        for d in defaults[i][1][1 .. ^1]:
+          types.add &"{d.repr}, "
       types.removeSuffix ", "
       types.add ")\n"
+
   if onClass:
     types.add "    "
   types.add "    "
@@ -222,7 +224,7 @@ proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
     types.add "\n"
 
   types.add "    def __eq__(self, obj):\n"
-  types.add "        "
+  types.add "        return "
   for identDefs in sym.getImpl()[2][2]:
     for property in identDefs[0 .. ^3]:
       types.add &"self.{toSnakeCase(property[1].repr)} == obj.{toSnakeCase(property[1].repr)} and "
@@ -236,11 +238,11 @@ proc genRefObject(objName: string) =
   types.add "\n"
 
   types.add "    def __bool__(self):\n"
-  types.add "        self.ref != None\n"
+  types.add "        return self.ref != None\n"
   types.add "\n"
 
   types.add "    def __eq__(self, obj):\n"
-  types.add "        self.ref == obj.ref\n"
+  types.add "        return self.ref == obj.ref\n"
   types.add "\n"
 
   types.add "    def __del__(self):\n"
