@@ -281,8 +281,8 @@ proc exportRefObjectNode*(
       constructorParams = constructorType[0][1 .. ^1]
       constructorRaises = constructor.raises()
 
-    # TODO Fix exports
-    types.add &"exports.{toVarCase(objName)} = function("
+    exports.add &"exports.new{objName} = new{objName}\n"
+    types.add &"function new{objName}("
     for i, param in constructorParams[0 .. ^1]:
       types.add &"{toSnakeCase(param[0].repr)}"
       types.add ", "
