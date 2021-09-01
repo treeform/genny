@@ -42,6 +42,19 @@ proc toCapSnakeCase*(s: string): string =
       prevCap = false
     result.add c.toUpperAscii()
 
+proc toCamelCase*(s: string): string =
+  ## Converts nim_type to NimType.
+  var cap = true
+  for i, c in s:
+    if c == '_':
+      cap = true
+    else:
+      if cap:
+        result.add c.toUpperAscii()
+        cap = false
+      else:
+        result.add c
+
 proc toVarCase*(s: string): string =
   ## Converts NimType to nimType.
   var i = 0

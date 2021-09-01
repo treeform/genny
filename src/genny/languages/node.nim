@@ -92,11 +92,13 @@ proc exportProcNode*(sym: NimNode, prefixes: openarray[NimNode] = [], ownClass =
 
   if onClass:
     types.add &"{ownClass}.prototype."
+    var name = ""
     if prefixes.len > 1:
       if prefixes[1].getImpl().kind != nnkNilLIt:
         if prefixes[1].getImpl()[2].kind != nnkEnumTy:
-          types.add &"{prefixes[1].repr}_"
-    types.add &"{sym.repr} = function("
+          name.add &"{prefixes[1].repr}_"
+    name.add sym.repr
+    types.add &"{toVarCase(toCamelCase(name))} = function("
   else:
     types.add &"function {sym.repr}("
     exports.add &"exports.{sym.repr} = {sym.repr}\n"
