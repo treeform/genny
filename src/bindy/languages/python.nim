@@ -342,7 +342,11 @@ proc exportRefObjectPy*(
       types.add "        self.ref = result\n"
       types.add "\n"
 
-      procs.add &"dll.{constructorLibProc}.argtypes = []\n"
+      procs.add &"dll.{constructorLibProc}.argtypes = ["
+      for param in constructorParams:
+        procs.add &"{exportTypePy(param[1])}, "
+      procs.removeSuffix ", "
+      procs.add "]\n"
       procs.add &"dll.{constructorLibProc}.restype = c_ulonglong\n"
       procs.add "\n"
 
