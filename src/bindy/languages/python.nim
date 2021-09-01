@@ -236,11 +236,11 @@ proc genRefObject(objName: string) =
   types.add "\n"
 
   types.add "    def __bool__(self):\n"
-  types.add "        self.ref != None\n"
+  types.add "        return self.ref != None\n"
   types.add "\n"
 
   types.add "    def __eq__(self, obj):\n"
-  types.add "        self.ref == obj.ref\n"
+  types.add "        return self.ref == obj.ref\n"
   types.add "\n"
 
   types.add "    def __del__(self):\n"
