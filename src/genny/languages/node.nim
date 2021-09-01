@@ -214,7 +214,7 @@ proc exportObjectNode*(sym: NimNode, constructor: NimNode) =
   types.add "\n"
 
 proc genRefObject(objName: string) =
-  exports.add &"exports.{objName} = {objName}\n"
+  exports.add &"exports.{objName}Type = {objName}\n"
   types.add &"{objName} = " & "Struct({'nimRef': 'uint64'});\n"
 
   types.add &"{objName}.prototype.isNull = function(){{\n"
@@ -281,7 +281,7 @@ proc exportRefObjectNode*(
       constructorParams = constructorType[0][1 .. ^1]
       constructorRaises = constructor.raises()
 
-    exports.add &"exports.new{objName} = new{objName}\n"
+    exports.add &"exports.{objName} = new{objName}\n"
     types.add &"function new{objName}("
     for i, param in constructorParams[0 .. ^1]:
       types.add &"{toSnakeCase(param[0].repr)}"
