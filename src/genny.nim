@@ -1,4 +1,4 @@
-import bindy/internal, bindy/common, bindy/languages/nim, bindy/languages/python, bindy/languages/javascript,
+import genny/internal, genny/common, genny/languages/nim, genny/languages/python, genny/languages/javascript,
     macros, strformat, tables
 
 template discard2(f: untyped): untyped =

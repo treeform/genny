@@ -1,4 +1,4 @@
-import bindy/common, macros, strformat, strutils
+import genny/common, macros, strformat, strutils
 
 var
   types {.compiletime.}: string
