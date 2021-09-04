@@ -43,15 +43,12 @@ proc convertImportToPy*(sym: NimNode): string =
     result = ".decode(\"utf8\")"
 
 proc exportConstPy*(sym: NimNode) =
-  let impl = sym.getImpl()
-  types.add &"{toCapSnakeCase(sym.repr)} = {impl[2].repr}\n"
+  types.add &"{toCapSnakeCase(sym.repr)} = {sym.getImpl()[2].repr}\n"
   types.add "\n"
 
 proc exportEnumPy*(sym: NimNode) =
-  let symImpl = sym.getImpl()[2]
-
   types.add &"{sym.repr} = c_byte\n"
-  for i, entry in symImpl[1 .. ^1]:
+  for i, entry in sym.getImpl()[2][1 .. ^1]:
     types.add &"{toCapSnakeCase(entry.repr)} = {i}\n"
   types.add "\n"
 
@@ -107,6 +104,22 @@ proc exportProcPy*(sym: NimNode, prefixes: openarray[NimNode] = []) =
     types.add &", "
   types.removeSuffix ", "
   types.add "):\n"
+  let comments =
+    if sym.getImpl()[6][0].kind == nnkCommentStmt:
+      sym.getImpl()[6][0].repr
+    elif sym.getImpl[6].kind == nnkAsgn and sym.getImpl[6][1][0].kind == nnkCommentStmt:
+      sym.getImpl[6][1][0].repr
+    else:
+      ""
+  if comments != "":
+    let lines = comments.replace("## ", "").split("\n")
+    if onClass: types.add "    "
+    types.add "    \"\"\"\n"
+    for line in lines:
+      if onClass: types.add "    "
+      types.add &"    {line}\n"
+    if onClass: types.add "    "
+    types.add "    \"\"\"\n"
   for i, param in procParams[0 .. ^1]:
     if i == 0:
       continue
