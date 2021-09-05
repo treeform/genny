@@ -80,7 +80,7 @@ proc exportProcNim*(
     for i in 0 .. param.len - 3:
       var paramType = param[^2]
       if paramType.repr.endsWith(":type"):
-        paramType = prefixes[0]
+        paramType = owner
       procs.add &"{toSnakeCase(param[i].repr)}: {exportTypeNim(paramType)}, "
   procs.removeSuffix ", "
   procs.add ")"
@@ -96,7 +96,7 @@ proc exportProcNim*(
   for i, param in procParams:
     var paramType = param[1]
     if paramType.repr.endsWith(":type"):
-      paramType = prefixes[0]
+      paramType = owner
     if param[^2].kind == nnkBracketExpr or paramType.repr.startsWith("Some"):
       procs.add &"{param[0].repr}: {exportTypeNim(paramType)}, "
     else:

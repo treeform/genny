@@ -30,7 +30,7 @@ proc exportTypePy(sym: NimNode): string =
       of "Rune": "c_int"
       of "Vec2": "Vector2"
       of "Mat3": "Matrix3"
-      of "": "None"
+      of "", "nil": "None"
       else:
         sym.repr
 
@@ -41,6 +41,20 @@ proc convertExportFromPy*(sym: NimNode): string =
 proc convertImportToPy*(sym: NimNode): string =
   if sym.repr == "string":
     result = ".decode(\"utf8\")"
+
+proc toArgTypes(args: openarray[NimNode]): seq[string] =
+  for arg in args:
+    if arg.getSize() > sizeof(float64) * 3:
+      result.add &"POINTER({exportTypePy(arg)})"
+    else:
+      result.add exportTypePy(arg)
+
+proc dllProc*(procName: string, args: openarray[string], restype: string) =
+  var argtypes = join(args, ", ")
+  argtypes.removeSuffix ", "
+  procs.add &"{procName}.argtypes = [{argtypes}]\n"
+  procs.add &"{procName}.restype = {restype}\n"
+  procs.add "\n"
 
 proc exportConstPy*(sym: NimNode) =
   types.add &"{toCapSnakeCase(sym.repr)} = {sym.getImpl()[2].repr}\n"
@@ -64,7 +78,7 @@ proc exportProcPy*(
     procParams = procType[0][1 .. ^1]
     procReturn = procType[0][0]
     procRaises = sym.raises()
-    onClass = prefixes.len > 0
+    onClass = owner != nil
 
   var apiProcName = ""
   if owner != nil:
@@ -81,10 +95,10 @@ proc exportProcPy*(
 
   if onClass:
     types.add "    def "
-    if prefixes.len > 1:
-      if prefixes[1].getImpl().kind != nnkNilLIt:
-        if prefixes[1].getImpl()[2].kind != nnkEnumTy:
-          types.add &"{toSnakeCase(prefixes[1].repr)}_"
+    if prefixes.len > 0:
+      if prefixes[0].getImpl().kind != nnkNilLIt:
+        if prefixes[0].getImpl()[2].kind != nnkEnumTy:
+          types.add &"{toSnakeCase(prefixes[0].repr)}_"
     types.add &"{toSnakeCase(sym.repr)}("
   else:
     types.add &"def {apiProcName}("
@@ -125,7 +139,7 @@ proc exportProcPy*(
       types.add &"    {line}\n"
     if onClass: types.add "    "
     types.add "    \"\"\"\n"
-  for i, param in procParams[0 .. ^1]:
+  for i, param in procParams:
     if i == 0:
       continue
     if defaults[i][1].kind notin {nnkEmpty, nnkIntLit, nnkFloatLit, nnkIdent}:
@@ -171,20 +185,10 @@ proc exportProcPy*(
     types.add "    return result\n"
   types.add "\n"
 
-  procs.add &"dll.$lib_{apiProcName}.argtypes = ["
+  var dllParams: seq[NimNode]
   for param in procParams:
-    for i in 0 .. param.len - 3:
-      var paramType = param[^2]
-      if paramType.repr.endsWith(":type"):
-        paramType = prefixes[0]
-      if paramType.getSize() > sizeof(float64) * 3:
-        procs.add &"POINTER({exportTypePy(paramType)}), "
-      else:
-        procs.add &"{exportTypePy(paramType)}, "
-  procs.removeSuffix ", "
-  procs.add "]\n"
-  procs.add &"dll.$lib_{apiProcName}.restype = {exportTypePy(procReturn)}\n"
-  procs.add "\n"
+    dllParams.add(param[1])
+  dllProc(&"dll.$lib_{apiProcName}", toArgTypes(dllParams), exportTypePy(procReturn))
 
 proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
   let objName = sym.repr
@@ -222,17 +226,10 @@ proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
         types.add &"        self.{toSnakeCase(property[1].repr)} = "
         types.add &"tmp.{toSnakeCase(property[1].repr)}\n"
     types.add "\n"
-
-    procs.add &"dll.$lib_{toSnakeCase(objName)}.argtypes = ["
+    var dllParams: seq[NimNode]
     for param in constructorParams:
-      if param.getSize() > sizeof(float64) * 3:
-        procs.add &"POINTER({exportTypePy(param[1])}), "
-      else:
-        procs.add &"{exportTypePy(param[1])}, "
-    procs.removeSuffix ", "
-    procs.add "]\n"
-    procs.add &"dll.$lib_{toSnakeCase(objName)}.restype = {objName}\n"
-    procs.add "\n"
+      dllParams.add(param[1])
+    dllProc(&"dll.$lib_{toSnakeCase(objName)}", toArgTypes(dllParams), objName)
   else:
     types.add "    def __init__(self, "
     for identDefs in sym.getImpl()[2][2]:
@@ -269,13 +266,13 @@ proc genRefObject(objName: string) =
   types.add "        return self.ref == obj.ref\n"
   types.add "\n"
 
+  let unrefLibProc = &"dll.$lib_{toSnakeCase(objName)}_unref"
+
   types.add "    def __del__(self):\n"
-  types.add &"        dll.$lib_{toSnakeCase(objName)}_unref(self)\n"
+  types.add &"        {unrefLibProc}(self)\n"
   types.add "\n"
 
-  procs.add &"dll.$lib_{toSnakeCase(objName)}_unref.argtypes = [{objName}]\n"
-  procs.add &"dll.$lib_{toSnakeCase(objName)}_unref.restype = None\n"
-  procs.add "\n"
+  dllProc(unrefLibProc, [objName], "None")
 
 proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   var baseIndent = "    "
@@ -306,29 +303,12 @@ proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   types.add &"{baseIndent}    dll.{procPrefix}_clear(self{selfSuffix})\n"
   types.add "\n"
 
-  procs.add &"dll.{procPrefix}_len.argtypes = [{objName}]\n"
-  procs.add &"dll.{procPrefix}_len.restype = c_longlong\n"
-  procs.add "\n"
-
-  procs.add &"dll.{procPrefix}_get.argtypes = [{objName}, c_longlong]\n"
-  procs.add &"dll.{procPrefix}_get.restype = {exportTypePy(entryType)}\n"
-  procs.add "\n"
-
-  procs.add &"dll.{procPrefix}_set.argtypes = [{objName}, c_longlong, {exportTypePy(entryType)}]\n"
-  procs.add &"dll.{procPrefix}_set.restype = None\n"
-  procs.add "\n"
-
-  procs.add &"dll.{procPrefix}_delete.argtypes = [{objName}, c_longlong]\n"
-  procs.add &"dll.{procPrefix}_delete.restype = None\n"
-  procs.add "\n"
-
-  procs.add &"dll.{procPrefix}_add.argtypes = [{objName}, {exportTypePy(entryType)}]\n"
-  procs.add &"dll.{procPrefix}_add.restype = None\n"
-  procs.add "\n"
-
-  procs.add &"dll.{procPrefix}_clear.argtypes = [{objName}]\n"
-  procs.add &"dll.{procPrefix}_clear.restype = None\n"
-  procs.add "\n"
+  dllProc(&"dll.{procPrefix}_len", [objName], "c_longlong")
+  dllProc(&"dll.{procPrefix}_get", [objName, "c_longlong"], exportTypePy(entryType))
+  dllProc(&"dll.{procPrefix}_set", [objName, "c_longlong", exportTypePy(entryType)], "None")
+  dllProc(&"dll.{procPrefix}_delete", [objName, "c_longlong"], "None")
+  dllProc(&"dll.{procPrefix}_add", [objName, exportTypePy(entryType)], "None")
+  dllProc(&"dll.{procPrefix}_clear", [objName], "None")
 
 proc exportRefObjectPy*(
   sym: NimNode, allowedFields: openarray[string], constructor: NimNode
@@ -342,7 +322,7 @@ proc exportRefObjectPy*(
 
   if constructor != nil:
       let
-        constructorLibProc = &"$lib_{toSnakeCase(constructor.repr)}"
+        constructorLibProc = &"dll.$lib_{toSnakeCase(constructor.repr)}"
         constructorType = constructor.getTypeInst()
         constructorParams = constructorType[0][1 .. ^1]
         constructorRaises = constructor.raises()
@@ -354,8 +334,8 @@ proc exportRefObjectPy*(
       types.removeSuffix ", "
       types.add "):\n"
       types.add &"        result = "
-      types.add &"dll.{constructorLibProc}("
-      for i, param in constructorParams[0 .. ^1]:
+      types.add &"{constructorLibProc}("
+      for param in constructorParams:
         types.add &"{toSnakeCase(param[0].repr)}{convertExportFromPy(param[1])}"
         types.add ", "
       types.removeSuffix ", "
@@ -368,17 +348,10 @@ proc exportRefObjectPy*(
       types.add "        self.ref = result\n"
       types.add "\n"
 
-      procs.add &"dll.{constructorLibProc}.argtypes = ["
+      var dllParams: seq[NimNode]
       for param in constructorParams:
-        if param.getSize() > sizeof(float64) * 3:
-          procs.add &"POINTER({exportTypePy(param[1])}), "
-        else:
-          procs.add &"{exportTypePy(param[1])}, "
-      procs.removeSuffix ", "
-      procs.add "]\n"
-      procs.add &"dll.{constructorLibProc}.restype = c_ulonglong\n"
-      procs.add "\n"
-
+        dllParams.add(param[1])
+      dllProc(constructorLibProc, toArgTypes(dllParams), "c_ulonglong")
   for property in objType[2]:
     if property.repr notin allowedFields:
       continue
@@ -407,19 +380,8 @@ proc exportRefObjectPy*(
       types.add ")\n"
       types.add "\n"
 
-      procs.add &"{getProcName}.argtypes = [{objName}]\n"
-      procs.add &"{getProcName}.restype = {exportTypePy(propertyType)}\n"
-      procs.add "\n"
-
-      let argType =
-        if propertyType.getSize() > sizeof(float64) * 3:
-          &"POINTER({exportTypePy(propertyType)})"
-        else:
-          exportTypePy(propertyType)
-
-      procs.add &"{setProcName}.argtypes = [{objName}, {argType}]\n"
-      procs.add &"{setProcName}.restype = None\n"
-      procs.add "\n"
+      dllProc(getProcName, toArgTypes([sym]), exportTypePy(propertyType))
+      dllProc(setProcName, toArgTypes([sym, propertyType]), exportTypePy(nil))
     else:
       var helperName = property.repr
       helperName[0] = toUpperAscii(helperName[0])
@@ -450,15 +412,13 @@ proc exportSeqPy*(sym: NimNode) =
 
   genRefObject(seqName)
 
-  let newSeqProc = &"$lib_new_{toSnakeCase(seqName)}"
+  let newSeqProc = &"dll.$lib_new_{toSnakeCase(seqName)}"
 
   types.add "    def __init__(self):\n"
-  types.add &"        self.ref = dll.{newSeqProc}()\n"
+  types.add &"        self.ref = {newSeqProc}()\n"
   types.add "\n"
 
-  procs.add &"dll.{newSeqProc}.argtypes = []\n"
-  procs.add &"dll.{newSeqProc}.restype = c_ulonglong\n"
-  procs.add "\n"
+  dllProc(newSeqProc, [], "c_ulonglong")
 
   genSeqProcs(
     sym.getName(),
@@ -472,16 +432,14 @@ from ctypes import *
 import os, sys
 from pathlib import Path
 
-src_path = Path(__file__).resolve()
-src_dir = str(src_path.parent)
-
+dir = os.path.dirname(sys.modules["pixie"].__file__)
 if sys.platform == "win32":
   libName = "pixie.dll"
 elif sys.platform == "darwin":
   libName = "libpixie.dylib"
 else:
   libName = "libpixie.so"
-dll = cdll.LoadLibrary(src_dir + "/" + libName)
+dll = cdll.LoadLibrary(os.path.join(dir, libName))
 
 class PixieError(Exception):
     pass

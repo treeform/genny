@@ -78,7 +78,7 @@ proc exportProcNode*(
     procParams = procType[0][1 .. ^1]
     procReturn = procType[0][0]
     procRaises = sym.raises()
-    onClass = prefixes.len > 0
+    onClass = owner != nil
 
   ## Nim bug, must set to "" first, otherwise crazy!
   var apiProcName = ""
@@ -98,10 +98,10 @@ proc exportProcNode*(
   if onClass:
     types.add &"{owner.repr}.prototype."
     var name = ""
-    if prefixes.len > 1:
-      if prefixes[1].getImpl().kind != nnkNilLIt:
-        if prefixes[1].getImpl()[2].kind != nnkEnumTy:
-          name.add &"{prefixes[1].repr}_"
+    if prefixes.len > 0:
+      if prefixes[0].getImpl().kind != nnkNilLIt:
+        if prefixes[0].getImpl()[2].kind != nnkEnumTy:
+          name.add &"{prefixes[0].repr}_"
     name.add sym.repr
     types.add &"{toVarCase(toCamelCase(name))} = function("
   else:
