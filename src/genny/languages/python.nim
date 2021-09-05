@@ -172,7 +172,10 @@ proc exportProcPy*(sym: NimNode, prefixes: openarray[NimNode] = []) =
       var paramType = param[^2]
       if paramType.repr.endsWith(":type"):
         paramType = prefixes[0]
-      procs.add &"{exportTypePy(paramType)}, "
+      if paramType.getSize() > sizeof(float64) * 3:
+        procs.add &"POINTER({exportTypePy(paramType)}), "
+      else:
+        procs.add &"{exportTypePy(paramType)}, "
   procs.removeSuffix ", "
   procs.add "]\n"
   procs.add &"dll.$lib_{apiProcName}.restype = {exportTypePy(procReturn)}\n"
@@ -217,7 +220,10 @@ proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
 
     procs.add &"dll.$lib_{toSnakeCase(objName)}.argtypes = ["
     for param in constructorParams:
-      procs.add &"{exportTypePy(param[1])}, "
+      if param.getSize() > sizeof(float64) * 3:
+        procs.add &"POINTER({exportTypePy(param[1])}), "
+      else:
+        procs.add &"{exportTypePy(param[1])}, "
     procs.removeSuffix ", "
     procs.add "]\n"
     procs.add &"dll.$lib_{toSnakeCase(objName)}.restype = {objName}\n"
@@ -359,7 +365,10 @@ proc exportRefObjectPy*(
 
       procs.add &"dll.{constructorLibProc}.argtypes = ["
       for param in constructorParams:
-        procs.add &"{exportTypePy(param[1])}, "
+        if param.getSize() > sizeof(float64) * 3:
+          procs.add &"POINTER({exportTypePy(param[1])}), "
+        else:
+          procs.add &"{exportTypePy(param[1])}, "
       procs.removeSuffix ", "
       procs.add "]\n"
       procs.add &"dll.{constructorLibProc}.restype = c_ulonglong\n"
@@ -397,7 +406,13 @@ proc exportRefObjectPy*(
       procs.add &"{getProcName}.restype = {exportTypePy(propertyType)}\n"
       procs.add "\n"
 
-      procs.add &"{setProcName}.argtypes = [{objName}, {exportTypePy(propertyType)}]\n"
+      let argType =
+        if propertyType.getSize() > sizeof(float64) * 3:
+          &"POINTER({exportTypePy(propertyType)})"
+        else:
+          exportTypePy(propertyType)
+
+      procs.add &"{setProcName}.argtypes = [{objName}, {argType}]\n"
       procs.add &"{setProcName}.restype = None\n"
       procs.add "\n"
     else:
