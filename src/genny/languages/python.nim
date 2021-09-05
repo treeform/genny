@@ -44,10 +44,7 @@ proc convertImportToPy*(sym: NimNode): string =
 
 proc toArgTypes(args: openarray[NimNode]): seq[string] =
   for arg in args:
-    if arg.getSize() > sizeof(float64) * 3:
-      result.add &"POINTER({exportTypePy(arg)})"
-    else:
-      result.add exportTypePy(arg)
+    result.add exportTypePy(arg)
 
 proc dllProc*(procName: string, args: openarray[string], restype: string) =
   var argtypes = join(args, ", ")
