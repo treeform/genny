@@ -10,7 +10,11 @@ proc exportConstInternal*(sym: NimNode) =
 proc exportEnumInternal*(sym: NimNode) =
   discard
 
-proc exportProcInternal*(sym: NimNode, prefixes: openarray[NimNode] = []) =
+proc exportProcInternal*(
+  sym: NimNode,
+  owner: NimNode = nil,
+  prefixes: openarray[NimNode] = []
+) =
   let
     procName = sym.repr
     procNameSnaked = toSnakeCase(procName)
@@ -20,9 +24,10 @@ proc exportProcInternal*(sym: NimNode, prefixes: openarray[NimNode] = []) =
     procRaises = sym.raises()
 
   var apiProcName = &"$lib_"
-  if prefixes.len > 0:
-    for prefix in prefixes:
-      apiProcName.add &"{toSnakeCase(prefix.getName())}_"
+  if owner != nil:
+    apiProcName.add &"{toSnakeCase(owner.getName())}_"
+  for prefix in prefixes:
+    apiProcName.add &"{toSnakeCase(prefix.getName())}_"
   apiProcName.add &"{procNameSnaked}"
 
   internal.add &"proc {apiProcName}*("

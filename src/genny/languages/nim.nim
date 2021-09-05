@@ -49,7 +49,11 @@ proc exportEnumNim*(sym: NimNode) =
     types.add &"  {entry.repr}\n"
   types.add "\n"
 
-proc exportProcNim*(sym: NimNode, prefixes: openarray[NimNode] = []) =
+proc exportProcNim*(
+  sym: NimNode,
+  owner: NimNode = nil,
+  prefixes: openarray[NimNode] = []
+) =
   let
     procName = sym.repr
     procNameSnaked = toSnakeCase(procName)
@@ -59,9 +63,10 @@ proc exportProcNim*(sym: NimNode, prefixes: openarray[NimNode] = []) =
     procRaises = sym.raises()
 
   var apiProcName = &"$lib_"
-  if prefixes.len > 0:
-    for prefix in prefixes:
-      apiProcName.add &"{toSnakeCase(prefix.getName())}_"
+  if owner != nil:
+    apiProcName.add &"{toSnakeCase(owner.getName())}_"
+  for prefix in prefixes:
+    apiProcName.add &"{toSnakeCase(prefix.getName())}_"
   apiProcName.add &"{procNameSnaked}"
 
   var defaults: seq[(string, NimNode)]

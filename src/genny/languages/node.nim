@@ -66,7 +66,11 @@ proc dllProc(proName: string, procParams: seq[NimNode], returnType: string) =
   procs.removeSuffix ", "
   procs.add "]],\n"
 
-proc exportProcNode*(sym: NimNode, prefixes: openarray[NimNode] = [], ownClass = "") =
+proc exportProcNode*(
+  sym: NimNode,
+  owner: NimNode = nil,
+  prefixes: openarray[NimNode] = []
+) =
   let
     procName = sym.repr
     procNameSnaked = toSnakeCase(procName)
@@ -79,9 +83,10 @@ proc exportProcNode*(sym: NimNode, prefixes: openarray[NimNode] = [], ownClass =
   ## Nim bug, must set to "" first, otherwise crazy!
   var apiProcName = ""
   apiProcName.add "$lib_"
-  if prefixes.len > 0:
-    for prefix in prefixes:
-      apiProcName.add &"{toSnakeCase(prefix.getName())}_"
+  if owner != nil:
+    apiProcName.add &"{toSnakeCase(owner.getName())}_"
+  for prefix in prefixes:
+    apiProcName.add &"{toSnakeCase(prefix.getName())}_"
   apiProcName.add &"{procNameSnaked}"
 
   var defaults: seq[(string, NimNode)]
@@ -91,7 +96,7 @@ proc exportProcNode*(sym: NimNode, prefixes: openarray[NimNode] = [], ownClass =
       defaults.add((entry.repr, default))
 
   if onClass:
-    types.add &"{ownClass}.prototype."
+    types.add &"{owner.repr}.prototype."
     var name = ""
     if prefixes.len > 1:
       if prefixes[1].getImpl().kind != nnkNilLIt:

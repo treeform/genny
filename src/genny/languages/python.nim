@@ -52,7 +52,11 @@ proc exportEnumPy*(sym: NimNode) =
     types.add &"{toCapSnakeCase(entry.repr)} = {i}\n"
   types.add "\n"
 
-proc exportProcPy*(sym: NimNode, prefixes: openarray[NimNode] = []) =
+proc exportProcPy*(
+  sym: NimNode,
+  owner: NimNode = nil,
+  prefixes: openarray[NimNode] = []
+) =
   let
     procName = sym.repr
     procNameSnaked = toSnakeCase(procName)
@@ -63,9 +67,10 @@ proc exportProcPy*(sym: NimNode, prefixes: openarray[NimNode] = []) =
     onClass = prefixes.len > 0
 
   var apiProcName = ""
-  if prefixes.len > 0:
-    for prefix in prefixes:
-      apiProcName.add &"{toSnakeCase(prefix.getName())}_"
+  if owner != nil:
+    apiProcName.add &"{toSnakeCase(owner.getName())}_"
+  for prefix in prefixes:
+    apiProcName.add &"{toSnakeCase(prefix.getName())}_"
   apiProcName.add &"{procNameSnaked}"
 
   var defaults: seq[(string, NimNode)]
