@@ -1,4 +1,4 @@
-import genny/internal, genny/common, genny/languages/nim, genny/languages/python, genny/languages/node,
+import genny/internal, genny/languages/nim, genny/languages/python, genny/languages/node,
     macros, strformat, tables
 
 template discard2(f: untyped): untyped =
@@ -84,12 +84,16 @@ proc procTypedSym(entry: NimNode): NimNode =
       else:
         entry[1][^1][0][0]
 
-proc procTyped(entry: NimNode, prefixes: openarray[NimNode] = [], ownerSym = "") =
+proc procTyped(
+  entry: NimNode,
+  owner: NimNode = nil,
+  prefixes: openarray[NimNode] = []
+) =
   let procSym = procTypedSym(entry)
-  exportProcInternal(procSym, prefixes)
-  exportProcNim(procSym, prefixes)
-  exportProcPy(procSym, prefixes)
-  exportProcNode(procSym, prefixes, ownerSym)
+  exportProcInternal(procSym, owner, prefixes)
+  exportProcNim(procSym, owner, prefixes)
+  exportProcPy(procSym, owner, prefixes)
+  exportProcNode(procSym, owner, prefixes)
 
 macro exportProcsUntyped(body: untyped) =
   result = newNimNode(nnkStmtList)
@@ -170,7 +174,7 @@ macro exportSeqTyped(body: typed) =
   exportSeqNode(sym)
 
   for entry in body[1 .. ^2]:
-    procTyped(entry, [sym], sym.getName())
+    procTyped(entry, sym)
 
 template exportSeq*(sym, body: untyped) =
   exportSeqTyped(exportSeqUntyped(sym, body))
@@ -243,17 +247,17 @@ macro exportRefObjectTyped(body: typed) =
     for entry in procsBlock[1][0 .. ^2]:
       var
         procSym = procTypedSym(entry)
-        prefixes = @[sym]
+        prefixes: seq[NimNode]
       if procSym.repr notin procsSeen:
         procsSeen.add procSym.repr
       else:
         let procType = procSym.getTypeInst()
         if procType[0].len > 2:
           prefixes.add(procType[0][2][1])
-      exportProcInternal(procSym, prefixes)
-      exportProcNim(procSym, prefixes)
-      exportProcPy(procSym, prefixes)
-      exportProcNode(procSym, prefixes, sym.repr)
+      exportProcInternal(procSym, sym, prefixes)
+      exportProcNim(procSym, sym, prefixes)
+      exportProcPy(procSym, sym, prefixes)
+      exportProcNode(procSym, sym, prefixes)
 
 template exportRefObject*(sym, body: untyped) =
   exportRefObjecTtyped(exportRefObjectUntyped(sym, body))
