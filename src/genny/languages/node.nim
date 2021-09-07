@@ -80,6 +80,20 @@ proc exportProcNode*(
     procRaises = sym.raises()
     onClass = owner != nil
 
+  let comments =
+    if sym.getImpl()[6][0].kind == nnkCommentStmt:
+      sym.getImpl()[6][0].repr
+    elif sym.getImpl[6].kind == nnkAsgn and sym.getImpl[6][1][0].kind == nnkCommentStmt:
+      sym.getImpl[6][1][0].repr
+    else:
+      ""
+  if comments != "":
+    let lines = comments.replace("## ", "").split("\n")
+    types.add "/**\n"
+    for i, line in lines:
+       types.add &" * {line}\n"
+    types.add " */\n"
+
   ## Nim bug, must set to "" first, otherwise crazy!
   var apiProcName = ""
   apiProcName.add "$lib_"
@@ -96,7 +110,7 @@ proc exportProcNode*(
       defaults.add((entry.repr, default))
 
   if onClass:
-    types.add &"{owner.repr}.prototype."
+    types.add &"{owner.getName()}.prototype."
     var name = ""
     if prefixes.len > 0:
       if prefixes[0].getImpl().kind != nnkNilLIt:
@@ -394,7 +408,7 @@ const loader = """
 
 var dllPath = ""
 if(process.platform == "win32") {
-  dllPath = '$lib.dll'
+  dllPath = __dirname + '/$lib.dll'
 } else if (process.platform == "darwin") {
   dllPath = __dirname + '/lib$lib.dylib'
 } else {
