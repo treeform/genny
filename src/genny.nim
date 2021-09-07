@@ -26,7 +26,7 @@ macro exportConstsTyped(body: typed) =
     exportConstInternal(sym)
     exportConstNim(sym)
     exportConstPy(sym)
-    exportConstNode(sym)
+    # exportConstNode(sym)
 
 template exportConsts*(body: untyped) =
   exportConstsTyped(exportConstsUntyped(body))
@@ -46,7 +46,7 @@ macro exportEnumsTyped(body: typed) =
     exportEnumInternal(sym)
     exportEnumNim(sym)
     exportEnumPy(sym)
-    exportEnumNode(sym)
+    # exportEnumNode(sym)
 
 template exportEnums*(body: untyped) =
   exportEnumsTyped(exportEnumsUntyped(body))
@@ -93,7 +93,7 @@ proc procTyped(
   exportProcInternal(procSym, owner, prefixes)
   exportProcNim(procSym, owner, prefixes)
   exportProcPy(procSym, owner, prefixes)
-  exportProcNode(procSym, owner, prefixes)
+  # exportProcNode(procSym, owner, prefixes)
 
 macro exportProcsUntyped(body: untyped) =
   result = newNimNode(nnkStmtList)
@@ -114,32 +114,61 @@ macro exportObjectUntyped(sym, body: untyped) =
     var obj: `sym`
   result.add varSection
 
+  var
+    constructorBlock = emptyBlockStmt()
+    procsBlock = emptyBlockStmt()
+
   for section in body:
     if section.kind == nnkDiscardStmt:
       continue
 
     case section[0].repr:
     of "constructor":
-      result.add procUntyped(section[1][0])
+      constructorBlock[1].add procUntyped(section[1][0])
+    of "procs":
+      for clause in section[1]:
+        procsBlock[1].add procUntyped(clause)
+      procsBlock[1].add quote do:
+        discard
     else:
       error("Invalid section", section)
 
-  result.add quote do:
-    discard
+  result.add constructorBlock
+  result.add procsBlock
 
 macro exportObjectTyped(body: typed) =
   let
     sym = body[0][0][1]
-    constructor =
-      if body[1].kind != nnkDiscardStmt:
-        procTypedSym(body[1])
-      else:
-        nil
+    constructorBlock = body[1]
+    procsBlock = body[2]
+
+  let constructor =
+    if constructorBlock[1].len > 0:
+      procTypedSym(constructorBlock[1])
+    else:
+      nil
 
   exportObjectInternal(sym, constructor)
   exportObjectNim(sym, constructor)
   exportObjectPy(sym, constructor)
-  exportObjectNode(sym, constructor)
+  # exportObjectNode(sym, constructor)
+
+  if procsBlock[1].len > 0:
+    var procsSeen: seq[string]
+    for entry in procsBlock[1][0 .. ^2]:
+      var
+        procSym = procTypedSym(entry)
+        prefixes: seq[NimNode]
+      if procSym.repr notin procsSeen:
+        procsSeen.add procSym.repr
+      else:
+        let procType = procSym.getTypeInst()
+        if procType[0].len > 2:
+          prefixes.add(procType[0][2][1])
+      exportProcInternal(procSym, sym, prefixes)
+      exportProcNim(procSym, sym, prefixes)
+      exportProcPy(procSym, sym, prefixes)
+      # exportProcNode(procSym, sym, prefixes)
 
 template exportObject*(sym, body: untyped) =
   exportObjectTyped(exportObjectUntyped(sym, body))
@@ -171,7 +200,7 @@ macro exportSeqTyped(body: typed) =
   exportSeqInternal(sym)
   exportSeqNim(sym)
   exportSeqPy(sym)
-  exportSeqNode(sym)
+  # exportSeqNode(sym)
 
   for entry in body[1 .. ^2]:
     procTyped(entry, sym)
@@ -190,7 +219,6 @@ macro exportRefObjectUntyped(sym, body: untyped) =
     fieldsBlock = emptyBlockStmt()
     constructorBlock = emptyBlockStmt()
     procsBlock = emptyBlockStmt()
-
 
   for section in body:
     if section.kind == nnkDiscardStmt:
@@ -240,7 +268,7 @@ macro exportRefObjectTyped(body: typed) =
   exportRefObjectInternal(sym, allowedFields, constructor)
   exportRefObjectNim(sym, allowedFields, constructor)
   exportRefObjectPy(sym, allowedFields, constructor)
-  exportRefObjectNode(sym, allowedFields, constructor)
+  # exportRefObjectNode(sym, allowedFields, constructor)
 
   if procsBlock[1].len > 0:
     var procsSeen: seq[string]
@@ -257,7 +285,7 @@ macro exportRefObjectTyped(body: typed) =
       exportProcInternal(procSym, sym, prefixes)
       exportProcNim(procSym, sym, prefixes)
       exportProcPy(procSym, sym, prefixes)
-      exportProcNode(procSym, sym, prefixes)
+      # exportProcNode(procSym, sym, prefixes)
 
 template exportRefObject*(sym, body: untyped) =
   exportRefObjecTtyped(exportRefObjectUntyped(sym, body))
@@ -266,4 +294,4 @@ macro writeFiles*(dir, lib: static[string]) =
   writeInternal(dir, lib)
   writeNim(dir, lib)
   writePy(dir, lib)
-  writeNode(dir, lib)
+  # writeNode(dir, lib)
