@@ -4,7 +4,7 @@ var
   types {.compiletime.}: string
   procs {.compiletime.}: string
 
-const operators = ["mul"]
+const operators = ["add", "sub", "mul", "div"]
 
 proc exportTypePy(sym: NimNode): string =
   if sym.kind == nnkBracketExpr:
@@ -100,7 +100,9 @@ proc exportProcPy*(
 
   if onClass:
     types.add "    def "
-    if sym.repr in operators and prefixes.len == 0:
+    if sym.repr in operators and
+      procReturn.kind != nnkEmpty and
+      prefixes.len == 0:
       types.add &"__{sym.repr}__("
     else:
       if prefixes.len > 0:
