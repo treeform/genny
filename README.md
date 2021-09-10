@@ -46,6 +46,8 @@ It would be easy to simply wrap the exported C api and have the user call the ug
 We provide a DSL that you can use to define how things need to be exported. The DSL is pretty simple to follow:
 
 ```nim
+import genny, pixie
+
 exportConsts:
   defaultMiterLimit
   autoLineHeight
@@ -76,6 +78,10 @@ exportRefObject Mask:
     copy(Mask)
     getValue
     setValue
+
+# Must have this at the end.
+writeFiles("bindings/generated", "pixie")
+include generated/internal
 ```
 
 See more in the [pixie bindings](https://github.com/treeform/pixie/blob/master/bindings/bindings.nim)
