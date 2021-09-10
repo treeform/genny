@@ -20,7 +20,7 @@ To make that C interface, Genny makes assumptions about what your Nim source loo
 
 ## Example uses
 
-This version of Genny was created to generate bindings for [Pixie](https://github.com/treeform/pixie). You can see how Pixie's dynamic library API is exported and the bindings generated [in this file](https://github.com/treeform/pixie/blob/master/bindings/bindings.nim).
+This version of Genny was created to generate bindings for [Pixie](https://github.com/treeform/pixie). You can see how Pixie's dynamic library API is exported and the bindings generated [in this file](https://github.com/treeform/pixie/blob/master/bindings/bindings.nim) and the [results here](https://github.com/treeform/pixie-python).
 
 ## Why add Nim binding support for a Nim library?
 
