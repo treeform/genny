@@ -4,11 +4,19 @@ var
   types {.compiletime.}: string
   procs {.compiletime.}: string
 
+const operators = ["add", "sub", "mul", "div"]
+
 proc exportTypePy(sym: NimNode): string =
   if sym.kind == nnkBracketExpr:
-    if sym[0].repr != "seq":
-      quit(&"Unexpected bracket expression {sym[0].repr}[")
-    result = sym.getSeqName()
+    if sym[0].repr == "array":
+      let
+        entryCount = sym[1].repr
+        entryType = exportTypePy(sym[2])
+      result = &"{entryType} * {entryCount}"
+    elif sym[0].repr != "seq":
+      error(&"Unexpected bracket expression {sym[0].repr}[")
+    else:
+      result = sym.getSeqName()
   else:
     result =
       case sym.repr:
@@ -92,11 +100,16 @@ proc exportProcPy*(
 
   if onClass:
     types.add "    def "
-    if prefixes.len > 0:
-      if prefixes[0].getImpl().kind != nnkNilLIt:
-        if prefixes[0].getImpl()[2].kind != nnkEnumTy:
-          types.add &"{toSnakeCase(prefixes[0].repr)}_"
-    types.add &"{toSnakeCase(sym.repr)}("
+    if sym.repr in operators and
+      procReturn.kind != nnkEmpty and
+      prefixes.len == 0:
+      types.add &"__{sym.repr}__("
+    else:
+      if prefixes.len > 0:
+        if prefixes[0].getImpl().kind != nnkNilLIt:
+          if prefixes[0].getImpl()[2].kind != nnkEnumTy:
+            types.add &"{toSnakeCase(prefixes[0].repr)}_"
+      types.add &"{toSnakeCase(sym.repr)}("
   else:
     types.add &"def {apiProcName}("
   for i, param in procParams[0 .. ^1]:
@@ -123,7 +136,9 @@ proc exportProcPy*(
   let comments =
     if sym.getImpl()[6][0].kind == nnkCommentStmt:
       sym.getImpl()[6][0].repr
-    elif sym.getImpl[6].kind == nnkAsgn and sym.getImpl[6][1][0].kind == nnkCommentStmt:
+    elif sym.getImpl[6].kind == nnkAsgn and
+      sym.getImpl[6][1].kind == nnkStmtListExpr and
+      sym.getImpl[6][1][0].kind == nnkCommentStmt:
       sym.getImpl[6][1][0].repr
     else:
       ""
@@ -245,7 +260,11 @@ proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
   types.add "        return "
   for identDefs in sym.getImpl()[2][2]:
     for property in identDefs[0 .. ^3]:
-      types.add &"self.{toSnakeCase(property[1].repr)} == obj.{toSnakeCase(property[1].repr)} and "
+      if identDefs[^2].len > 0 and identDefs[^2][0].repr == "array":
+        for i in 0 ..< identDefs[^2][1].intVal:
+          types.add &"self.{toSnakeCase(property[1].repr)}[{i}] == obj.{toSnakeCase(property[1].repr)}[{i}] and "
+      else:
+        types.add &"self.{toSnakeCase(property[1].repr)} == obj.{toSnakeCase(property[1].repr)} and "
   types.removeSuffix " and "
   types.add "\n"
   types.add "\n"
@@ -427,7 +446,6 @@ proc exportSeqPy*(sym: NimNode) =
 const header = """
 from ctypes import *
 import os, sys
-from pathlib import Path
 
 dir = os.path.dirname(sys.modules["pixie"].__file__)
 if sys.platform == "win32":
