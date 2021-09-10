@@ -29,6 +29,7 @@ macro exportConstsTyped(body: typed) =
     exportConstNode(sym)
 
 template exportConsts*(body: untyped) =
+  ## Exports a list of constants.
   exportConstsTyped(exportConstsUntyped(body))
 
 macro exportEnumsUntyped(body: untyped) =
@@ -49,6 +50,7 @@ macro exportEnumsTyped(body: typed) =
     exportEnumNode(sym)
 
 template exportEnums*(body: untyped) =
+  ## Exports a list of enums.
   exportEnumsTyped(exportEnumsUntyped(body))
 
 proc procUntyped(clause: NimNode): NimNode =
@@ -105,6 +107,8 @@ macro exportProcsTyped(body: typed) =
     procTyped(entry)
 
 template exportProcs*(body: untyped) =
+  ## Exports a list of procs.
+  ## Procs can just be a name `doX` or fully qualified with `doX(int): int`.
   exportProcsTyped(exportProcsUntyped(body))
 
 macro exportObjectUntyped(sym, body: untyped) =
@@ -142,6 +146,10 @@ macro exportObjectTyped(body: typed) =
   exportObjectNode(sym, constructor)
 
 template exportObject*(sym, body: untyped) =
+  ## Exports an object, with these sections:
+  ## * fields
+  ## * constructor
+  ## * procs
   exportObjectTyped(exportObjectUntyped(sym, body))
 
 macro exportSeqUntyped(sym, body: untyped) =
@@ -177,6 +185,8 @@ macro exportSeqTyped(body: typed) =
     procTyped(entry, sym)
 
 template exportSeq*(sym, body: untyped) =
+  ## Exports a regular sequence.
+  ## * procs section
   exportSeqTyped(exportSeqUntyped(sym, body))
 
 macro exportRefObjectUntyped(sym, body: untyped) =
@@ -260,9 +270,15 @@ macro exportRefObjectTyped(body: typed) =
       exportProcNode(procSym, sym, prefixes)
 
 template exportRefObject*(sym, body: untyped) =
+  ## Exports a ref object, with these sections:
+  ## * fields
+  ## * constructor
+  ## * procs
   exportRefObjecTtyped(exportRefObjectUntyped(sym, body))
 
 macro writeFiles*(dir, lib: static[string]) =
+  ## This needs to be and the end of the file and it needs to be followed by:
+  ## `include generated/internal`
   writeInternal(dir, lib)
   writeNim(dir, lib)
   writePy(dir, lib)
