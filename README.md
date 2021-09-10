@@ -2,7 +2,7 @@
 
 # Genny - Generate Nim library bindings for many languages
 
-So you made a cool Nim library but you want it to be available to other languages as well. With `genny` you can generate a dynamically linked library with a simple C API and generated bindings for many languages.
+So you made a cool Nim library but you want it to be available to other languages as well. With `genny` you can generate a dynamically linked library with a simple C API and generated bindings for many languages. In some ways its similar to [SWIG](http://www.swig.org/) project for C or [djinni](https://github.com/dropbox/djinni) for C++.
 
 ![Github Actions](https://github.com/treeform/genny/workflows/Github%20Actions/badge.svg)
 
@@ -41,7 +41,7 @@ It would be easy to simply wrap the exported C api and have the user call the ug
 * Synchronize native GC and Nim's ARC GC.
 * And even copy the comments so that automated tools can use them.
 
-## A bindings DSL
+## A bindings interface DSL
 
 We provide a DSL that you can use to define how things need to be exported. The DSL is pretty simple to follow:
 
