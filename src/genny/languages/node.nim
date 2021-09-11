@@ -15,6 +15,7 @@ proc exportTypeNode(sym: NimNode): string =
       case sym.repr:
       of "string": "'string'"
       of "bool": "'bool'"
+      of "byte": "'int8'"
       of "int8": "'int8'"
       of "int16": "'int16'"
       of "int32": "'int32'"

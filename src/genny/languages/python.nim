@@ -23,6 +23,7 @@ proc exportTypePy(sym: NimNode): string =
       of "string": "c_char_p"
       of "bool": "c_bool"
       of "int8": "c_byte"
+      of "byte": "c_byte"
       of "int16": "c_short"
       of "int32": "c_int"
       of "int64": "c_longlong"

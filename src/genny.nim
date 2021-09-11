@@ -1,4 +1,4 @@
-import genny/internal, genny/languages/nim, genny/languages/python, genny/languages/node,
+import genny/internal, genny/languages/c, genny/languages/nim, genny/languages/python, genny/languages/node,
     macros, strformat, tables
 
 template discard2(f: untyped): untyped =
@@ -6,6 +6,14 @@ template discard2(f: untyped): untyped =
     discard f
   else:
     f
+
+proc asStmtList(body: NimNode): seq[NimNode] =
+  ## Nim optimizes StmtList, reverse that:
+  if body.kind != nnkStmtList:
+    result.add(body)
+  else:
+    for child in body:
+      result.add(child)
 
 proc emptyBlockStmt(): NimNode =
   result = quote do:
@@ -21,12 +29,13 @@ macro exportConstsUntyped(body: untyped) =
     result.add varSection
 
 macro exportConstsTyped(body: typed) =
-  for varSection in body:
+  for varSection in body.asStmtList:
     let sym = varSection[0][0]
     exportConstInternal(sym)
     exportConstNim(sym)
     exportConstPy(sym)
     # exportConstNode(sym)
+    exportConstC(sym)
 
 template exportConsts*(body: untyped) =
   ## Exports a list of constants.
@@ -42,12 +51,13 @@ macro exportEnumsUntyped(body: untyped) =
     result.add varSection
 
 macro exportEnumsTyped(body: typed) =
-  for varSection in body:
+  for varSection in body.asStmtList:
     let sym = varSection[0][1]
     exportEnumInternal(sym)
     exportEnumNim(sym)
     exportEnumPy(sym)
     # exportEnumNode(sym)
+    exportEnumC(sym)
 
 template exportEnums*(body: untyped) =
   ## Exports a list of enums.
@@ -77,6 +87,7 @@ proc procUntyped(clause: NimNode): NimNode =
     result[1].add endStmt
 
 proc procTypedSym(entry: NimNode): NimNode =
+  doAssert entry.kind != nnkEmpty
   result =
     if entry[1].kind == nnkVarSection:
       entry[1][0][2]
@@ -95,7 +106,8 @@ proc procTyped(
   exportProcInternal(procSym, owner, prefixes)
   exportProcNim(procSym, owner, prefixes)
   exportProcPy(procSym, owner, prefixes)
-  # exportProcNode(procSym, owner, prefixes)
+  exportProcNode(procSym, owner, prefixes)
+  exportProcC(procSym, owner, prefixes)
 
 macro exportProcsUntyped(body: untyped) =
   result = newNimNode(nnkStmtList)
@@ -103,7 +115,7 @@ macro exportProcsUntyped(body: untyped) =
     result.add procUntyped(clause)
 
 macro exportProcsTyped(body: typed) =
-  for entry in body:
+  for entry in body.asStmtList:
     procTyped(entry)
 
 template exportProcs*(body: untyped) =
@@ -155,7 +167,8 @@ macro exportObjectTyped(body: typed) =
   exportObjectInternal(sym, constructor)
   exportObjectNim(sym, constructor)
   exportObjectPy(sym, constructor)
-  # exportObjectNode(sym, constructor)
+  exportObjectNode(sym, constructor)
+  exportObjectC(sym, constructor)
 
   if procsBlock[1].len > 0:
     var procsSeen: seq[string]
@@ -172,7 +185,7 @@ macro exportObjectTyped(body: typed) =
       exportProcInternal(procSym, sym, prefixes)
       exportProcNim(procSym, sym, prefixes)
       exportProcPy(procSym, sym, prefixes)
-      # exportProcNode(procSym, sym, prefixes)
+      exportProcNode(procSym, sym, prefixes)
 
 template exportObject*(sym, body: untyped) =
   ## Exports an object, with these sections:
@@ -208,7 +221,8 @@ macro exportSeqTyped(body: typed) =
   exportSeqInternal(sym)
   exportSeqNim(sym)
   exportSeqPy(sym)
-  # exportSeqNode(sym)
+  exportSeqNode(sym)
+  exportSeqC(sym)
 
   for entry in body[1 .. ^2]:
     procTyped(entry, sym)
@@ -278,7 +292,8 @@ macro exportRefObjectTyped(body: typed) =
   exportRefObjectInternal(sym, allowedFields, constructor)
   exportRefObjectNim(sym, allowedFields, constructor)
   exportRefObjectPy(sym, allowedFields, constructor)
-  # exportRefObjectNode(sym, allowedFields, constructor)
+  exportRefObjectNode(sym, allowedFields, constructor)
+  exportRefObjectC(sym, allowedFields, constructor)
 
   if procsBlock[1].len > 0:
     var procsSeen: seq[string]
@@ -296,6 +311,7 @@ macro exportRefObjectTyped(body: typed) =
       exportProcNim(procSym, sym, prefixes)
       exportProcPy(procSym, sym, prefixes)
       # exportProcNode(procSym, sym, prefixes)
+      exportProcC(procSym, sym, prefixes)
 
 template exportRefObject*(sym, body: untyped) =
   ## Exports a ref object, with these sections:
@@ -310,4 +326,5 @@ macro writeFiles*(dir, lib: static[string]) =
   writeInternal(dir, lib)
   writeNim(dir, lib)
   writePy(dir, lib)
-  # writeNode(dir, lib)
+  writeNode(dir, lib)
+  writeC(dir, lib)
