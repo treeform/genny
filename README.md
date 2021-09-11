@@ -24,26 +24,26 @@ Node.js       | ffi-napi      | ✅     | ✅     | ✅          | ✅    |
 
 ## Quest for "nice" language binding.
 
-It would be easy to simply wrap the exported C api and have the user call the ugly C style methods, but that's not us. We try to generate a "nice" language api that feels like it was made custom for that language. This means where possible and target language supports it we:
+It would be pretty easy just export a C API from Nim and have users call the ugly C style methods but that is not our goal with Genny. Instead, we try to generate a "nice" API for each language that feels like it was custom-made. This means, where possible, we:
 
-* Use naming convention that is normal of the language CamelCase, Snake_Case or Kabob-Case.
+* Use naming conventions that are familar in the language (CamelCase, Snake_Case or Kabob-Case).
 * Make sure regular `object`s are passed by value and behave simply.
 * Make `ref object`s behave like OOP objects with members, methods and constructors.
 * Generate helper methods like `==` or `isNull`.
-* Export `Seq[X]` as some thing that feels like a native array.
-* Export `Seq[X]` on a `ref object` behaves like what we call a bound-seq.
+* Export `seq[X]` as some thing that feels like a native array.
+* Export `seq[X]` on a `ref object` behaves like what we call a bound-seq.
 * Support the `[]` syntax.
 * Support the `.` member syntax.
 * Overload math operators `+`, `-`, `*`, `/`.
 * Overload `proc`s, where we first unpack them to different C calls with unique prefixes and them repack them back into overloaded methods or functions.
 * Pass optional arguments.
 * Pass enums and constants.
-* Synchronize native GC and Nim's ARC GC.
+* Synchronize the binding language's GC and Nim's ARC GC.
 * And even copy the comments so that automated tools can use them.
 
 ## A bindings interface DSL
 
-We provide a DSL that you can use to define how things need to be exported. The DSL is pretty simple to follow:
+Genny provides a DSL that you can use to define how things need to be exported. The DSL is pretty simple to follow:
 
 ```nim
 import genny, pixie
@@ -98,7 +98,7 @@ This version of Genny was created to generate bindings for [Pixie](https://githu
 
 ## Nim is great, why other languages?
 
-Nim is a niche language, we feel we can broaden Nim's appeal by creating Nim libraries for other more popular language and have Nim slowly work into other companies. Maybe after companies see that they already use Nim, they can start writing their own code in it.
+Nim is a niche language. We believe we can broaden Nim's appeal by creating Nim libraries for other more popular language and have Nim slowly work its way into companies. Maybe after companies see that they already use Nim, they will start writing their own code in it.
 
 ## Why add Nim binding support for a Nim library?
 
