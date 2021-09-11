@@ -244,8 +244,16 @@ proc exportSeqC*(sym: NimNode) =
   )
 
 const header = """
+#ifndef INCLUDE_$LIB_H
+#define INCLUDE_$LIB_H
 
 """
 
+const footer = """
+#endif
+"""
+
 proc writeC*(dir, lib: string) =
-  writeFile(&"{dir}/{lib}.h", (header & types & procs).replace("$lib", lib))
+  writeFile(&"{dir}/{lib}.h", (header & types & procs & footer)
+    .replace("$lib", lib).replace("$LIB", lib.toUpperAscii())
+  )
