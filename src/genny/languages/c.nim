@@ -4,15 +4,13 @@ var
   types {.compiletime.}: string
   procs {.compiletime.}: string
 
-const operators = ["add", "sub", "mul", "div"]
-
 proc exportTypeC(sym: NimNode): string =
   if sym.kind == nnkBracketExpr:
     if sym[0].repr == "array":
       let
         entryCount = sym[1].repr
         entryType = exportTypeC(sym[2])
-      result = &"{entryType}[{entryCount}]"
+      result = &"{entryType}*" # [{entryCount}]"
     elif sym[0].repr == "ref":
       result = sym[1].repr.split(":", 1)[0]
     elif sym[0].repr != "seq":
@@ -62,11 +60,19 @@ proc dllProc*(procName: string, args: openarray[(string, string)], restype: stri
   procs.add &"{restype} {procName}({argStr});\n"
   procs.add "\n"
 
-proc dllProc*(procName: string, args: openarray[NimNode], restype: string) =
+proc dllProc*(procName: string, args: openarray[(NimNode, NimNode)], restype: string) =
   var argsConverted: seq[(string, string)]
-  for node in args:
-    argsConverted.add (node.repr.toSnakeCase, node.getType.exportTypeC)
+  for (argName, argType) in args:
+    # echo arg.treeRepr
+    # echo arg.repr
+    # echo arg.getImpl()[2][2]
+    # echo arg.getType()
+    argsConverted.add (toSnakeCase(argName.getName()), exportTypeC(argType))
   dllProc(procName, argsConverted, restype)
+
+proc dllProc*(procName: string, restype: string) =
+  var a: seq[(string, string)]
+  dllProc(procName, a, restype)
 
 proc exportConstC*(sym: NimNode) =
   types.add &"#define {toCapSnakeCase(sym.repr)} {sym.getImpl()[2].repr}\n"
@@ -119,16 +125,16 @@ proc exportProcC*(
       procs.add &" * {line}\n"
     procs.add " */\n"
 
-  var dllParams: seq[NimNode]
+  var dllParams: seq[(NimNode, NimNode)]
   for param in procParams:
-    dllParams.add(param[1])
+    dllParams.add((param[0], param[1]))
   dllProc(&"$lib_{apiProcName}", dllParams, exportTypeC(procReturn))
 
 proc exportObjectC*(sym: NimNode, constructor: NimNode) =
   let objName = sym.repr
 
-  if objName in ["Vector2", "Matrix3", "Rect", "Color"]:
-    return
+  # if objName in ["Vector2", "Matrix3", "Rect", "Color"]:
+  #   return
 
   types.add &"typedef struct {objName} " & "{\n"
   for identDefs in sym.getImpl()[2][2]:
@@ -186,9 +192,9 @@ proc exportRefObjectC*(
         constructorParams = constructorType[0][1 .. ^1]
         constructorRaises = constructor.raises()
 
-      var dllParams: seq[NimNode]
+      var dllParams: seq[(NimNode, NimNode)]
       for param in constructorParams:
-        dllParams.add(param[1])
+        dllParams.add((param[0], param[1]))
       dllProc(constructorLibProc, dllParams, objName)
 
   for property in objType[2]:
@@ -205,8 +211,8 @@ proc exportRefObjectC*(
 
       let setProcName = &"$lib_{objNameSnaked}_set_{propertyNameSnaked}"
 
-      dllProc(getProcName, [sym], exportTypeC(propertyType))
-      dllProc(setProcName, [sym, propertyType], exportTypeC(nil))
+      dllProc(getProcName, [(objNameSnaked, objName)], exportTypeC(propertyType))
+      dllProc(setProcName, [(objNameSnaked, objName), ("value", exportTypeC(propertyType))], exportTypeC(nil))
     else:
       var helperName = property.repr
       helperName[0] = toUpperAscii(helperName[0])
@@ -228,7 +234,7 @@ proc exportSeqC*(sym: NimNode) =
 
   let newSeqProc = &"$lib_new_{toSnakeCase(seqName)}"
 
-  dllProc(newSeqProc, [], seqName)
+  dllProc(newSeqProc, seqName)
 
   genSeqProcs(
     sym.getName(),

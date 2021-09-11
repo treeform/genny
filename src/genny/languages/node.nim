@@ -7,9 +7,17 @@ var
 
 proc exportTypeNode(sym: NimNode): string =
   if sym.kind == nnkBracketExpr:
-    if sym[0].repr != "seq":
+    if sym[0].repr == "array":
+      let
+        entryCount = sym[1].repr
+        entryType = exportTypeNode(sym[2])
+      result = &"ArrayType({entryType}, {entryCount})"
+    elif sym[0].repr == "ref":
+      result = sym[1].repr.split(":", 1)[0]
+    elif sym[0].repr != "seq":
       error(&"Unexpected bracket expression {sym[0].repr}[")
-    result = sym.getSeqName()
+    else:
+      result = sym.getSeqName()
   else:
     result =
       case sym.repr:
