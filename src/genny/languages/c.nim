@@ -12,7 +12,9 @@ proc exportTypeC(sym: NimNode): string =
       let
         entryCount = sym[1].repr
         entryType = exportTypeC(sym[2])
-      result = &"{entryType} * {entryCount}"
+      result = &"{entryType}[{entryCount}]"
+    elif sym[0].repr == "ref":
+      result = sym[1].repr.split(":", 1)[0]
     elif sym[0].repr != "seq":
       error(&"Unexpected bracket expression {sym[0].repr}[")
     else:
@@ -52,14 +54,19 @@ proc convertImportToC*(sym: NimNode): string =
   if sym.repr == "string":
     result = ".decode(\"utf8\")"
 
-proc toArgTypes(args: openarray[NimNode]): seq[string] =
-  for arg in args:
-    result.add exportTypeC(arg)
-
-proc dllProc*(procName: string, args: openarray[string], restype: string) =
-  var argtypes = join(args, ", ")
-  procs.add &"{restype} {procName}({argtypes});\n"
+proc dllProc*(procName: string, args: openarray[(string, string)], restype: string) =
+  var argStr = ""
+  for (argName, argType) in args:
+    argStr.add &"{argType} {argName}, "
+  argStr.removeSuffix ", "
+  procs.add &"{restype} {procName}({argStr});\n"
   procs.add "\n"
+
+proc dllProc*(procName: string, args: openarray[NimNode], restype: string) =
+  var argsConverted: seq[(string, string)]
+  for node in args:
+    argsConverted.add (node.repr.toSnakeCase, node.getType.exportTypeC)
+  dllProc(procName, argsConverted, restype)
 
 proc exportConstC*(sym: NimNode) =
   types.add &"#define {toCapSnakeCase(sym.repr)} {sym.getImpl()[2].repr}\n"
@@ -115,7 +122,7 @@ proc exportProcC*(
   var dllParams: seq[NimNode]
   for param in procParams:
     dllParams.add(param[1])
-  dllProc(&"$lib_{apiProcName}", toArgTypes(dllParams), exportTypeC(procReturn))
+  dllProc(&"$lib_{apiProcName}", dllParams, exportTypeC(procReturn))
 
 proc exportObjectC*(sym: NimNode, constructor: NimNode) =
   let objName = sym.repr
@@ -151,15 +158,16 @@ proc genRefObject(objName: string) =
 
   let unrefLibProc = &"$lib_{toSnakeCase(objName)}_unref"
 
-  dllProc(unrefLibProc, [objName], "void")
+  dllProc(unrefLibProc, [(toSnakeCase(objName), objName)], "void")
 
 proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
-  dllProc(&"{procPrefix}_len", [objName], "long long")
-  dllProc(&"{procPrefix}_get", [objName, "long long"], exportTypeC(entryType))
-  dllProc(&"{procPrefix}_set", [objName, "long long", exportTypeC(entryType)], "void")
-  dllProc(&"{procPrefix}_delete", [objName, "long long"], "void")
-  dllProc(&"{procPrefix}_add", [objName, exportTypeC(entryType)], "void")
-  dllProc(&"{procPrefix}_clear", [objName], "void")
+  let objArg = (toSnakeCase(objName), objName)
+  dllProc(&"{procPrefix}_len", [objArg], "long long")
+  dllProc(&"{procPrefix}_get", [objArg, ("index", "long long")], exportTypeC(entryType))
+  dllProc(&"{procPrefix}_set", [objArg, ("index", "long long"), ("value", exportTypeC(entryType))], "void")
+  dllProc(&"{procPrefix}_delete", [objArg, ("index", "long long")], "void")
+  dllProc(&"{procPrefix}_add", [objArg, ("value", exportTypeC(entryType))], "void")
+  dllProc(&"{procPrefix}_clear", [objArg], "void")
 
 proc exportRefObjectC*(
   sym: NimNode, allowedFields: openarray[string], constructor: NimNode
@@ -181,7 +189,7 @@ proc exportRefObjectC*(
       var dllParams: seq[NimNode]
       for param in constructorParams:
         dllParams.add(param[1])
-      dllProc(constructorLibProc, toArgTypes(dllParams), objName)
+      dllProc(constructorLibProc, dllParams, objName)
 
   for property in objType[2]:
     if property.repr notin allowedFields:
@@ -197,8 +205,8 @@ proc exportRefObjectC*(
 
       let setProcName = &"$lib_{objNameSnaked}_set_{propertyNameSnaked}"
 
-      dllProc(getProcName, toArgTypes([sym]), exportTypeC(propertyType))
-      dllProc(setProcName, toArgTypes([sym, propertyType]), exportTypeC(nil))
+      dllProc(getProcName, [sym], exportTypeC(propertyType))
+      dllProc(setProcName, [sym, propertyType], exportTypeC(nil))
     else:
       var helperName = property.repr
       helperName[0] = toUpperAscii(helperName[0])
