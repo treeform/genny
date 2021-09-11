@@ -34,7 +34,7 @@ macro exportConstsTyped(body: typed) =
     exportConstInternal(sym)
     exportConstNim(sym)
     exportConstPy(sym)
-    # exportConstNode(sym)
+    exportConstNode(sym)
     exportConstC(sym)
 
 template exportConsts*(body: untyped) =
@@ -56,7 +56,7 @@ macro exportEnumsTyped(body: typed) =
     exportEnumInternal(sym)
     exportEnumNim(sym)
     exportEnumPy(sym)
-    # exportEnumNode(sym)
+    exportEnumNode(sym)
     exportEnumC(sym)
 
 template exportEnums*(body: untyped) =
@@ -318,7 +318,7 @@ template exportRefObject*(sym, body: untyped) =
   ## * fields
   ## * constructor
   ## * procs
-  exportRefObjecTtyped(exportRefObjectUntyped(sym, body))
+  exportRefObjectTyped(exportRefObjectUntyped(sym, body))
 
 macro writeFiles*(dir, lib: static[string]) =
   ## This needs to be and the end of the file and it needs to be followed by:

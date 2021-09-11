@@ -8,6 +8,8 @@ function TestException(message) {
   this.name = 'TestException';
 }
 
+const SimpleEnum = 'int8'
+
 /**
  * Returns the integer passed in.
  */
@@ -86,6 +88,45 @@ SeqInt.prototype.add = function(value){
 SeqInt.prototype.clear = function(){
   dll.test_seq_int_clear(this)
 };
+RefObjWithSeq = Struct({'nimRef': 'uint64'});
+RefObjWithSeq.prototype.isNull = function(){
+  return this.nimRef == 0;
+};
+RefObjWithSeq.prototype.isEqual = function(other){
+  return this.nimRef == other.nimRef;
+};
+RefObjWithSeq.prototype.unref = function(){
+  return dll.test_ref_obj_with_seq_unref(this)
+};
+function newRefObjWithSeq(){
+  var result = dll.test_new_ref_obj_with_seq()
+  return result
+}
+function RefObjWithSeqData(refObjWithSeq){
+  this.refObjWithSeq = refObjWithSeq;
+}
+RefObjWithSeqData.prototype.length = function(){
+  return dll.test_ref_obj_with_seq_data_len(this.ref_obj_with_seq)
+};
+RefObjWithSeqData.prototype.get = function(index){
+  return dll.test_ref_obj_with_seq_data_get(this.ref_obj_with_seq, index)
+};
+RefObjWithSeqData.prototype.set = function(index, value){
+  dll.test_ref_obj_with_seq_data_set(this.ref_obj_with_seq, index, value)
+};
+RefObjWithSeqData.prototype.delete = function(index){
+  dll.test_ref_obj_with_seq_data_delete(this.ref_obj_with_seq, index)
+};
+RefObjWithSeqData.prototype.add = function(value){
+  dll.test_ref_obj_with_seq_data_add(this.ref_obj_with_seq, value)
+};
+RefObjWithSeqData.prototype.clear = function(){
+  dll.test_ref_obj_with_seq_data_clear(this.ref_obj_with_seq)
+};
+Object.defineProperty(RefObjWithSeq.prototype, 'data', {
+  get: function() {return new RefObjWithSeqData(this)},
+});
+
 
 var dllPath = ""
 if(process.platform == "win32") {
@@ -112,11 +153,26 @@ dll = ffi.Library(dllPath, {
   'test_seq_int_delete': ['void', [SeqInt, 'uint64']],
   'test_seq_int_add': ['void', [SeqInt, 'int64']],
   'test_seq_int_clear': ['void', [SeqInt]],
+  'test_ref_obj_with_seq_unref': ['void', [RefObjWithSeq]],
+  'test_new_ref_obj_with_seq': [RefObjWithSeq, []],
+  'test_ref_obj_with_seq_data_len': ['uint64', [RefObjWithSeq]],
+  'test_ref_obj_with_seq_data_get': ['int8', [RefObjWithSeq, 'uint64']],
+  'test_ref_obj_with_seq_data_set': ['void', [RefObjWithSeq, 'uint64', 'int8']],
+  'test_ref_obj_with_seq_data_delete': ['void', [RefObjWithSeq, 'uint64']],
+  'test_ref_obj_with_seq_data_add': ['void', [RefObjWithSeq, 'int8']],
+  'test_ref_obj_with_seq_data_clear': ['void', [RefObjWithSeq]],
 });
 
+exports.SIMPLE_CONST = 123
+exports.SimpleEnum = SimpleEnum
+exports.FIRST = 0
+exports.SECOND = 1
+exports.THIRD = 2
 exports.simpleCall = simpleCall
 exports.SimpleObj = SimpleObj;
 exports.simpleObj = simpleObj;
 exports.SimpleRefObjType = SimpleRefObj
 exports.SimpleRefObj = newSimpleRefObj
 exports.SeqIntType = SeqInt
+exports.RefObjWithSeqType = RefObjWithSeq
+exports.RefObjWithSeq = newRefObjWithSeq

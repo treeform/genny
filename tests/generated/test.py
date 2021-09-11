@@ -113,6 +113,49 @@ class SeqInt(Structure):
     def clear(self):
         dll.test_seq_int_clear(self)
 
+class RefObjWithSeq(Structure):
+    _fields_ = [("ref", c_ulonglong)]
+
+    def __bool__(self):
+        return self.ref != None
+
+    def __eq__(self, obj):
+        return self.ref == obj.ref
+
+    def __del__(self):
+        dll.test_ref_obj_with_seq_unref(self)
+
+    def __init__(self):
+        result = dll.test_new_ref_obj_with_seq()
+        self.ref = result
+
+    class RefObjWithSeqData:
+
+        def __init__(self, ref_obj_with_seq):
+            self.ref_obj_with_seq = ref_obj_with_seq
+
+        def __len__(self):
+            return dll.test_ref_obj_with_seq_data_len(self.ref_obj_with_seq)
+
+        def __getitem__(self, index):
+            return dll.test_ref_obj_with_seq_data_get(self.ref_obj_with_seq, index)
+
+        def __setitem__(self, index, value):
+            dll.test_ref_obj_with_seq_data_set(self.ref_obj_with_seq, index, value)
+
+        def __delitem__(self, index):
+            dll.test_ref_obj_with_seq_data_delete(self.ref_obj_with_seq, index)
+
+        def append(self, value):
+            dll.test_ref_obj_with_seq_data_add(self.ref_obj_with_seq, value)
+
+        def clear(self):
+            dll.test_ref_obj_with_seq_data_clear(self.ref_obj_with_seq)
+
+    @property
+    def data(self):
+        return self.RefObjWithSeqData(self)
+
 dll.test_simple_call.argtypes = [c_longlong]
 dll.test_simple_call.restype = c_longlong
 
@@ -160,4 +203,28 @@ dll.test_seq_int_add.restype = None
 
 dll.test_seq_int_clear.argtypes = [SeqInt]
 dll.test_seq_int_clear.restype = None
+
+dll.test_ref_obj_with_seq_unref.argtypes = [RefObjWithSeq]
+dll.test_ref_obj_with_seq_unref.restype = None
+
+dll.test_new_ref_obj_with_seq.argtypes = []
+dll.test_new_ref_obj_with_seq.restype = c_ulonglong
+
+dll.test_ref_obj_with_seq_data_len.argtypes = [RefObjWithSeq]
+dll.test_ref_obj_with_seq_data_len.restype = c_longlong
+
+dll.test_ref_obj_with_seq_data_get.argtypes = [RefObjWithSeq, c_longlong]
+dll.test_ref_obj_with_seq_data_get.restype = c_byte
+
+dll.test_ref_obj_with_seq_data_set.argtypes = [RefObjWithSeq, c_longlong, c_byte]
+dll.test_ref_obj_with_seq_data_set.restype = None
+
+dll.test_ref_obj_with_seq_data_delete.argtypes = [RefObjWithSeq, c_longlong]
+dll.test_ref_obj_with_seq_data_delete.restype = None
+
+dll.test_ref_obj_with_seq_data_add.argtypes = [RefObjWithSeq, c_byte]
+dll.test_ref_obj_with_seq_data_add.restype = None
+
+dll.test_ref_obj_with_seq_data_clear.argtypes = [RefObjWithSeq]
+dll.test_ref_obj_with_seq_data_clear.restype = None
 

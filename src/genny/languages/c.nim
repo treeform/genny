@@ -107,7 +107,7 @@ proc exportProcC*(
       ""
   if comments != "":
     let lines = comments.replace("## ", "").split("\n")
-    procs.add "/*\n"
+    procs.add "/**\n"
     for line in lines:
       procs.add &" * {line}\n"
     procs.add " */\n"
@@ -204,23 +204,12 @@ proc exportRefObjectC*(
       helperName[0] = toUpperAscii(helperName[0])
       let helperClassName = objName & helperName
 
-      types.add &"    class {helperClassName}:\n"
-      types.add "\n"
-      types.add &"        def __init__(self, {toSnakeCase(objName)}):\n"
-      types.add &"            self.{toSnakeCase(objName)} = {toSnakeCase(objName)}\n"
-      types.add "\n"
-
       genSeqProcs(
         objName,
         &"$lib_{objNameSnaked}_{propertyNameSnaked}",
         &".{toSnakeCase(objName)}",
         propertyType[1]
       )
-
-      types.add "    @property\n"
-      types.add &"    def {toSnakeCase(helperName)}(self):\n"
-      types.add &"        return self.{helperClassName}(self)\n"
-      types.add "\n"
 
 proc exportSeqC*(sym: NimNode) =
   let

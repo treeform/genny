@@ -50,6 +50,16 @@ proc test_seq_int_unref(x: SeqIntObj) {.importc: "test_seq_int_unref", cdecl.}
 proc `=destroy`(x: var SeqIntObj) =
   test_seq_int_unref(x)
 
+type RefObjWithSeqObj = object
+  reference: pointer
+
+type RefObjWithSeq* = ref RefObjWithSeqObj
+
+proc test_ref_obj_with_seq_unref(x: RefObjWithSeqObj) {.importc: "test_ref_obj_with_seq_unref", cdecl.}
+
+proc `=destroy`(x: var RefObjWithSeqObj) =
+  test_ref_obj_with_seq_unref(x)
+
 proc test_simple_call(a: int): int {.importc: "test_simple_call", cdecl.}
 
 proc simpleCall*(a: int): int {.inline.} =
@@ -119,4 +129,45 @@ proc test_new_seq_int*(): SeqInt {.importc: "test_new_seq_int", cdecl.}
 
 proc newSeqInt*(): SeqInt =
   test_new_seq_int()
+
+proc test_new_ref_obj_with_seq(): RefObjWithSeq {.importc: "test_new_ref_obj_with_seq", cdecl.}
+
+proc newRefObjWithSeq*(): RefObjWithSeq {.inline.} =
+  result = test_new_ref_obj_with_seq()
+
+type RefObjWithSeqData = object
+    refObjWithSeq: RefObjWithSeq
+
+proc data*(refObjWithSeq: RefObjWithSeq): RefObjWithSeqData =
+  RefObjWithSeqData(refObjWithSeq: refObjWithSeq)
+
+proc test_ref_obj_with_seq_data_len(s: RefObjWithSeq): int {.importc: "test_ref_obj_with_seq_data_len", cdecl.}
+
+proc len*(s: RefObjWithSeqData): int =
+  test_ref_obj_with_seq_data_len(s.refObjWithSeq)
+
+proc test_ref_obj_with_seq_data_add(s: RefObjWithSeq, v: byte) {.importc: "test_ref_obj_with_seq_data_add", cdecl.}
+
+proc add*(s: RefObjWithSeqData, v: byte) =
+  test_ref_obj_with_seq_data_add(s.refObjWithSeq, v)
+
+proc test_ref_obj_with_seq_data_get(s: RefObjWithSeq, i: int): byte {.importc: "test_ref_obj_with_seq_data_get", cdecl.}
+
+proc `[]`*(s: RefObjWithSeqData, i: int): byte =
+  test_ref_obj_with_seq_data_get(s.refObjWithSeq, i)
+
+proc test_ref_obj_with_seq_data_set(s: RefObjWithSeq, i: int, v: byte) {.importc: "test_ref_obj_with_seq_data_set", cdecl.}
+
+proc `[]=`*(s: RefObjWithSeqData, i: int, v: byte) =
+  test_ref_obj_with_seq_data_set(s.refObjWithSeq, i, v)
+
+proc test_ref_obj_with_seq_data_delete(s: RefObjWithSeq, i: int) {.importc: "test_ref_obj_with_seq_data_delete", cdecl.}
+
+proc delete*(s: RefObjWithSeqData, i: int) =
+  test_ref_obj_with_seq_data_delete(s.refObjWithSeq, i)
+
+proc test_ref_obj_with_seq_data_clear(s: RefObjWithSeq) {.importc: "test_ref_obj_with_seq_data_clear", cdecl.}
+
+proc clear*(s: RefObjWithSeqData) =
+  test_ref_obj_with_seq_data_clear(s.refObjWithSeq)
 

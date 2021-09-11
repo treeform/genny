@@ -23,7 +23,9 @@ typedef long long SimpleRefObj;
 
 typedef long long SeqInt;
 
-/*
+typedef long long RefObjWithSeq;
+
+/**
  * Returns the integer passed in.
  */
 long long test_simple_call(long long);
@@ -40,7 +42,7 @@ char test_simple_ref_obj_get_simple_ref_b(SimpleRefObj);
 
 void test_simple_ref_obj_set_simple_ref_b(SimpleRefObj, char);
 
-/*
+/**
  * Does some thing with SimpleRefObj.
  */
 void test_simple_ref_obj_doit(SimpleRefObj);
@@ -60,4 +62,20 @@ void test_seq_int_delete(SeqInt, long long);
 void test_seq_int_add(SeqInt, long long);
 
 void test_seq_int_clear(SeqInt);
+
+void test_ref_obj_with_seq_unref(RefObjWithSeq);
+
+RefObjWithSeq test_new_ref_obj_with_seq();
+
+long long test_ref_obj_with_seq_data_len(RefObjWithSeq);
+
+char test_ref_obj_with_seq_data_get(RefObjWithSeq, long long);
+
+void test_ref_obj_with_seq_data_set(RefObjWithSeq, long long, char);
+
+void test_ref_obj_with_seq_data_delete(RefObjWithSeq, long long);
+
+void test_ref_obj_with_seq_data_add(RefObjWithSeq, char);
+
+void test_ref_obj_with_seq_data_clear(RefObjWithSeq);
 

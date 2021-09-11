@@ -53,6 +53,19 @@ exportRefObject SimpleRefObj:
 exportSeq seq[int]:
   discard
 
+type RefObjWithSeq* = ref object
+  data*: seq[byte]
+
+proc newRefObjWithSeq(): RefObjWithSeq =
+  ## Creates new SimpleRefObj.
+  RefObjWithSeq()
+
+exportRefObject RefObjWithSeq:
+  fields:
+    data
+  constructor:
+    newRefObjWithSeq()
+
 writeFiles("tests/generated", "test")
 
 include generated/internal

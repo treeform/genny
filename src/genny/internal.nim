@@ -87,7 +87,6 @@ proc exportObjectInternal*(sym: NimNode, constructor: NimNode) =
 proc exportRefObjectInternal*(
   sym: NimNode, allowedFields: openarray[string], constructor: NimNode
 ) =
-  echo sym.getType().treeRepr
   let
     objName = sym.repr
     objNameSnaked = toSnakeCase(objName)
