@@ -10,8 +10,7 @@ proc exportTypeC(sym: NimNode): string =
       let
         entryCount = sym[1].repr
         entryType = exportTypeC(sym[2])
-      # fix # TODO figure out a different way for this: entryType[entryCount]"
-      result = &"{entryType}*"
+      result = &"{entryType}[{entryCount}]"
     elif sym[0].repr == "ref":
       result = sym[1].repr.split(":", 1)[0]
     elif sym[0].repr != "seq":
@@ -45,22 +44,39 @@ proc exportTypeC(sym: NimNode): string =
       else:
         sym.repr
 
-proc dllProc*(procName: string, args: openarray[(string, string)], restype: string) =
+proc exportTypeC(sym: NimNode, name: string): string =
+  if sym.kind == nnkBracketExpr:
+    if sym[0].repr == "array":
+      let
+        entryCount = sym[1].repr
+        entryType = exportTypeC(sym[2], &"{name}[{entryCount}]")
+      result = &"{entryType}"
+
+    elif sym[0].repr == "ref":
+      result = sym[1].repr.split(":", 1)[0] & " " & name
+    elif sym[0].repr != "seq":
+      error(&"Unexpected bracket expression {sym[0].repr}[")
+    else:
+      result = sym.getSeqName() & " " & name
+  else:
+    result = exportTypeC(sym) & " " & name
+
+proc dllProc*(procName: string, args: openarray[string], restype: string) =
   var argStr = ""
-  for (argName, argType) in args:
-    argStr.add &"{argType} {argName}, "
+  for arg in args:
+    argStr.add &"{arg}, "
   argStr.removeSuffix ", "
   procs.add &"{restype} {procName}({argStr});\n"
   procs.add "\n"
 
 proc dllProc*(procName: string, args: openarray[(NimNode, NimNode)], restype: string) =
-  var argsConverted: seq[(string, string)]
+  var argsConverted: seq[string]
   for (argName, argType) in args:
-    argsConverted.add (toSnakeCase(argName.getName()), exportTypeC(argType))
+    argsConverted.add exportTypeC(argType, toSnakeCase(argName.getName()))
   dllProc(procName, argsConverted, restype)
 
 proc dllProc*(procName: string, restype: string) =
-  var a: seq[(string, string)]
+  var a: seq[(string)]
   dllProc(procName, a, restype)
 
 proc exportConstC*(sym: NimNode) =
@@ -125,7 +141,7 @@ proc exportObjectC*(sym: NimNode, constructor: NimNode) =
   types.add &"typedef struct {objName} " & "{\n"
   for identDefs in sym.getImpl()[2][2]:
     for property in identDefs[0 .. ^3]:
-      types.add &"  {exportTypeC(identDefs[^2])} {toSnakeCase(property[1].repr)};\n"
+      types.add &"  {exportTypeC(identDefs[^2], toSnakeCase(property[1].repr))};\n"
   types.add "} " & &"{objName};\n"
 
   if constructor != nil:
@@ -134,14 +150,17 @@ proc exportObjectC*(sym: NimNode, constructor: NimNode) =
     types.add &"{objName} {toSnakeCase(objName)}("
     for identDefs in sym.getImpl()[2][2]:
       for property in identDefs[0 .. ^3]:
-        types.add &"{exportTypeC(identDefs[^2])} {toSnakeCase(property[1].repr)}, "
+        types.add &"{exportTypeC(identDefs[^2], toSnakeCase(property[1].repr))}, "
     types.removeSuffix ", "
     types.add ") {\n"
     types.add &"  {objName} result;\n"
     for identDefs in sym.getImpl()[2][2]:
       for property in identDefs[0 .. ^3]:
-        types.add &"  result.{toSnakeCase(property[1].repr)} = "
-        types.add &"{toSnakeCase(property[1].repr)};\n"
+        let argName = toSnakeCase(property[1].repr)
+        if "[" in exportTypeC(identDefs[^2]):
+          types.add &"  memcpy(&result.{argName}, &{argName}, sizeof({argName}));\n"
+        else:
+          types.add &"  result.{argName} = {argName};\n"
     types.add "  return result;\n"
     types.add "}\n\n"
 
@@ -150,15 +169,15 @@ proc genRefObject(objName: string) =
 
   let unrefLibProc = &"$lib_{toSnakeCase(objName)}_unref"
 
-  dllProc(unrefLibProc, [(toSnakeCase(objName), objName)], "void")
+  dllProc(unrefLibProc, [objName & " " & toSnakeCase(objName)], "void")
 
 proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
-  let objArg = (toSnakeCase(objName), objName)
+  let objArg = objName & " " & toSnakeCase(objName)
   dllProc(&"{procPrefix}_len", [objArg], "long long")
-  dllProc(&"{procPrefix}_get", [objArg, ("index", "long long")], exportTypeC(entryType))
-  dllProc(&"{procPrefix}_set", [objArg, ("index", "long long"), ("value", exportTypeC(entryType))], "void")
-  dllProc(&"{procPrefix}_delete", [objArg, ("index", "long long")], "void")
-  dllProc(&"{procPrefix}_add", [objArg, ("value", exportTypeC(entryType))], "void")
+  dllProc(&"{procPrefix}_get", [objArg, "long long index"], exportTypeC(entryType))
+  dllProc(&"{procPrefix}_set", [objArg, "long long index", exportTypeC(entryType, "value")], "void")
+  dllProc(&"{procPrefix}_delete", [objArg, "long long index"], "void")
+  dllProc(&"{procPrefix}_add", [objArg, exportTypeC(entryType, "value")], "void")
   dllProc(&"{procPrefix}_clear", [objArg], "void")
 
 proc exportRefObjectC*(
@@ -197,8 +216,8 @@ proc exportRefObjectC*(
 
       let setProcName = &"$lib_{objNameSnaked}_set_{propertyNameSnaked}"
 
-      dllProc(getProcName, [(objNameSnaked, objName)], exportTypeC(propertyType))
-      dllProc(setProcName, [(objNameSnaked, objName), ("value", exportTypeC(propertyType))], exportTypeC(nil))
+      dllProc(getProcName, [objName & " " & objNameSnaked], exportTypeC(propertyType))
+      dllProc(setProcName, [objName & " " & objNameSnaked, exportTypeC(propertyType, "value")], exportTypeC(nil))
     else:
       var helperName = property.repr
       helperName[0] = toUpperAscii(helperName[0])
@@ -232,6 +251,7 @@ proc exportSeqC*(sym: NimNode) =
 const header = """
 #ifndef INCLUDE_$LIB_H
 #define INCLUDE_$LIB_H
+void *memcpy(void *dest, const void * src, size_t n);
 
 """
 

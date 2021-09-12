@@ -174,6 +174,21 @@ class SimpleObjWithProc(Structure):
     def extra_proc(self):
         dll.test_simple_obj_with_proc_extra_proc(self)
 
+class ArrayObj(Structure):
+    _fields_ = [
+        ("arr_1", c_longlong * 3),
+        ("arr_2", c_longlong * 3 * 3),
+        ("arr_3", c_longlong * 3 * 3 * 3)
+    ]
+
+    def __init__(self, arr_1, arr_2, arr_3):
+        self.arr_1 = arr_1
+        self.arr_2 = arr_2
+        self.arr_3 = arr_3
+
+    def __eq__(self, obj):
+        return self.arr_1[0] == obj.arr_1[0] and self.arr_1[1] == obj.arr_1[1] and self.arr_1[2] == obj.arr_1[2] and self.arr_2[0] == obj.arr_2[0] and self.arr_2[1] == obj.arr_2[1] and self.arr_2[2] == obj.arr_2[2] and self.arr_3[0] == obj.arr_3[0] and self.arr_3[1] == obj.arr_3[1] and self.arr_3[2] == obj.arr_3[2]
+
 dll.test_simple_call.argtypes = [c_longlong]
 dll.test_simple_call.restype = c_longlong
 

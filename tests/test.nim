@@ -78,6 +78,32 @@ exportObject SimpleObjWithProc:
   procs:
     extraProc
 
+type ArrayObj = object
+  arr1*: array[3, int]
+  arr2*: array[3, array[3, int]]
+  arr3*: array[3, array[3, array[3, int]]]
+
+exportObject ArrayObj:
+  discard
+
+# proc arrayCall1(a: array[2, int]) =
+#   discard
+
+# proc arrayCall2(): array[2, int] =
+#   discard
+
+# proc arrayCall3(a: array[2, int]): array[2, int] =
+#   discard
+
+# proc arrayCall4(a: array[3, array[3, float32]]): array[3, array[3, float32]] =
+#   discard
+
+# exportProcs:
+#   arrayCall1
+#   arrayCall2
+#   arrayCall3
+#   arrayCall4
+
 writeFiles("tests/generated", "test")
 
 include generated/internal

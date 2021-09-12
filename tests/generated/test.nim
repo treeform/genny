@@ -70,6 +70,16 @@ proc simpleObjWithProc*(simple_a: int, simple_b: byte, simple_c: bool): SimpleOb
   result.simple_b = simple_b
   result.simple_c = simple_c
 
+type ArrayObj* = object
+  arr1*: array[3, int]
+  arr2*: array[3, array[3, int]]
+  arr3*: array[3, array[3, array[3, int]]]
+
+proc arrayObj*(arr_1: array[3, int], arr_2: array[3, array[3, int]], arr_3: array[3, array[3, array[3, int]]]): ArrayObj =
+  result.arr_1 = arr_1
+  result.arr_2 = arr_2
+  result.arr_3 = arr_3
+
 proc test_simple_call(a: int): int {.importc: "test_simple_call", cdecl.}
 
 proc simpleCall*(a: int): int {.inline.} =

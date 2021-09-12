@@ -147,6 +147,22 @@ SimpleObjWithProc.prototype.extraProc = function(){
   dll.test_simple_obj_with_proc_extra_proc(this)
 }
 
+const ArrayObj = Struct({
+  'arr1':ArrayType('int64', 3),
+  'arr2':ArrayType(ArrayType('int64', 3), 3),
+  'arr3':ArrayType(ArrayType(ArrayType('int64', 3), 3), 3)
+})
+arrayObj = function(arr_1, arr_2, arr_3){
+  var v = new ArrayObj();
+  v.arr_1 = arr_1
+  v.arr_2 = arr_2
+  v.arr_3 = arr_3
+  return v;
+}
+ArrayObj.prototype.isEqual = function(other){
+  return self.arr1 == other.arr1 && self.arr2 == other.arr2 && self.arr3 == other.arr3;
+};
+
 
 var dllPath = ""
 if(process.platform == "win32") {
@@ -199,3 +215,5 @@ exports.RefObjWithSeqType = RefObjWithSeq
 exports.RefObjWithSeq = newRefObjWithSeq
 exports.SimpleObjWithProc = SimpleObjWithProc;
 exports.simpleObjWithProc = simpleObjWithProc;
+exports.ArrayObj = ArrayObj;
+exports.arrayObj = arrayObj;
