@@ -11,10 +11,10 @@ proc exportTypeC(sym: NimNode): string =
         entryCount = sym[1].repr
         entryType = exportTypeC(sym[2])
       result = &"{entryType}[{entryCount}]"
-    elif sym[0].repr != "seq":
-      error(&"Unexpected bracket expression {sym[0].repr}[")
-    else:
+    elif sym[0].repr == "seq":
       result = sym.getSeqName()
+    else:
+      error(&"Unexpected bracket expression {sym[0].repr}[")
   else:
     result =
       case sym.repr:
@@ -49,10 +49,10 @@ proc exportTypeC(sym: NimNode, name: string): string =
         entryCount = sym[1].repr
         entryType = exportTypeC(sym[2], &"{name}[{entryCount}]")
       result = &"{entryType}"
-    elif sym[0].repr != "seq":
-      error(&"Unexpected bracket expression {sym[0].repr}[")
-    else:
+    elif sym[0].repr == "seq":
       result = sym.getSeqName() & " " & name
+    else:
+      error(&"Unexpected bracket expression {sym[0].repr}[")
   else:
     result = exportTypeC(sym) & " " & name
 

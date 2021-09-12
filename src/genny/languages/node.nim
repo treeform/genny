@@ -12,10 +12,10 @@ proc exportTypeNode(sym: NimNode): string =
         entryCount = sym[1].repr
         entryType = exportTypeNode(sym[2])
       result = &"ArrayType({entryType}, {entryCount})"
-    elif sym[0].repr != "seq":
-      error(&"Unexpected bracket expression {sym[0].repr}[")
-    else:
+    elif sym[0].repr == "seq":
       result = sym.getSeqName()
+    else:
+      error(&"Unexpected bracket expression {sym[0].repr}[")
   else:
     result =
       case sym.repr:
