@@ -16,11 +16,12 @@ https://nimdocs.com/treeform/genny
 
 ## Supported features and languages:
 
-Language      | Method        | Enums  | Objects | Ref Objects | Seqs   |
-------------- | ------------- | ------ | ------- | ----------- | ------ |
-Nim           | {.importc.}   | ✅     | ✅     | ✅          | ✅    |
-Python        | ctypes        | ✅     | ✅     | ✅          | ✅    |
-Node.js       | ffi-napi      | ✅     | ✅     | ✅          | ✅    |
+Language      | Method        | Enums  | Objects | Ref Objects | Seqs   | GC |
+------------- | ------------- | ------ | ------- | ----------- | ------ | -- |
+Nim           | {.importc.}   | ✅     | ✅     | ✅          | ✅    | ✅ |
+Python        | ctypes        | ✅     | ✅     | ✅          | ✅    | ✅ |
+Node.js       | ffi-napi      | ✅     | ✅     | ✅          | ✅    | no |
+C             | .h            | ✅     | ✅     | ✅          | ✅    | no |
 
 ## Quest for "nice" language binding.
 
