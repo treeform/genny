@@ -169,7 +169,6 @@ macro exportObjectTyped(body: typed) =
 
   if procsBlock[1].len > 0:
     var procsSeen: seq[string]
-    echo procsBlock[1].treeRepr
     for entry in procsBlock[1].asStmtList:
       var
         procSym = procTypedSym(entry)
