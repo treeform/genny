@@ -10,7 +10,8 @@ proc exportTypeC(sym: NimNode): string =
       let
         entryCount = sym[1].repr
         entryType = exportTypeC(sym[2])
-      result = &"{entryType}*" # [{entryCount}]"
+      # fix # TODO figure out a different way for this: entryType[entryCount]"
+      result = &"{entryType}*"
     elif sym[0].repr == "ref":
       result = sym[1].repr.split(":", 1)[0]
     elif sym[0].repr != "seq":
@@ -44,14 +45,6 @@ proc exportTypeC(sym: NimNode): string =
       else:
         sym.repr
 
-proc convertExportFromC*(sym: NimNode): string =
-  if sym.repr == "string":
-    result = ".encode(\"utf8\")"
-
-proc convertImportToC*(sym: NimNode): string =
-  if sym.repr == "string":
-    result = ".decode(\"utf8\")"
-
 proc dllProc*(procName: string, args: openarray[(string, string)], restype: string) =
   var argStr = ""
   for (argName, argType) in args:
@@ -63,10 +56,6 @@ proc dllProc*(procName: string, args: openarray[(string, string)], restype: stri
 proc dllProc*(procName: string, args: openarray[(NimNode, NimNode)], restype: string) =
   var argsConverted: seq[(string, string)]
   for (argName, argType) in args:
-    # echo arg.treeRepr
-    # echo arg.repr
-    # echo arg.getImpl()[2][2]
-    # echo arg.getType()
     argsConverted.add (toSnakeCase(argName.getName()), exportTypeC(argType))
   dllProc(procName, argsConverted, restype)
 
@@ -132,9 +121,6 @@ proc exportProcC*(
 
 proc exportObjectC*(sym: NimNode, constructor: NimNode) =
   let objName = sym.repr
-
-  # if objName in ["Vector2", "Matrix3", "Rect", "Color"]:
-  #   return
 
   types.add &"typedef struct {objName} " & "{\n"
   for identDefs in sym.getImpl()[2][2]:

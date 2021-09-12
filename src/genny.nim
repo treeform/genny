@@ -87,7 +87,6 @@ proc procUntyped(clause: NimNode): NimNode =
     result[1].add endStmt
 
 proc procTypedSym(entry: NimNode): NimNode =
-  doAssert entry.kind != nnkEmpty
   result =
     if entry[1].kind == nnkVarSection:
       entry[1][0][2]
@@ -144,8 +143,6 @@ macro exportObjectUntyped(sym, body: untyped) =
     of "procs":
       for clause in section[1]:
         procsBlock[1].add procUntyped(clause)
-      procsBlock[1].add quote do:
-        discard
     else:
       error("Invalid section", section)
 
@@ -172,7 +169,8 @@ macro exportObjectTyped(body: typed) =
 
   if procsBlock[1].len > 0:
     var procsSeen: seq[string]
-    for entry in procsBlock[1][0 .. ^2]:
+    echo procsBlock[1].treeRepr
+    for entry in procsBlock[1].asStmtList:
       var
         procSym = procTypedSym(entry)
         prefixes: seq[NimNode]
@@ -212,11 +210,8 @@ macro exportSeqUntyped(sym, body: untyped) =
     else:
       error("Invalid section", section)
 
-  result.add quote do:
-    discard
-
 macro exportSeqTyped(body: typed) =
-  let sym = body[0][0][1]
+  let sym = body.asStmtList()[0][0][1]
 
   exportSeqInternal(sym)
   exportSeqNim(sym)
@@ -224,7 +219,7 @@ macro exportSeqTyped(body: typed) =
   exportSeqNode(sym)
   exportSeqC(sym)
 
-  for entry in body[1 .. ^2]:
+  for entry in body.asStmtList()[1 .. ^1]:
     procTyped(entry, sym)
 
 template exportSeq*(sym, body: untyped) =
@@ -262,8 +257,6 @@ macro exportRefObjectUntyped(sym, body: untyped) =
     of "procs":
       for clause in section[1]:
         procsBlock[1].add procUntyped(clause)
-      procsBlock[1].add quote do:
-        discard
     else:
       error("Invalid section", section)
 
@@ -297,7 +290,7 @@ macro exportRefObjectTyped(body: typed) =
 
   if procsBlock[1].len > 0:
     var procsSeen: seq[string]
-    for entry in procsBlock[1][0 .. ^2]:
+    for entry in procsBlock[1].asStmtList:
       var
         procSym = procTypedSym(entry)
         prefixes: seq[NimNode]

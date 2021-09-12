@@ -66,6 +66,18 @@ exportRefObject RefObjWithSeq:
   constructor:
     newRefObjWithSeq()
 
+type SimpleObjWithProc = object
+  simpleA*: int
+  simpleB*: byte
+  simpleC*: bool
+
+proc extraProc(s: SimpleObjWithProc) =
+  discard
+
+exportObject SimpleObjWithProc:
+  procs:
+    extraProc
+
 writeFiles("tests/generated", "test")
 
 include generated/internal

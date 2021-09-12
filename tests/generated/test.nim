@@ -60,6 +60,16 @@ proc test_ref_obj_with_seq_unref(x: RefObjWithSeqObj) {.importc: "test_ref_obj_w
 proc `=destroy`(x: var RefObjWithSeqObj) =
   test_ref_obj_with_seq_unref(x)
 
+type SimpleObjWithProc* = object
+  simpleA*: int
+  simpleB*: byte
+  simpleC*: bool
+
+proc simpleObjWithProc*(simple_a: int, simple_b: byte, simple_c: bool): SimpleObjWithProc =
+  result.simple_a = simple_a
+  result.simple_b = simple_b
+  result.simple_c = simple_c
+
 proc test_simple_call(a: int): int {.importc: "test_simple_call", cdecl.}
 
 proc simpleCall*(a: int): int {.inline.} =
@@ -170,4 +180,9 @@ proc test_ref_obj_with_seq_data_clear(s: RefObjWithSeq) {.importc: "test_ref_obj
 
 proc clear*(s: RefObjWithSeqData) =
   test_ref_obj_with_seq_data_clear(s.refObjWithSeq)
+
+proc test_simple_obj_with_proc_extra_proc(s: SimpleObjWithProc) {.importc: "test_simple_obj_with_proc_extra_proc", cdecl.}
+
+proc extraProc*(s: SimpleObjWithProc) {.inline.} =
+  test_simple_obj_with_proc_extra_proc(s)
 

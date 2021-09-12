@@ -73,3 +73,6 @@ proc test_ref_obj_with_seq_data_delete*(ref_obj_with_seq: RefObjWithSeq, i: int)
 proc test_ref_obj_with_seq_data_clear*(ref_obj_with_seq: RefObjWithSeq) {.raises: [], cdecl, exportc, dynlib.} =
   ref_obj_with_seq.data.setLen(0)
 
+proc test_simple_obj_with_proc_extra_proc*(s: SimpleObjWithProc) {.raises: [], cdecl, exportc, dynlib.} =
+  extraProc(s)
+

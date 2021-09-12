@@ -156,6 +156,24 @@ class RefObjWithSeq(Structure):
     def data(self):
         return self.RefObjWithSeqData(self)
 
+class SimpleObjWithProc(Structure):
+    _fields_ = [
+        ("simple_a", c_longlong),
+        ("simple_b", c_byte),
+        ("simple_c", c_bool)
+    ]
+
+    def __init__(self, simple_a, simple_b, simple_c):
+        self.simple_a = simple_a
+        self.simple_b = simple_b
+        self.simple_c = simple_c
+
+    def __eq__(self, obj):
+        return self.simple_a == obj.simple_a and self.simple_b == obj.simple_b and self.simple_c == obj.simple_c
+
+    def extra_proc(self):
+        dll.test_simple_obj_with_proc_extra_proc(self)
+
 dll.test_simple_call.argtypes = [c_longlong]
 dll.test_simple_call.restype = c_longlong
 
@@ -227,4 +245,7 @@ dll.test_ref_obj_with_seq_data_add.restype = None
 
 dll.test_ref_obj_with_seq_data_clear.argtypes = [RefObjWithSeq]
 dll.test_ref_obj_with_seq_data_clear.restype = None
+
+dll.test_simple_obj_with_proc_extra_proc.argtypes = [SimpleObjWithProc]
+dll.test_simple_obj_with_proc_extra_proc.restype = None
 

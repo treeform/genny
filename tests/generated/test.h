@@ -1,3 +1,5 @@
+#ifndef INCLUDE_TEST_H
+#define INCLUDE_TEST_H
 
 #define SIMPLE_CONST 123
 
@@ -25,10 +27,23 @@ typedef long long SeqInt;
 
 typedef long long RefObjWithSeq;
 
+typedef struct SimpleObjWithProc {
+  long long simple_a;
+  char simple_b;
+  char simple_c;
+} SimpleObjWithProc;
+SimpleObjWithProc simple_obj_with_proc(long long simple_a, char simple_b, char simple_c) {
+  SimpleObjWithProc result;
+  result.simple_a = simple_a;
+  result.simple_b = simple_b;
+  result.simple_c = simple_c;
+  return result;
+}
+
 /**
  * Returns the integer passed in.
  */
-long long test_simple_call(long long int);
+long long test_simple_call(long long a);
 
 void test_simple_ref_obj_unref(SimpleRefObj simple_ref_obj);
 
@@ -36,16 +51,16 @@ SimpleRefObj test_new_simple_ref_obj();
 
 long long test_simple_ref_obj_get_simple_ref_a(SimpleRefObj simple_ref_obj);
 
-void test_simple_ref_obj_set_simple_ref_a(SimpleRefObj simple_ref_obj, long long int);
+void test_simple_ref_obj_set_simple_ref_a(SimpleRefObj simple_ref_obj, long long value);
 
 char test_simple_ref_obj_get_simple_ref_b(SimpleRefObj simple_ref_obj);
 
-void test_simple_ref_obj_set_simple_ref_b(SimpleRefObj simple_ref_obj, unsigned char byte);
+void test_simple_ref_obj_set_simple_ref_b(SimpleRefObj simple_ref_obj, char value);
 
 /**
  * Does some thing with SimpleRefObj.
  */
-void test_simple_ref_obj_doit(SimpleRefObj simple_ref_obj);
+void test_simple_ref_obj_doit(SimpleRefObj s);
 
 void test_seq_int_unref(SeqInt seq_int);
 
@@ -79,3 +94,4 @@ void test_ref_obj_with_seq_data_add(RefObjWithSeq ref_obj_with_seq, char value);
 
 void test_ref_obj_with_seq_data_clear(RefObjWithSeq ref_obj_with_seq);
 
+#endif

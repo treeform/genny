@@ -127,6 +127,26 @@ Object.defineProperty(RefObjWithSeq.prototype, 'data', {
   get: function() {return new RefObjWithSeqData(this)},
 });
 
+const SimpleObjWithProc = Struct({
+  'simpleA':'int64',
+  'simpleB':'int8',
+  'simpleC':'bool'
+})
+simpleObjWithProc = function(simple_a, simple_b, simple_c){
+  var v = new SimpleObjWithProc();
+  v.simple_a = simple_a
+  v.simple_b = simple_b
+  v.simple_c = simple_c
+  return v;
+}
+SimpleObjWithProc.prototype.isEqual = function(other){
+  return self.simpleA == other.simpleA && self.simpleB == other.simpleB && self.simpleC == other.simpleC;
+};
+
+SimpleObjWithProc.prototype.extraProc = function(){
+  dll.test_simple_obj_with_proc_extra_proc(this)
+}
+
 
 var dllPath = ""
 if(process.platform == "win32") {
@@ -161,6 +181,7 @@ dll = ffi.Library(dllPath, {
   'test_ref_obj_with_seq_data_delete': ['void', [RefObjWithSeq, 'uint64']],
   'test_ref_obj_with_seq_data_add': ['void', [RefObjWithSeq, 'int8']],
   'test_ref_obj_with_seq_data_clear': ['void', [RefObjWithSeq]],
+  'test_simple_obj_with_proc_extra_proc': ['void', [SimpleObjWithProc]],
 });
 
 exports.SIMPLE_CONST = 123
@@ -176,3 +197,5 @@ exports.SimpleRefObj = newSimpleRefObj
 exports.SeqIntType = SeqInt
 exports.RefObjWithSeqType = RefObjWithSeq
 exports.RefObjWithSeq = newRefObjWithSeq
+exports.SimpleObjWithProc = SimpleObjWithProc;
+exports.simpleObjWithProc = simpleObjWithProc;
