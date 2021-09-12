@@ -12,8 +12,6 @@ proc exportTypeNode(sym: NimNode): string =
         entryCount = sym[1].repr
         entryType = exportTypeNode(sym[2])
       result = &"ArrayType({entryType}, {entryCount})"
-    elif sym[0].repr == "ref":
-      result = sym[1].repr.split(":", 1)[0]
     elif sym[0].repr != "seq":
       error(&"Unexpected bracket expression {sym[0].repr}[")
     else:

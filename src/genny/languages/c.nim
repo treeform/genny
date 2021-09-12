@@ -11,8 +11,6 @@ proc exportTypeC(sym: NimNode): string =
         entryCount = sym[1].repr
         entryType = exportTypeC(sym[2])
       result = &"{entryType}[{entryCount}]"
-    elif sym[0].repr == "ref":
-      result = sym[1].repr.split(":", 1)[0]
     elif sym[0].repr != "seq":
       error(&"Unexpected bracket expression {sym[0].repr}[")
     else:
@@ -51,9 +49,6 @@ proc exportTypeC(sym: NimNode, name: string): string =
         entryCount = sym[1].repr
         entryType = exportTypeC(sym[2], &"{name}[{entryCount}]")
       result = &"{entryType}"
-
-    elif sym[0].repr == "ref":
-      result = sym[1].repr.split(":", 1)[0] & " " & name
     elif sym[0].repr != "seq":
       error(&"Unexpected bracket expression {sym[0].repr}[")
     else:
@@ -156,8 +151,11 @@ proc exportObjectC*(sym: NimNode, constructor: NimNode) =
     types.add &"  {objName} result;\n"
     for identDefs in sym.getImpl()[2][2]:
       for property in identDefs[0 .. ^3]:
-        let argName = toSnakeCase(property[1].repr)
-        if "[" in exportTypeC(identDefs[^2]):
+        let
+          argName = toSnakeCase(property[1].repr)
+          isArray = identDefs[^2].kind == nnkBracketExpr and
+            identDefs[^2][0].repr == "array"
+        if isArray:
           types.add &"  memcpy(&result.{argName}, &{argName}, sizeof({argName}));\n"
         else:
           types.add &"  result.{argName} = {argName};\n"
