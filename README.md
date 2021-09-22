@@ -25,18 +25,18 @@ C             | .h            | ✅     | ✅     | ✅          | ✅    | no |
 
 ## Quest for "nice" language binding.
 
-It would be pretty easy just export a C API from Nim and have users call the ugly C style methods but that is not our goal with Genny. Instead, we try to generate a "nice" API for each language that feels like it was custom-made. This means, where possible, we:
+It would be pretty easy to just export a C API from Nim and have users call the ugly C style methods but that is not our goal with Genny. Instead, we try to generate a "nice" API for each language that feels like it was custom-made. This means, where possible, we:
 
 * Use naming conventions that are familar in the language (CamelCase, Snake_Case or Kabob-Case).
 * Make sure regular `object`s are passed by value and behave simply.
 * Make `ref object`s behave like OOP objects with members, methods and constructors.
 * Generate helper methods like `==` or `isNull`.
-* Export `seq[X]` as some thing that feels like a native array.
+* Export `seq[X]` as something that feels like a native array.
 * Export `seq[X]` on a `ref object` behaves like what we call a bound-seq.
 * Support the `[]` syntax.
 * Support the `.` member syntax.
 * Overload math operators `+`, `-`, `*`, `/`.
-* Overload `proc`s, where we first unpack them to different C calls with unique prefixes and them repack them back into overloaded methods or functions.
+* Overload `proc`s, where we first unpack them to different C calls with unique prefixes and then repack them back into overloaded methods or functions.
 * Pass optional arguments.
 * Pass enums and constants.
 * Synchronize the binding language's GC and Nim's ARC GC.
@@ -103,4 +103,4 @@ Nim is a niche language. We believe we can broaden Nim's appeal by creating Nim 
 
 ## Why add Nim binding support for a Nim library?
 
-"Can't you just import your cool library in Nim?" We though it was important to test the library in a what we call Nim-C-Nim sandwich. It makes sure everyone uses your library API the same way. This also means you could ship huge Nim libraries as DLLs and use them in your Nim programs without recompiling everything every time.
+"Can't you just import your cool library in Nim?" We thought it was important to test the library in a what we call Nim-C-Nim sandwich. It makes sure everyone uses your library API the same way. This also means you could ship huge Nim libraries as DLLs and use them in your Nim programs without recompiling everything every time.
