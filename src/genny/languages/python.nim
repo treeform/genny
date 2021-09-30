@@ -448,13 +448,13 @@ const header = """
 from ctypes import *
 import os, sys
 
-dir = os.path.dirname(sys.modules["pixie"].__file__)
+dir = os.path.dirname(sys.modules["$lib"].__file__)
 if sys.platform == "win32":
-  libName = "pixie.dll"
+  libName = "$lib.dll"
 elif sys.platform == "darwin":
-  libName = "libpixie.dylib"
+  libName = "lib$lib.dylib"
 else:
-  libName = "libpixie.so"
+  libName = "lib$lib.so"
 dll = cdll.LoadLibrary(os.path.join(dir, libName))
 
 class $LibError(Exception):
