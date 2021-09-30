@@ -169,7 +169,7 @@ proc exportProcNode*(
   types.add &"){convertImportToNode(procReturn)}\n"
   if procRaises:
     types.add &"  if(checkError()) "
-    types.add "throw new PixieException("
+    types.add "throw new $LibException("
     types.add "takeError()"
     types.add ");\n"
   if procReturn.kind != nnkEmpty:
@@ -323,7 +323,7 @@ proc exportRefObjectNode*(
     types.add ")\n"
     if constructorRaises:
       types.add &"  if(checkError()) "
-      types.add "throw new PixieException("
+      types.add "throw new $LibException("
       types.add "takeError()"
       types.add ");\n"
     types.add "  return result\n"
@@ -432,5 +432,6 @@ const footer = """
 proc writeNode*(dir, lib: string) =
   writeFile(
     &"{dir}/{lib}.js",
-    (header & types & loader & procs & footer & exports).replace("$lib", lib).replace("$Lib", lib.capitalizeAscii())
+    (header & types & loader & procs & footer & exports)
+      .replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
   )
