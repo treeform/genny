@@ -189,7 +189,7 @@ proc exportProcPy*(
     types.add &"    if check_error():\n"
     if onClass:
       types.add "    "
-    types.add "        raise PixieError("
+    types.add "        raise $LibError("
     types.add "take_error()"
     types.add ")\n"
   if procReturn.kind != nnkEmpty:
@@ -359,7 +359,7 @@ proc exportRefObjectPy*(
       types.add ")\n"
       if constructorRaises:
         types.add &"        if check_error():\n"
-        types.add "            raise PixieError("
+        types.add "            raise $LibError("
         types.add "take_error()"
         types.add ")\n"
       types.add "        self.ref = result\n"
@@ -457,10 +457,12 @@ else:
   libName = "libpixie.so"
 dll = cdll.LoadLibrary(os.path.join(dir, libName))
 
-class PixieError(Exception):
+class $LibError(Exception):
     pass
 
 """
 
 proc writePy*(dir, lib: string) =
-  writeFile(&"{dir}/{lib}.py", (header & types & procs).replace("$lib", lib))
+  writeFile(&"{dir}/{lib}.py", (header & types & procs)
+    .replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
+  )

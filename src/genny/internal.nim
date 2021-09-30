@@ -59,7 +59,7 @@ proc exportProcInternal*(
     internal.add convertExportFromNim(procReturn)
   if procRaises:
     internal.add "\n"
-    internal.add "  except PixieError as e:\n"
+    internal.add "  except $LibError as e:\n"
     internal.add "    lastError = e"
   internal.add "\n"
   internal.add "\n"
@@ -222,4 +222,7 @@ proc exportSeqInternal*(sym: NimNode) =
   generateSeqs(sym)
 
 proc writeInternal*(dir, lib: string) =
-  writeFile(&"{dir}/internal.nim", internal.replace("$lib", lib))
+  writeFile(
+    &"{dir}/internal.nim",
+    internal.replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
+  )

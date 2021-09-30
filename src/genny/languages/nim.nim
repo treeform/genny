@@ -121,7 +121,7 @@ proc exportProcNim*(
   procs.add ")\n"
   if procRaises:
     procs.add "  if checkError():\n"
-    procs.add "    raise newException(PixieError, $takeError())\n"
+    procs.add "    raise newException($LibError, $takeError())\n"
   procs.add "\n"
 
 proc exportObjectNim*(sym: NimNode, constructor: NimNode) =
@@ -360,9 +360,11 @@ else:
 
 {.push dynlib: libName.}
 
-type PixieError = object of ValueError
+type $LibError = object of ValueError
 
 """
 
 proc writeNim*(dir, lib: string) =
-  writeFile(&"{dir}/{lib}.nim", (header & types & procs).replace("$lib", lib))
+  writeFile( &"{dir}/{lib}.nim", (header & types & procs)
+    .replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
+  )
