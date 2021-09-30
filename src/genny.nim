@@ -302,7 +302,7 @@ macro exportRefObjectTyped(body: typed) =
       exportProcInternal(procSym, sym, prefixes)
       exportProcNim(procSym, sym, prefixes)
       exportProcPy(procSym, sym, prefixes)
-      # exportProcNode(procSym, sym, prefixes)
+      exportProcNode(procSym, sym, prefixes)
       exportProcC(procSym, sym, prefixes)
 
 template exportRefObject*(sym, body: untyped) =
