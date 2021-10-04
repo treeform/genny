@@ -365,6 +365,6 @@ type $LibError = object of ValueError
 """
 
 proc writeNim*(dir, lib: string) =
-  writeFile( &"{dir}/{lib}.nim", (header & types & procs)
+  writeFile( &"{dir}/{toSnakeCase(lib)}.nim", (header & types & procs)
     .replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
   )
