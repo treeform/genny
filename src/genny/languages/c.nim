@@ -258,6 +258,6 @@ const footer = """
 """
 
 proc writeC*(dir, lib: string) =
-  writeFile(&"{dir}/{lib}.h", (header & types & procs & footer)
+  writeFile(&"{dir}/{toSnakeCase(lib)}.h", (header & types & procs & footer)
     .replace("$lib", lib).replace("$LIB", lib.toUpperAscii())
   )

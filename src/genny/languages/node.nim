@@ -431,7 +431,7 @@ const footer = """
 
 proc writeNode*(dir, lib: string) =
   writeFile(
-    &"{dir}/{lib}.js",
+    &"{dir}/{toSnakeCase(lib)}.js",
     (header & types & loader & procs & footer & exports)
       .replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
   )

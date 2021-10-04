@@ -463,6 +463,6 @@ class $LibError(Exception):
 """
 
 proc writePy*(dir, lib: string) =
-  writeFile(&"{dir}/{lib}.py", (header & types & procs)
+  writeFile(&"{dir}/{toSnakeCase(lib)}.py", (header & types & procs)
     .replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
   )
