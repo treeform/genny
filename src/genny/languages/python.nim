@@ -328,7 +328,10 @@ proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   dllProc(&"dll.{procPrefix}_clear", [objName], "None")
 
 proc exportRefObjectPy*(
-  sym: NimNode, allowedFields: openarray[string], constructor: NimNode
+  sym: NimNode,
+  allowedFields: openarray[string],
+  pseudoFields: seq[NimNode],
+  constructor: NimNode
 ) =
   let
     objName = sym.repr
@@ -369,6 +372,31 @@ proc exportRefObjectPy*(
       for param in constructorParams:
         dllParams.add(param[1])
       dllProc(constructorLibProc, toArgTypes(dllParams), "c_ulonglong")
+
+  proc exportField(fieldName: string, fieldType: NimNode) =
+    let fieldNameSnaked = toSnakeCase(fieldName)
+
+    let getProcName = &"dll.$lib_{objNameSnaked}_get_{fieldNameSnaked}"
+
+    types.add "    @property\n"
+    types.add &"    def {fieldNameSnaked}(self):\n"
+    types.add "        "
+    types.add &"return {getProcName}(self){convertImportToPy(fieldType)}\n"
+
+    let setProcName = &"dll.$lib_{objNameSnaked}_set_{fieldNameSnaked}"
+
+    types.add "\n"
+    types.add &"    @{fieldNameSnaked}.setter\n"
+    types.add &"    def {fieldNameSnaked}(self, {fieldNameSnaked}):\n"
+    types.add "        "
+    types.add &"{setProcName}(self, "
+    types.add &"{fieldNameSnaked}{convertExportFromPy(fieldType)}"
+    types.add ")\n"
+    types.add "\n"
+
+    dllProc(getProcName, toArgTypes([sym]), exportTypePy(fieldType))
+    dllProc(setProcName, toArgTypes([sym, fieldType]), exportTypePy(nil))
+
   for property in objType[2]:
     if property.repr notin allowedFields:
       continue
@@ -379,26 +407,7 @@ proc exportRefObjectPy*(
       propertyType = property.getTypeInst()
 
     if propertyType.kind != nnkBracketExpr:
-      let getProcName = &"dll.$lib_{objNameSnaked}_get_{propertyNameSnaked}"
-
-      types.add "    @property\n"
-      types.add &"    def {propertyNameSnaked}(self):\n"
-      types.add "        "
-      types.add &"return {getProcName}(self){convertImportToPy(propertyType)}\n"
-
-      let setProcName = &"dll.$lib_{objNameSnaked}_set_{propertyNameSnaked}"
-
-      types.add "\n"
-      types.add &"    @{propertyNameSnaked}.setter\n"
-      types.add &"    def {propertyNameSnaked}(self, {propertyNameSnaked}):\n"
-      types.add "        "
-      types.add &"{setProcName}(self, "
-      types.add &"{propertyNameSnaked}{convertExportFromPy(propertyType)}"
-      types.add ")\n"
-      types.add "\n"
-
-      dllProc(getProcName, toArgTypes([sym]), exportTypePy(propertyType))
-      dllProc(setProcName, toArgTypes([sym, propertyType]), exportTypePy(nil))
+      exportField(propertyName, propertyType)
     else:
       var helperName = property.repr
       helperName[0] = toUpperAscii(helperName[0])
@@ -421,6 +430,9 @@ proc exportRefObjectPy*(
       types.add &"    def {toSnakeCase(helperName)}(self):\n"
       types.add &"        return self.{helperClassName}(self)\n"
       types.add "\n"
+
+  for pseudoField in pseudoFields:
+    exportField(pseudoField.repr, pseudoField.getTypeInst()[0][0][0])
 
 proc exportSeqPy*(sym: NimNode) =
   let

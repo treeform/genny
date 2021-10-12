@@ -235,6 +235,7 @@ macro exportRefObjectUntyped(sym, body: untyped) =
 
   var
     fieldsBlock = emptyBlockStmt()
+    pseudoFieldsBlock = emptyBlockStmt()
     constructorBlock = emptyBlockStmt()
     procsBlock = emptyBlockStmt()
 
@@ -251,6 +252,9 @@ macro exportRefObjectUntyped(sym, body: untyped) =
       for field in section[1]:
         allowedFields[0][2][1].add newStrLitNode(field.repr)
       fieldsBlock[1].add allowedFields
+    of "pseudoFields":
+      for psuedoField in section[1]:
+        pseudoFieldsBlock[1].add procUntyped(psuedoField)
     of "constructor":
       constructorBlock[1].add procUntyped(section[1][0])
     of "procs":
@@ -260,6 +264,7 @@ macro exportRefObjectUntyped(sym, body: untyped) =
       error("Invalid section", section)
 
   result.add fieldsBlock
+  result.add pseudoFieldsBlock
   result.add constructorBlock
   result.add procsBlock
 
@@ -267,13 +272,20 @@ macro exportRefObjectTyped(body: typed) =
   let
     sym = body[0][0][1]
     fieldsBlock = body[1]
-    constructorBlock = body[2]
-    procsBlock = body[3]
+    pseudoFieldsBlock = body[2]
+    constructorBlock = body[3]
+    procsBlock = body[4]
 
   var allowedFields: seq[string]
   if fieldsBlock[1].len > 0:
     for entry in fieldsBlock[1][0][2][1]:
       allowedFields.add entry.strVal
+
+  var pseudoFields: seq[NimNode]
+  if pseudoFieldsBlock[1].len > 0:
+    for entry in pseudoFieldsBlock[1].asStmtList:
+      let procSym = procTypedSym(entry)
+      pseudoFields.add procSym
 
   let constructor =
     if constructorBlock[1].len > 0:
@@ -281,9 +293,9 @@ macro exportRefObjectTyped(body: typed) =
     else:
       nil
 
-  exportRefObjectInternal(sym, allowedFields, constructor)
-  exportRefObjectNim(sym, allowedFields, constructor)
-  exportRefObjectPy(sym, allowedFields, constructor)
+  exportRefObjectInternal(sym, allowedFields, pseudoFields, constructor)
+  exportRefObjectNim(sym, allowedFields, pseudoFields, constructor)
+  exportRefObjectPy(sym, allowedFields, pseudoFields, constructor)
   exportRefObjectNode(sym, allowedFields, constructor)
   exportRefObjectC(sym, allowedFields, constructor)
 

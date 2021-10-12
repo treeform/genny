@@ -85,7 +85,10 @@ proc exportObjectInternal*(sym: NimNode, constructor: NimNode) =
     internal.add "\n"
 
 proc exportRefObjectInternal*(
-  sym: NimNode, allowedFields: openarray[string], constructor: NimNode
+  sym: NimNode,
+  allowedFields: openarray[string],
+  pseudoFields: seq[NimNode],
+  constructor: NimNode
 ) =
   let
     objName = sym.repr
@@ -100,6 +103,28 @@ proc exportRefObjectInternal*(
   if constructor != nil:
     exportProcInternal(constructor)
 
+  proc exportField(fieldName: string, fieldType: NimNode) =
+    let fieldNameSnaked = toSnakeCase(fieldName)
+
+    internal.add "proc "
+    internal.add &"$lib_{objNameSnaked}_get_{fieldNameSnaked}*"
+    internal.add &"({objNameSnaked}: {objName}): {exportTypeNim(fieldType)}"
+    internal.add &" {exportProcPragmas} =\n"
+    internal.add &"  {objNameSnaked}.{fieldName}"
+    internal.add convertExportFromNim(fieldType)
+    internal.add "\n"
+    internal.add "\n"
+
+    internal.add "proc "
+    internal.add &"$lib_{objNameSnaked}_set_{fieldNameSnaked}*"
+    internal.add &"({objNameSnaked}: {objName}, "
+    internal.add &"{fieldName}: {exportTypeNim(fieldType)})"
+    internal.add &" {exportProcPragmas} =\n"
+    internal.add &"  {objNameSnaked}.{fieldName} = {fieldName}"
+    internal.add convertImportToNim(fieldType)
+    internal.add "\n"
+    internal.add "\n"
+
   for property in objType[2]:
     if property.repr notin allowedFields:
       continue
@@ -110,24 +135,7 @@ proc exportRefObjectInternal*(
       propertyType = property.getTypeInst()
 
     if propertyType.kind != nnkBracketExpr:
-      internal.add "proc "
-      internal.add &"$lib_{objNameSnaked}_get_{propertyNameSnaked}*"
-      internal.add &"({objNameSnaked}: {objName}): {exportTypeNim(propertyType)}"
-      internal.add &" {exportProcPragmas} =\n"
-      internal.add &"  {objNameSnaked}.{propertyName}"
-      internal.add convertExportFromNim(propertyType)
-      internal.add "\n"
-      internal.add "\n"
-
-      internal.add "proc "
-      internal.add &"$lib_{objNameSnaked}_set_{propertyNameSnaked}*"
-      internal.add &"({objNameSnaked}: {objName}, "
-      internal.add &"{propertyName}: {exportTypeNim(propertyType)})"
-      internal.add &" {exportProcPragmas} =\n"
-      internal.add &"  {objNameSnaked}.{propertyName} = {propertyName}"
-      internal.add convertImportToNim(propertyType)
-      internal.add "\n"
-      internal.add "\n"
+      exportField(propertyNameSnaked, propertyType)
     else: # Treat this property as a bound seq
       let prefix = &"$lib_{objNameSnaked}_{propertyNameSnaked}"
 
@@ -160,6 +168,9 @@ proc exportRefObjectInternal*(
       internal.add &" {exportProcPragmas} =\n"
       internal.add &"  {objNameSnaked}.{propertyName}.setLen(0)\n"
       internal.add "\n"
+
+  for pseudoField in pseudoFields:
+    exportField(pseudoField.repr, pseudoField.getTypeInst()[0][0][0])
 
 proc generateSeqs(sym: NimNode) =
   let

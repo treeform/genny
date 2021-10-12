@@ -90,7 +90,9 @@ proc exportProcNode*(
   let comments =
     if sym.getImpl()[6][0].kind == nnkCommentStmt:
       sym.getImpl()[6][0].repr
-    elif sym.getImpl[6].kind == nnkAsgn and sym.getImpl[6][1][0].kind == nnkCommentStmt:
+    elif sym.getImpl[6].kind == nnkAsgn and
+      sym.getImpl[6][1].kind == nnkStmtListExpr and
+      sym.getImpl[6][1][0].kind == nnkCommentStmt:
       sym.getImpl[6][1][0].repr
     else:
       ""
