@@ -179,7 +179,9 @@ proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   dllProc(&"{procPrefix}_clear", [objArg], "void")
 
 proc exportRefObjectC*(
-  sym: NimNode, allowedFields: openarray[string], constructor: NimNode
+  sym: NimNode,
+  fields: seq[(string, NimNode)],
+  constructor: NimNode
 ) =
   let
     objName = sym.repr
@@ -200,32 +202,26 @@ proc exportRefObjectC*(
         dllParams.add((param[0], param[1]))
       dllProc(constructorLibProc, dllParams, objName)
 
-  for property in objType[2]:
-    if property.repr notin allowedFields:
-      continue
+  for (fieldName, fieldType) in fields:
+    let fieldNameSnaked = toSnakeCase(fieldName)
 
-    let
-      propertyName = property.repr
-      propertyNameSnaked = toSnakeCase(propertyName)
-      propertyType = property.getTypeInst()
+    if fieldType.kind != nnkBracketExpr:
+      let getProcName = &"$lib_{objNameSnaked}_get_{fieldNameSnaked}"
 
-    if propertyType.kind != nnkBracketExpr:
-      let getProcName = &"$lib_{objNameSnaked}_get_{propertyNameSnaked}"
+      let setProcName = &"$lib_{objNameSnaked}_set_{fieldNameSnaked}"
 
-      let setProcName = &"$lib_{objNameSnaked}_set_{propertyNameSnaked}"
-
-      dllProc(getProcName, [objName & " " & objNameSnaked], exportTypeC(propertyType))
-      dllProc(setProcName, [objName & " " & objNameSnaked, exportTypeC(propertyType, "value")], exportTypeC(nil))
+      dllProc(getProcName, [objName & " " & objNameSnaked], exportTypeC(fieldType))
+      dllProc(setProcName, [objName & " " & objNameSnaked, exportTypeC(fieldType, "value")], exportTypeC(nil))
     else:
-      var helperName = property.repr
+      var helperName = fieldName
       helperName[0] = toUpperAscii(helperName[0])
       let helperClassName = objName & helperName
 
       genSeqProcs(
         objName,
-        &"$lib_{objNameSnaked}_{propertyNameSnaked}",
+        &"$lib_{objNameSnaked}_{fieldNameSnaked}",
         &".{toSnakeCase(objName)}",
-        propertyType[1]
+        fieldType[1]
       )
 
 proc exportSeqC*(sym: NimNode) =

@@ -238,8 +238,7 @@ proc genSeqProcs(objName, niceName, procPrefix, objSuffix, entryName: string) =
 
 proc exportRefObjectNim*(
   sym: NimNode,
-  allowedFields: openarray[string],
-  pseudoFields: seq[NimNode],
+  fields: seq[(string, NimNode)],
   constructor: NimNode
 ) =
   let
@@ -252,61 +251,50 @@ proc exportRefObjectNim*(
   if constructor != nil:
     exportProcNim(constructor)
 
-  proc exportField(fieldName: string, fieldType: NimNode) =
+  for (fieldName, fieldType) in fields:
     let fieldNameSnaked = toSnakeCase(fieldName)
 
-    let getProcName = &"$lib_{objNameSnaked}_get_{fieldNameSnaked}"
+    if fieldType.kind != nnkBracketExpr:
+      let getProcName = &"$lib_{objNameSnaked}_get_{fieldNameSnaked}"
 
-    procs.add &"proc {getProcName}("
-    procs.add &"{toVarCase(objName)}: {objName}): "
-    procs.add exportTypeNim(fieldType)
-    procs.add " {.importc: \""
-    procs.add &"{getProcName}"
-    procs.add "\", cdecl.}"
-    procs.add "\n"
-    procs.add "\n"
+      procs.add &"proc {getProcName}("
+      procs.add &"{toVarCase(objName)}: {objName}): "
+      procs.add exportTypeNim(fieldType)
+      procs.add " {.importc: \""
+      procs.add &"{getProcName}"
+      procs.add "\", cdecl.}"
+      procs.add "\n"
+      procs.add "\n"
 
-    procs.add &"proc {fieldName}*("
-    procs.add &"{toVarCase(objName)}: {objName}): "
-    procs.add &"{exportTypeNim(fieldType)}"
-    procs.add " {.inline.} =\n"
-    procs.add &"  {getProcName}({toVarCase(objName)})"
-    procs.add convertImportToNim(fieldType)
-    procs.add "\n"
-    procs.add "\n"
+      procs.add &"proc {fieldName}*("
+      procs.add &"{toVarCase(objName)}: {objName}): "
+      procs.add &"{exportTypeNim(fieldType)}"
+      procs.add " {.inline.} =\n"
+      procs.add &"  {getProcName}({toVarCase(objName)})"
+      procs.add convertImportToNim(fieldType)
+      procs.add "\n"
+      procs.add "\n"
 
-    let setProcName = &"$lib_{objNameSnaked}_set_{fieldNameSnaked}"
+      let setProcName = &"$lib_{objNameSnaked}_set_{fieldNameSnaked}"
 
-    procs.add &"proc {setProcName}("
-    procs.add &"{toVarCase(objName)}: {objName}, "
-    procs.add &"{fieldName}: {exportTypeNim(fieldType)})"
-    procs.add " {.importc: \""
-    procs.add &"{setProcName}"
-    procs.add "\", cdecl.}"
-    procs.add "\n"
-    procs.add "\n"
+      procs.add &"proc {setProcName}("
+      procs.add &"{toVarCase(objName)}: {objName}, "
+      procs.add &"{fieldName}: {exportTypeNim(fieldType)})"
+      procs.add " {.importc: \""
+      procs.add &"{setProcName}"
+      procs.add "\", cdecl.}"
+      procs.add "\n"
+      procs.add "\n"
 
-    procs.add &"proc `{fieldName}=`*("
-    procs.add &"{toVarCase(objName)}: {objName}, "
-    procs.add &"{fieldName}: {fieldType.repr}) =\n"
-    procs.add &"  {setProcName}({toVarCase(objName)}, "
-    procs.add &"{fieldName}{convertExportFromNim(fieldType)})"
-    procs.add "\n"
-    procs.add "\n"
-
-  for property in objType[2]:
-    if property.repr notin allowedFields:
-      continue
-
-    let
-      propertyName = property.repr
-      propertyNameSnaked = toSnakeCase(propertyName)
-      propertyType = property.getTypeInst()
-
-    if propertyType.kind != nnkBracketExpr:
-      exportField(propertyName, propertyType)
+      procs.add &"proc `{fieldName}=`*("
+      procs.add &"{toVarCase(objName)}: {objName}, "
+      procs.add &"{fieldName}: {fieldType.repr}) =\n"
+      procs.add &"  {setProcName}({toVarCase(objName)}, "
+      procs.add &"{fieldName}{convertExportFromNim(fieldType)})"
+      procs.add "\n"
+      procs.add "\n"
     else:
-      var helperName = property.repr
+      var helperName = fieldName
       helperName[0] = toUpperAscii(helperName[0])
       helperName = objName & helperName
 
@@ -314,7 +302,7 @@ proc exportRefObjectNim*(
       procs.add &"    {toVarCase(objName)}: {objName}\n"
       procs.add "\n"
 
-      procs.add &"proc {propertyName}*("
+      procs.add &"proc {fieldName}*("
       procs.add &"{toVarCase(objName)}: {objName}"
       procs.add &"): {helperName} =\n"
       procs.add &"  {helperName}({toVarCase(objName)}: {toVarCase(objName)})\n"
@@ -323,13 +311,10 @@ proc exportRefObjectNim*(
       genSeqProcs(
         objName,
         helperName,
-        &"$lib_{objNameSnaked}_{propertyNameSnaked}",
+        &"$lib_{objNameSnaked}_{fieldNameSnaked}",
         &".{toVarCase(objName)}",
-        propertyType[1].repr
+        fieldType[1].repr
       )
-
-  for pseudoField in pseudoFields:
-    exportField(pseudoField.repr, pseudoField.getTypeInst()[0][0][0])
 
 proc exportSeqNim*(sym: NimNode) =
   let
