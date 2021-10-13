@@ -63,6 +63,13 @@ template exportEnums*(body: untyped) =
   ## Exports a list of enums.
   exportEnumsTyped(exportEnumsUntyped(body))
 
+proc fieldUntyped(clause, owner: NimNode): NimNode =
+  result = emptyBlockStmt()
+  result[1].add quote do:
+    var
+      obj: `owner`
+      f = obj.`clause`
+
 proc procUntyped(clause: NimNode): NimNode =
   result = emptyBlockStmt()
 
@@ -244,13 +251,8 @@ macro exportRefObjectUntyped(sym, body: untyped) =
 
     case section[0].repr:
     of "fields":
-      var
-        seqIdent = ident("allowedFields")
-        allowedFields = quote do:
-          var `seqIdent`: seq[string] = @[]
       for field in section[1]:
-        allowedFields[0][2][1].add newStrLitNode(field.repr)
-      fieldsBlock[1].add allowedFields
+        fieldsBlock[1].add fieldUntyped(field, sym)
     of "constructor":
       constructorBlock[1].add procUntyped(section[1][0])
     of "procs":
@@ -270,10 +272,20 @@ macro exportRefObjectTyped(body: typed) =
     constructorBlock = body[2]
     procsBlock = body[3]
 
-  var allowedFields: seq[string]
+  var fields: seq[(string, NimNode)]
   if fieldsBlock[1].len > 0:
-    for entry in fieldsBlock[1][0][2][1]:
-      allowedFields.add entry.strVal
+    for entry in fieldsBlock[1].asStmtList:
+      case entry[1][1][2].kind:
+      of nnkCall:
+        fields.add((
+          entry[1][1][2][0].repr,
+          entry[1][1][2].getTypeInst()
+        ))
+      else:
+        fields.add((
+          entry[1][1][2][1].repr,
+          entry[1][1][2][1].getTypeInst()
+        ))
 
   let constructor =
     if constructorBlock[1].len > 0:
@@ -281,11 +293,11 @@ macro exportRefObjectTyped(body: typed) =
     else:
       nil
 
-  exportRefObjectInternal(sym, allowedFields, constructor)
-  exportRefObjectNim(sym, allowedFields, constructor)
-  exportRefObjectPy(sym, allowedFields, constructor)
-  exportRefObjectNode(sym, allowedFields, constructor)
-  exportRefObjectC(sym, allowedFields, constructor)
+  exportRefObjectInternal(sym, fields, constructor)
+  exportRefObjectNim(sym, fields, constructor)
+  exportRefObjectPy(sym, fields, constructor)
+  exportRefObjectNode(sym, fields, constructor)
+  exportRefObjectC(sym, fields, constructor)
 
   if procsBlock[1].len > 0:
     var procsSeen: seq[string]

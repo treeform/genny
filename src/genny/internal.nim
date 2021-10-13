@@ -85,7 +85,9 @@ proc exportObjectInternal*(sym: NimNode, constructor: NimNode) =
     internal.add "\n"
 
 proc exportRefObjectInternal*(
-  sym: NimNode, allowedFields: openarray[string], constructor: NimNode
+  sym: NimNode,
+  fields: seq[(string, NimNode)],
+  constructor: NimNode
 ) =
   let
     objName = sym.repr
@@ -100,65 +102,59 @@ proc exportRefObjectInternal*(
   if constructor != nil:
     exportProcInternal(constructor)
 
-  for property in objType[2]:
-    if property.repr notin allowedFields:
-      continue
+  for (fieldName, fieldType) in fields:
+    let fieldNameSnaked = toSnakeCase(fieldName)
 
-    let
-      propertyName = property.repr
-      propertyNameSnaked = toSnakeCase(propertyName)
-      propertyType = property.getTypeInst()
-
-    if propertyType.kind != nnkBracketExpr:
+    if fieldType.kind != nnkBracketExpr:
       internal.add "proc "
-      internal.add &"$lib_{objNameSnaked}_get_{propertyNameSnaked}*"
-      internal.add &"({objNameSnaked}: {objName}): {exportTypeNim(propertyType)}"
+      internal.add &"$lib_{objNameSnaked}_get_{fieldNameSnaked}*"
+      internal.add &"({objNameSnaked}: {objName}): {exportTypeNim(fieldType)}"
       internal.add &" {exportProcPragmas} =\n"
-      internal.add &"  {objNameSnaked}.{propertyName}"
-      internal.add convertExportFromNim(propertyType)
+      internal.add &"  {objNameSnaked}.{fieldName}"
+      internal.add convertExportFromNim(fieldType)
       internal.add "\n"
       internal.add "\n"
 
       internal.add "proc "
-      internal.add &"$lib_{objNameSnaked}_set_{propertyNameSnaked}*"
+      internal.add &"$lib_{objNameSnaked}_set_{fieldNameSnaked}*"
       internal.add &"({objNameSnaked}: {objName}, "
-      internal.add &"{propertyName}: {exportTypeNim(propertyType)})"
+      internal.add &"{fieldName}: {exportTypeNim(fieldType)})"
       internal.add &" {exportProcPragmas} =\n"
-      internal.add &"  {objNameSnaked}.{propertyName} = {propertyName}"
-      internal.add convertImportToNim(propertyType)
+      internal.add &"  {objNameSnaked}.{fieldName} = {fieldName}"
+      internal.add convertImportToNim(fieldType)
       internal.add "\n"
       internal.add "\n"
-    else: # Treat this property as a bound seq
-      let prefix = &"$lib_{objNameSnaked}_{propertyNameSnaked}"
+    else:
+      let prefix = &"$lib_{objNameSnaked}_{fieldNameSnaked}"
 
       internal.add &"proc {prefix}_len*({objNameSnaked}: {objName}): int"
       internal.add &" {exportProcPragmas} =\n"
-      internal.add &"  {objNameSnaked}.{propertyName}.len\n"
+      internal.add &"  {objNameSnaked}.{fieldName}.len\n"
       internal.add "\n"
 
-      internal.add &"proc {prefix}_add*({objNameSnaked}: {objName}, v: {propertyType[1].repr})"
+      internal.add &"proc {prefix}_add*({objNameSnaked}: {objName}, v: {fieldType[1].repr})"
       internal.add &" {exportProcPragmas} =\n"
-      internal.add &"  {objNameSnaked}.{propertyName}.add(v)\n"
+      internal.add &"  {objNameSnaked}.{fieldName}.add(v)\n"
       internal.add "\n"
 
-      internal.add &"proc {prefix}_get*({objNameSnaked}: {objName}, i: int): {propertyType[1].repr}"
+      internal.add &"proc {prefix}_get*({objNameSnaked}: {objName}, i: int): {fieldType[1].repr}"
       internal.add &" {exportProcPragmas} =\n"
-      internal.add &"  {objNameSnaked}.{propertyName}[i]\n"
+      internal.add &"  {objNameSnaked}.{fieldName}[i]\n"
       internal.add "\n"
 
-      internal.add &"proc {prefix}_set*({objNameSnaked}: {objName}, i: int, v: {propertyType[1].repr})"
+      internal.add &"proc {prefix}_set*({objNameSnaked}: {objName}, i: int, v: {fieldType[1].repr})"
       internal.add &" {exportProcPragmas} =\n"
-      internal.add &"  {objNameSnaked}.{propertyName}[i] = v\n"
+      internal.add &"  {objNameSnaked}.{fieldName}[i] = v\n"
       internal.add "\n"
 
       internal.add &"proc {prefix}_delete*({objNameSnaked}: {objName}, i: int)"
       internal.add &" {exportProcPragmas} =\n"
-      internal.add &"  {objNameSnaked}.{propertyName}.delete(i)\n"
+      internal.add &"  {objNameSnaked}.{fieldName}.delete(i)\n"
       internal.add "\n"
 
       internal.add &"proc {prefix}_clear*({objNameSnaked}: {objName})"
       internal.add &" {exportProcPragmas} =\n"
-      internal.add &"  {objNameSnaked}.{propertyName}.setLen(0)\n"
+      internal.add &"  {objNameSnaked}.{fieldName}.setLen(0)\n"
       internal.add "\n"
 
 proc generateSeqs(sym: NimNode) =

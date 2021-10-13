@@ -90,7 +90,9 @@ proc exportProcNode*(
   let comments =
     if sym.getImpl()[6][0].kind == nnkCommentStmt:
       sym.getImpl()[6][0].repr
-    elif sym.getImpl[6].kind == nnkAsgn and sym.getImpl[6][1][0].kind == nnkCommentStmt:
+    elif sym.getImpl[6].kind == nnkAsgn and
+      sym.getImpl[6][1].kind == nnkStmtListExpr and
+      sym.getImpl[6][1][0].kind == nnkCommentStmt:
       sym.getImpl[6][1][0].repr
     else:
       ""
@@ -291,7 +293,9 @@ proc genSeqProcs(objName, ownObjName, procPrefix, selfSuffix: string, entryType:
   procs.add &"  '{procPrefix}_clear': ['void', [{objName}]],\n"
 
 proc exportRefObjectNode*(
-  sym: NimNode, allowedFields: openarray[string], constructor: NimNode
+  sym: NimNode,
+  fields: seq[(string, NimNode)],
+  constructor: NimNode
 ) =
   let
     objName = sym.repr
@@ -331,30 +335,24 @@ proc exportRefObjectNode*(
 
     dllProc(constructorLibProc, constructorParams, objName)
 
-  for property in objType[2]:
-    if property.repr notin allowedFields:
-      continue
+  for (fieldName, fieldType) in fields:
+    let fieldNameSnaked = toSnakeCase(fieldName)
 
-    let
-      propertyName = property.repr
-      propertyNameSnaked = toSnakeCase(propertyName)
-      propertyType = property.getTypeInst()
+    if fieldType.kind != nnkBracketExpr:
+      let getProcName = &"$lib_{objNameSnaked}_get_{fieldNameSnaked}"
+      let setProcName = &"$lib_{objNameSnaked}_set_{fieldNameSnaked}"
 
-    if propertyType.kind != nnkBracketExpr:
-      let getProcName = &"$lib_{objNameSnaked}_get_{propertyNameSnaked}"
-      let setProcName = &"$lib_{objNameSnaked}_set_{propertyNameSnaked}"
-
-      types.add &"Object.defineProperty({objName}.prototype, '{propertyName}', {{\n"
+      types.add &"Object.defineProperty({objName}.prototype, '{fieldName}', {{\n"
       types.add &"  get: function() {{return dll.{getProcName}(this)}},\n"
       types.add &"  set: function(v) {{dll.{setProcName}(this, v)}}\n"
       types.add "});\n"
 
-      procs.add &"  '{getProcName}': [{exportTypeNode(propertyType)}, [{objName}]],\n"
-      procs.add &"  '{setProcName}': ['void', [{objName}, {exportTypeNode(propertyType)}]],\n"
+      procs.add &"  '{getProcName}': [{exportTypeNode(fieldType)}, [{objName}]],\n"
+      procs.add &"  '{setProcName}': ['void', [{objName}, {exportTypeNode(fieldType)}]],\n"
 
     else:
       discard
-      var helperName = property.repr
+      var helperName = fieldName
       helperName[0] = toUpperAscii(helperName[0])
       let helperClassName = objName & helperName
 
@@ -365,12 +363,12 @@ proc exportRefObjectNode*(
       genSeqProcs(
         objName,
         helperClassName,
-        &"$lib_{objNameSnaked}_{propertyNameSnaked}",
+        &"$lib_{objNameSnaked}_{fieldNameSnaked}",
         &".{toSnakeCase(objName)}",
-        propertyType[1]
+        fieldType[1]
       )
 
-      types.add &"Object.defineProperty({objName}.prototype, '{propertyName}', {{\n"
+      types.add &"Object.defineProperty({objName}.prototype, '{fieldName}', {{\n"
       types.add &"  get: function() {{return new {helperClassName}(this)}},\n"
       types.add "});\n"
 
