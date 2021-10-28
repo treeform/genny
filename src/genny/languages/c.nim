@@ -142,25 +142,14 @@ proc exportObjectC*(sym: NimNode, constructor: NimNode) =
   if constructor != nil:
     exportProcC(constructor)
   else:
-    types.add &"{objName} {toSnakeCase(objName)}("
+    procs.add &"{objName} $lib_{toSnakeCase(objName)}("
     for identDefs in sym.getImpl()[2][2]:
       for property in identDefs[0 .. ^3]:
-        types.add &"{exportTypeC(identDefs[^2], toSnakeCase(property[1].repr))}, "
-    types.removeSuffix ", "
-    types.add ") {\n"
-    types.add &"  {objName} result;\n"
-    for identDefs in sym.getImpl()[2][2]:
-      for property in identDefs[0 .. ^3]:
-        let
-          argName = toSnakeCase(property[1].repr)
-          isArray = identDefs[^2].kind == nnkBracketExpr and
-            identDefs[^2][0].repr == "array"
-        if isArray:
-          types.add &"  memcpy(&result.{argName}, &{argName}, sizeof({argName}));\n"
-        else:
-          types.add &"  result.{argName} = {argName};\n"
-    types.add "  return result;\n"
-    types.add "}\n\n"
+        procs.add &"{exportTypeC(identDefs[^2], toSnakeCase(property[1].repr))}, "
+    procs.removeSuffix ", "
+    procs.add ");\n\n"
+
+  dllProc(&"$lib_{toSnakeCase(objName)}_eq", [&"{objName} a", &"{objName} b"], "char")
 
 proc genRefObject(objName: string) =
   types.add &"typedef long long {objName};\n\n"

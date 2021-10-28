@@ -83,6 +83,31 @@ proc exportObjectInternal*(sym: NimNode, constructor: NimNode) =
     internal.removeSuffix ", "
     internal.add ")\n"
     internal.add "\n"
+  else:
+    internal.add &"proc $lib_{objNameSnaked}*("
+    let objType = sym.getType()
+    for fieldSym in objType[2]:
+      let
+        fieldName = fieldSym.repr
+        fieldType = fieldSym.getTypeInst()
+      internal.add &"{toSnakeCase(fieldName)}: {exportTypeNim(fieldType)}, "
+    internal.removeSuffix ", "
+    internal.add &"): {objName} {exportProcPragmas} =\n"
+    for fieldSym in objType[2]:
+      let
+        fieldName = fieldSym.repr
+      internal.add &"  result.{toSnakeCase(fieldName)} = {toSnakeCase(fieldName)}\n"
+    internal.add "\n"
+
+  internal.add &"proc $lib_{objNameSnaked}_eq*(a, b: {objName}): bool {exportProcPragmas}=\n"
+  let objType = sym.getType()
+  internal.add "  "
+  for fieldSym in objType[2]:
+    let
+      fieldName = fieldSym.repr
+    internal.add &"a.{toSnakeCase(fieldName)} == b.{toSnakeCase(fieldName)} and "
+  internal.removeSuffix " and "
+  internal.add "\n\n"
 
 proc exportRefObjectInternal*(
   sym: NimNode,
