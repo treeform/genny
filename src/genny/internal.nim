@@ -89,7 +89,7 @@ proc exportObjectInternal*(sym: NimNode, constructor: NimNode) =
     for fieldSym in objType[2]:
       let
         fieldName = fieldSym.repr
-        fieldType = fieldSym.getType()
+        fieldType = fieldSym.getTypeInst()
       internal.add &"{toSnakeCase(fieldName)}: {exportTypeNim(fieldType)}, "
     internal.removeSuffix ", "
     internal.add &"): {objName} {exportProcPragmas} =\n"
