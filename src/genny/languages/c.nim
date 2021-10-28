@@ -245,7 +245,7 @@ proc exportSeqC*(sym: NimNode) =
 const header = """
 #ifndef INCLUDE_$LIB_H
 #define INCLUDE_$LIB_H
-void *memcpy(void *dest, const void * src, size_t n);
+#include <string.h>
 
 """
 
