@@ -1,6 +1,14 @@
 proc test_simple_call*(a: int): int {.raises: [], cdecl, exportc, dynlib.} =
   simpleCall(a)
 
+proc test_simple_obj*(simple_a: int, simple_b: uint8, simple_c: bool): SimpleObj {.raises: [], cdecl, exportc, dynlib.} =
+  result.simple_a = simple_a
+  result.simple_b = simple_b
+  result.simple_c = simple_c
+
+proc test_simple_obj_eq*(a, b: SimpleObj): bool {.raises: [], cdecl, exportc, dynlib.}=
+  a.simple_a == b.simple_a and a.simple_b == b.simple_b and a.simple_c == b.simple_c
+
 proc test_simple_ref_obj_unref*(x: SimpleRefObj) {.raises: [], cdecl, exportc, dynlib.} =
   GC_unref(x)
 
@@ -72,6 +80,14 @@ proc test_ref_obj_with_seq_data_delete*(ref_obj_with_seq: RefObjWithSeq, i: int)
 
 proc test_ref_obj_with_seq_data_clear*(ref_obj_with_seq: RefObjWithSeq) {.raises: [], cdecl, exportc, dynlib.} =
   ref_obj_with_seq.data.setLen(0)
+
+proc test_simple_obj_with_proc*(simple_a: int, simple_b: uint8, simple_c: bool): SimpleObjWithProc {.raises: [], cdecl, exportc, dynlib.} =
+  result.simple_a = simple_a
+  result.simple_b = simple_b
+  result.simple_c = simple_c
+
+proc test_simple_obj_with_proc_eq*(a, b: SimpleObjWithProc): bool {.raises: [], cdecl, exportc, dynlib.}=
+  a.simple_a == b.simple_a and a.simple_b == b.simple_b and a.simple_c == b.simple_c
 
 proc test_simple_obj_with_proc_extra_proc*(s: SimpleObjWithProc) {.raises: [], cdecl, exportc, dynlib.} =
   extraProc(s)

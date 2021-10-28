@@ -78,13 +78,13 @@ exportObject SimpleObjWithProc:
   procs:
     extraProc
 
-type ArrayObj = object
-  arr1*: array[3, int]
-  arr2*: array[3, array[3, int]]
-  arr3*: array[3, array[3, array[3, int]]]
+# type ArrayObj = object
+#   arr1*: array[3, int]
+#   arr2*: array[3, array[3, int]]
+#   arr3*: array[3, array[3, array[3, int]]]
 
-exportObject ArrayObj:
-  discard
+# exportObject ArrayObj:
+#   discard
 
 # proc arrayCall1(a: array[2, int]) =
 #   discard
