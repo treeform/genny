@@ -190,6 +190,7 @@ macro exportObjectTyped(body: typed) =
       exportProcNim(procSym, sym, prefixes)
       exportProcPy(procSym, sym, prefixes)
       exportProcNode(procSym, sym, prefixes)
+      exportProcC(procSym, sym, prefixes)
 
 template exportObject*(sym, body: untyped) =
   ## Exports an object, with these sections:
