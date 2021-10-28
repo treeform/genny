@@ -21,7 +21,7 @@ proc toSnakeCase*(s: string): string =
   ## Converts NimType to nim_type.
   var prevCap = false
   for i, c in s:
-    if c in {'A' .. 'Z'} or c in {'0' .. '9'}:
+    if c in {'A' .. 'Z'}:
       if result.len > 0 and result[^1] != '_' and not prevCap:
         result.add '_'
       prevCap = true
@@ -34,7 +34,7 @@ proc toCapSnakeCase*(s: string): string =
   ## Converts NimType to NIM_TYPE.
   var prevCap = false
   for i, c in s:
-    if c in {'A' .. 'Z'} or c in {'0' .. '9'}:
+    if c in {'A' .. 'Z'}:
       if result.len > 0 and result[^1] != '_' and not prevCap:
         result.add '_'
       prevCap = true
