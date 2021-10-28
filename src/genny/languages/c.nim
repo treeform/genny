@@ -137,7 +137,7 @@ proc exportObjectC*(sym: NimNode, constructor: NimNode) =
   for identDefs in sym.getImpl()[2][2]:
     for property in identDefs[0 .. ^3]:
       types.add &"  {exportTypeC(identDefs[^2], toSnakeCase(property[1].repr))};\n"
-  types.add "} " & &"{objName};\n"
+  types.add "} " & &"{objName};\n\n"
 
   if constructor != nil:
     exportProcC(constructor)
@@ -245,7 +245,7 @@ proc exportSeqC*(sym: NimNode) =
 const header = """
 #ifndef INCLUDE_$LIB_H
 #define INCLUDE_$LIB_H
-void *memcpy(void *dest, const void * src, size_t n);
+#include <string.h>
 
 """
 
@@ -255,5 +255,5 @@ const footer = """
 
 proc writeC*(dir, lib: string) =
   writeFile(&"{dir}/{toSnakeCase(lib)}.h", (header & types & procs & footer)
-    .replace("$lib", lib).replace("$LIB", lib.toUpperAscii())
+    .replace("$lib", toSnakeCase(lib)).replace("$LIB", lib.toUpperAscii())
   )
