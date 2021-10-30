@@ -3,9 +3,9 @@ var Struct = require("ref-struct-napi");
 
 var dll = {};
 
-function TestException(message) {
+function testException(message) {
   this.message = message;
-  this.name = 'TestException';
+  this.name = 'testException';
 }
 
 const SimpleEnum = 'int8'
@@ -56,6 +56,13 @@ Object.defineProperty(SimpleRefObj.prototype, 'simpleRefB', {
   get: function() {return dll.test_simple_ref_obj_get_simple_ref_b(this)},
   set: function(v) {dll.test_simple_ref_obj_set_simple_ref_b(this, v)}
 });
+
+/**
+ * Does some thing with SimpleRefObj.
+ */
+SimpleRefObj.prototype.doit = function(){
+  dll.test_simple_ref_obj_doit(this)
+}
 
 SeqInt = Struct({'nimRef': 'uint64'});
 SeqInt.prototype.isNull = function(){
@@ -147,22 +154,6 @@ SimpleObjWithProc.prototype.extraProc = function(){
   dll.test_simple_obj_with_proc_extra_proc(this)
 }
 
-const ArrayObj = Struct({
-  'arr1':ArrayType('int64', 3),
-  'arr2':ArrayType(ArrayType('int64', 3), 3),
-  'arr3':ArrayType(ArrayType(ArrayType('int64', 3), 3), 3)
-})
-arrayObj = function(arr_1, arr_2, arr_3){
-  var v = new ArrayObj();
-  v.arr_1 = arr_1
-  v.arr_2 = arr_2
-  v.arr_3 = arr_3
-  return v;
-}
-ArrayObj.prototype.isEqual = function(other){
-  return self.arr1 == other.arr1 && self.arr2 == other.arr2 && self.arr3 == other.arr3;
-};
-
 
 var dllPath = ""
 if(process.platform == "win32") {
@@ -181,6 +172,7 @@ dll = ffi.Library(dllPath, {
   'test_simple_ref_obj_set_simple_ref_a': ['void', [SimpleRefObj, 'int64']],
   'test_simple_ref_obj_get_simple_ref_b': ['int8', [SimpleRefObj]],
   'test_simple_ref_obj_set_simple_ref_b': ['void', [SimpleRefObj, 'int8']],
+  'test_simple_ref_obj_doit': ['void', [SimpleRefObj]],
   'test_seq_int_unref': ['void', [SeqInt]],
   'test_new_seq_int': [SeqInt, []],
   'test_seq_int_len': ['uint64', [SeqInt]],
@@ -215,5 +207,3 @@ exports.RefObjWithSeqType = RefObjWithSeq
 exports.RefObjWithSeq = newRefObjWithSeq
 exports.SimpleObjWithProc = SimpleObjWithProc;
 exports.simpleObjWithProc = simpleObjWithProc;
-exports.ArrayObj = ArrayObj;
-exports.arrayObj = arrayObj;

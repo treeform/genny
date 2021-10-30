@@ -1,6 +1,6 @@
 #ifndef INCLUDE_TEST_H
 #define INCLUDE_TEST_H
-void *memcpy(void *dest, const void * src, size_t n);
+#include <string.h>
 
 #define SIMPLE_CONST 123
 
@@ -14,13 +14,6 @@ typedef struct SimpleObj {
   char simple_b;
   char simple_c;
 } SimpleObj;
-SimpleObj simple_obj(long long simple_a, char simple_b, char simple_c) {
-  SimpleObj result;
-  result.simple_a = simple_a;
-  result.simple_b = simple_b;
-  result.simple_c = simple_c;
-  return result;
-}
 
 typedef long long SimpleRefObj;
 
@@ -33,31 +26,15 @@ typedef struct SimpleObjWithProc {
   char simple_b;
   char simple_c;
 } SimpleObjWithProc;
-SimpleObjWithProc simple_obj_with_proc(long long simple_a, char simple_b, char simple_c) {
-  SimpleObjWithProc result;
-  result.simple_a = simple_a;
-  result.simple_b = simple_b;
-  result.simple_c = simple_c;
-  return result;
-}
-
-typedef struct ArrayObj {
-  long long arr_1[3];
-  long long arr_2[3][3];
-  long long arr_3[3][3][3];
-} ArrayObj;
-ArrayObj array_obj(long long arr_1[3], long long arr_2[3][3], long long arr_3[3][3][3]) {
-  ArrayObj result;
-  memcpy(&result.arr_1, &arr_1, sizeof(arr_1));
-  memcpy(&result.arr_2, &arr_2, sizeof(arr_2));
-  memcpy(&result.arr_3, &arr_3, sizeof(arr_3));
-  return result;
-}
 
 /**
  * Returns the integer passed in.
  */
 long long test_simple_call(long long a);
+
+SimpleObj test_simple_obj(long long simple_a, char simple_b, char simple_c);
+
+char test_simple_obj_eq(SimpleObj a, SimpleObj b);
 
 void test_simple_ref_obj_unref(SimpleRefObj simple_ref_obj);
 
@@ -107,5 +84,11 @@ void test_ref_obj_with_seq_data_delete(RefObjWithSeq ref_obj_with_seq, long long
 void test_ref_obj_with_seq_data_add(RefObjWithSeq ref_obj_with_seq, char value);
 
 void test_ref_obj_with_seq_data_clear(RefObjWithSeq ref_obj_with_seq);
+
+SimpleObjWithProc test_simple_obj_with_proc(long long simple_a, char simple_b, char simple_c);
+
+char test_simple_obj_with_proc_eq(SimpleObjWithProc a, SimpleObjWithProc b);
+
+void test_simple_obj_with_proc_extra_proc(SimpleObjWithProc s);
 
 #endif
