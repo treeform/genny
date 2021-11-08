@@ -242,8 +242,14 @@ proc generateSeqs(sym: NimNode) =
 proc exportSeqInternal*(sym: NimNode) =
   generateSeqs(sym)
 
+const header = """
+when not defined(gcArc) and not defined(gcOrc):
+  {.error: "Please use --gc:arc or --gc:orc when using Genny.".}
+
+"""
+
 proc writeInternal*(dir, lib: string) =
   writeFile(
     &"{dir}/internal.nim",
-    internal.replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
+    header & internal.replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
   )
