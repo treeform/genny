@@ -10,6 +10,8 @@ So you made a cool Nim library but you want it to be available to other language
 
 https://nimdocs.com/treeform/genny
 
+See [Pixie's nimble file](https://github.com/treeform/pixie/blob/master/pixie.nimble#L16) for an example of how to compile bindings with `genny`.
+
 ## Installation:
 
 `nimble install genny`
