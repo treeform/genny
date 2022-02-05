@@ -1,6 +1,8 @@
 when not defined(gcArc) and not defined(gcOrc):
   {.error: "Please use --gc:arc or --gc:orc when using Genny.".}
 
+when (NimMajor, NimMinor, NimPatch) == (1, 6, 2):
+  {.error: "Nim 1.6.2 not supported with Genny due to FFI issues.".}
 proc test_simple_call*(a: int): int {.raises: [], cdecl, exportc, dynlib.} =
   simpleCall(a)
 
