@@ -1,6 +1,5 @@
 #ifndef INCLUDE_TEST_H
 #define INCLUDE_TEST_H
-#include <string.h>
 
 #define SIMPLE_CONST 123
 
@@ -26,6 +25,8 @@ typedef struct SimpleObjWithProc {
   char simple_b;
   char simple_c;
 } SimpleObjWithProc;
+
+typedef long long SeqString;
 
 /**
  * Returns the integer passed in.
@@ -90,5 +91,23 @@ SimpleObjWithProc test_simple_obj_with_proc(long long simple_a, char simple_b, c
 char test_simple_obj_with_proc_eq(SimpleObjWithProc a, SimpleObjWithProc b);
 
 void test_simple_obj_with_proc_extra_proc(SimpleObjWithProc s);
+
+void test_seq_string_unref(SeqString seq_string);
+
+SeqString test_new_seq_string();
+
+long long test_seq_string_len(SeqString seq_string);
+
+char* test_seq_string_get(SeqString seq_string, long long index);
+
+void test_seq_string_set(SeqString seq_string, long long index, char* value);
+
+void test_seq_string_delete(SeqString seq_string, long long index);
+
+void test_seq_string_add(SeqString seq_string, char* value);
+
+void test_seq_string_clear(SeqString seq_string);
+
+SeqString test_get_datas();
 
 #endif

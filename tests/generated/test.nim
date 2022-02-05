@@ -70,6 +70,16 @@ proc simpleObjWithProc*(simple_a: int, simple_b: byte, simple_c: bool): SimpleOb
   result.simple_b = simple_b
   result.simple_c = simple_c
 
+type SeqStringObj = object
+  reference: pointer
+
+type SeqString* = ref SeqStringObj
+
+proc test_seq_string_unref(x: SeqStringObj) {.importc: "test_seq_string_unref", cdecl.}
+
+proc `=destroy`(x: var SeqStringObj) =
+  test_seq_string_unref(x)
+
 proc test_simple_call(a: int): int {.importc: "test_simple_call", cdecl.}
 
 proc simpleCall*(a: int): int {.inline.} =
@@ -185,4 +195,44 @@ proc test_simple_obj_with_proc_extra_proc(s: SimpleObjWithProc) {.importc: "test
 
 proc extraProc*(s: SimpleObjWithProc) {.inline.} =
   test_simple_obj_with_proc_extra_proc(s)
+
+proc test_seq_string_len(s: SeqString): int {.importc: "test_seq_string_len", cdecl.}
+
+proc len*(s: SeqString): int =
+  test_seq_string_len(s)
+
+proc test_seq_string_add(s: SeqString, v: string) {.importc: "test_seq_string_add", cdecl.}
+
+proc add*(s: SeqString, v: string) =
+  test_seq_string_add(s, v)
+
+proc test_seq_string_get(s: SeqString, i: int): string {.importc: "test_seq_string_get", cdecl.}
+
+proc `[]`*(s: SeqString, i: int): string =
+  test_seq_string_get(s, i)
+
+proc test_seq_string_set(s: SeqString, i: int, v: string) {.importc: "test_seq_string_set", cdecl.}
+
+proc `[]=`*(s: SeqString, i: int, v: string) =
+  test_seq_string_set(s, i, v)
+
+proc test_seq_string_delete(s: SeqString, i: int) {.importc: "test_seq_string_delete", cdecl.}
+
+proc delete*(s: SeqString, i: int) =
+  test_seq_string_delete(s, i)
+
+proc test_seq_string_clear(s: SeqString) {.importc: "test_seq_string_clear", cdecl.}
+
+proc clear*(s: SeqString) =
+  test_seq_string_clear(s)
+
+proc test_new_seq_string*(): SeqString {.importc: "test_new_seq_string", cdecl.}
+
+proc newSeqString*(): SeqString =
+  test_new_seq_string()
+
+proc test_get_datas(): SeqString {.importc: "test_get_datas", cdecl.}
+
+proc getDatas*(): SeqString {.inline.} =
+  result = test_get_datas()
 

@@ -22,6 +22,7 @@ proc exportProcInternal*(
     procParams = procType[0][1 .. ^1]
     procReturn = procType[0][0]
     procRaises = sym.raises()
+    procReturnsSeq = procReturn.kind == nnkBracketExpr
 
   var apiProcName = &"$lib_"
   if owner != nil:
@@ -48,6 +49,8 @@ proc exportProcInternal*(
     internal.add "  result = "
   else:
     internal.add "  "
+  if procReturnsSeq:
+    internal.add &"{procReturn.getSeqName()}(s: "
   internal.add &"{procName}("
   for param in procParams:
     for i in 0 .. param.len - 3:
@@ -55,6 +58,8 @@ proc exportProcInternal*(
       internal.add &"{convertImportToNim(param[^2])}, "
   internal.removeSuffix ", "
   internal.add ")"
+  if procReturnsSeq:
+    internal.add ")"
   if procReturn.kind != nnkEmpty:
     internal.add convertExportFromNim(procReturn)
   if procRaises:
