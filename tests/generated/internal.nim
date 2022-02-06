@@ -106,14 +106,14 @@ proc test_new_seq_string*(): SeqString {.raises: [], cdecl, exportc, dynlib.} =
 proc test_seq_string_len*(s: SeqString): int {.raises: [], cdecl, exportc, dynlib.} =
   s.s.len
 
-proc test_seq_string_add*(s: SeqString, v: string) {.raises: [], cdecl, exportc, dynlib.} =
-  s.s.add(v)
+proc test_seq_string_add*(s: SeqString, v: cstring) {.raises: [], cdecl, exportc, dynlib.} =
+  s.s.add(v.`$`)
 
-proc test_seq_string_get*(s: SeqString, i: int): string {.raises: [], cdecl, exportc, dynlib.} =
-  s.s[i]
+proc test_seq_string_get*(s: SeqString, i: int): cstring {.raises: [], cdecl, exportc, dynlib.} =
+  s.s[i].cstring
 
-proc test_seq_string_set*(s: SeqString, i: int, v: string) {.raises: [], cdecl, exportc, dynlib.} =
-  s.s[i] = v
+proc test_seq_string_set*(s: SeqString, i: int, v: cstring) {.raises: [], cdecl, exportc, dynlib.} =
+  s.s[i] = v.`$`
 
 proc test_seq_string_delete*(s: SeqString, i: int) {.raises: [], cdecl, exportc, dynlib.} =
   s.s.delete(i)

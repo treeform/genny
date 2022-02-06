@@ -193,10 +193,10 @@ class SeqString(Structure):
         return dll.test_seq_string_len(self)
 
     def __getitem__(self, index):
-        return dll.test_seq_string_get(self, index)
+        return dll.test_seq_string_get(self, index).decode("utf8")
 
     def __setitem__(self, index, value):
-        dll.test_seq_string_set(self, index, value)
+        dll.test_seq_string_set(self, index, value.encode("utf8"))
 
     def __delitem__(self, index):
         dll.test_seq_string_delete(self, index)

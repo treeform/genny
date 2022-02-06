@@ -208,22 +208,22 @@ proc generateSeqs(sym: NimNode) =
   internal.add "  s.s.len\n"
   internal.add "\n"
 
-  internal.add &"proc $lib_{seqNameSnaked}_add*(s: {seqName}, v: {sym[1].repr})"
+  internal.add &"proc $lib_{seqNameSnaked}_add*(s: {seqName}, v: {exportTypeNim(sym[1])})"
   internal.add &" {exportProcPragmas}"
   internal.add " =\n"
-  internal.add "  s.s.add(v)\n"
+  internal.add &"  s.s.add(v{convertImportToNim(sym[1])})\n"
   internal.add "\n"
 
-  internal.add &"proc $lib_{seqNameSnaked}_get*(s: {seqName}, i: int): {sym[1].repr}"
+  internal.add &"proc $lib_{seqNameSnaked}_get*(s: {seqName}, i: int): {exportTypeNim(sym[1])}"
   internal.add &" {exportProcPragmas}"
   internal.add " =\n"
-  internal.add "  s.s[i]\n"
+  internal.add &"  s.s[i]{convertExportFromNim(sym[1])}\n"
   internal.add "\n"
 
-  internal.add &"proc $lib_{seqNameSnaked}_set*(s: {seqName}, i: int, v: {sym[1].repr})"
+  internal.add &"proc $lib_{seqNameSnaked}_set*(s: {seqName}, i: int, v: {exportTypeNim(sym[1])})"
   internal.add &" {exportProcPragmas}"
   internal.add " =\n"
-  internal.add "  s.s[i] = v\n"
+  internal.add &"  s.s[i] = v{convertImportToNim(sym[1])}\n"
   internal.add "\n"
 
   internal.add &"proc $lib_{seqNameSnaked}_delete*(s: {seqName}, i: int)"

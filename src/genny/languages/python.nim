@@ -301,11 +301,11 @@ proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   types.add "\n"
 
   types.add &"{baseIndent}def __getitem__(self, index):\n"
-  types.add &"{baseIndent}    return dll.{procPrefix}_get(self{selfSuffix}, index)\n"
+  types.add &"{baseIndent}    return dll.{procPrefix}_get(self{selfSuffix}, index){convertImportToPy(entryType)}\n"
   types.add "\n"
 
   types.add &"{baseIndent}def __setitem__(self, index, value):\n"
-  types.add &"{baseIndent}    dll.{procPrefix}_set(self{selfSuffix}, index, value)\n"
+  types.add &"{baseIndent}    dll.{procPrefix}_set(self{selfSuffix}, index, value{convertExportFromPy(entryType)})\n"
   types.add "\n"
 
   types.add &"{baseIndent}def __delitem__(self, index):\n"
