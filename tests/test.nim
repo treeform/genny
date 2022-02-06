@@ -104,6 +104,15 @@ exportObject SimpleObjWithProc:
 #   arrayCall3
 #   arrayCall4
 
+proc getDatas(): seq[string] =
+  @["a", "b", "c"]
+
+exportSeq seq[string]:
+  discard
+
+exportProcs:
+  getDatas
+
 writeFiles("tests/generated", "test")
 
 include generated/internal

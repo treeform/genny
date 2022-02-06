@@ -154,6 +154,42 @@ SimpleObjWithProc.prototype.extraProc = function(){
   dll.test_simple_obj_with_proc_extra_proc(this)
 }
 
+SeqString = Struct({'nimRef': 'uint64'});
+SeqString.prototype.isNull = function(){
+  return this.nimRef == 0;
+};
+SeqString.prototype.isEqual = function(other){
+  return this.nimRef == other.nimRef;
+};
+SeqString.prototype.unref = function(){
+  return dll.test_seq_string_unref(this)
+};
+function seqString(){
+  return dll.test_new_seq_string();
+}
+SeqString.prototype.length = function(){
+  return dll.test_seq_string_len(this)
+};
+SeqString.prototype.get = function(index){
+  return dll.test_seq_string_get(this, index)
+};
+SeqString.prototype.set = function(index, value){
+  dll.test_seq_string_set(this, index, value)
+};
+SeqString.prototype.delete = function(index){
+  dll.test_seq_string_delete(this, index)
+};
+SeqString.prototype.add = function(value){
+  dll.test_seq_string_add(this, value)
+};
+SeqString.prototype.clear = function(){
+  dll.test_seq_string_clear(this)
+};
+function getDatas(){
+  result = dll.test_get_datas()
+  return result
+}
+
 
 var dllPath = ""
 if(process.platform == "win32") {
@@ -190,6 +226,15 @@ dll = ffi.Library(dllPath, {
   'test_ref_obj_with_seq_data_add': ['void', [RefObjWithSeq, 'int8']],
   'test_ref_obj_with_seq_data_clear': ['void', [RefObjWithSeq]],
   'test_simple_obj_with_proc_extra_proc': ['void', [SimpleObjWithProc]],
+  'test_seq_string_unref': ['void', [SeqString]],
+  'test_new_seq_string': [SeqString, []],
+  'test_seq_string_len': ['uint64', [SeqString]],
+  'test_seq_string_get': ['string', [SeqString, 'uint64']],
+  'test_seq_string_set': ['void', [SeqString, 'uint64', 'string']],
+  'test_seq_string_delete': ['void', [SeqString, 'uint64']],
+  'test_seq_string_add': ['void', [SeqString, 'string']],
+  'test_seq_string_clear': ['void', [SeqString]],
+  'test_get_datas': [SeqString, []],
 });
 
 exports.SIMPLE_CONST = 123
@@ -207,3 +252,5 @@ exports.RefObjWithSeqType = RefObjWithSeq
 exports.RefObjWithSeq = newRefObjWithSeq
 exports.SimpleObjWithProc = SimpleObjWithProc;
 exports.simpleObjWithProc = simpleObjWithProc;
+exports.SeqStringType = SeqString
+exports.getDatas = getDatas

@@ -1,7 +1,12 @@
+when not defined(gcArc) and not defined(gcOrc):
+  {.error: "Please use --gc:arc or --gc:orc when using Genny.".}
+
+when (NimMajor, NimMinor, NimPatch) == (1, 6, 2):
+  {.error: "Nim 1.6.2 not supported with Genny due to FFI issues.".}
 proc test_simple_call*(a: int): int {.raises: [], cdecl, exportc, dynlib.} =
   simpleCall(a)
 
-proc test_simple_obj*(simple_a: int, simple_b: uint8, simple_c: bool): SimpleObj {.raises: [], cdecl, exportc, dynlib.} =
+proc test_simple_obj*(simple_a: int, simple_b: byte, simple_c: bool): SimpleObj {.raises: [], cdecl, exportc, dynlib.} =
   result.simple_a = simple_a
   result.simple_b = simple_b
   result.simple_c = simple_c
@@ -81,7 +86,7 @@ proc test_ref_obj_with_seq_data_delete*(ref_obj_with_seq: RefObjWithSeq, i: int)
 proc test_ref_obj_with_seq_data_clear*(ref_obj_with_seq: RefObjWithSeq) {.raises: [], cdecl, exportc, dynlib.} =
   ref_obj_with_seq.data.setLen(0)
 
-proc test_simple_obj_with_proc*(simple_a: int, simple_b: uint8, simple_c: bool): SimpleObjWithProc {.raises: [], cdecl, exportc, dynlib.} =
+proc test_simple_obj_with_proc*(simple_a: int, simple_b: byte, simple_c: bool): SimpleObjWithProc {.raises: [], cdecl, exportc, dynlib.} =
   result.simple_a = simple_a
   result.simple_b = simple_b
   result.simple_c = simple_c
@@ -91,4 +96,34 @@ proc test_simple_obj_with_proc_eq*(a, b: SimpleObjWithProc): bool {.raises: [], 
 
 proc test_simple_obj_with_proc_extra_proc*(s: SimpleObjWithProc) {.raises: [], cdecl, exportc, dynlib.} =
   extraProc(s)
+
+type SeqString* = ref object
+  s: seq[string]
+
+proc test_new_seq_string*(): SeqString {.raises: [], cdecl, exportc, dynlib.} =
+  SeqString()
+
+proc test_seq_string_len*(s: SeqString): int {.raises: [], cdecl, exportc, dynlib.} =
+  s.s.len
+
+proc test_seq_string_add*(s: SeqString, v: string) {.raises: [], cdecl, exportc, dynlib.} =
+  s.s.add(v)
+
+proc test_seq_string_get*(s: SeqString, i: int): string {.raises: [], cdecl, exportc, dynlib.} =
+  s.s[i]
+
+proc test_seq_string_set*(s: SeqString, i: int, v: string) {.raises: [], cdecl, exportc, dynlib.} =
+  s.s[i] = v
+
+proc test_seq_string_delete*(s: SeqString, i: int) {.raises: [], cdecl, exportc, dynlib.} =
+  s.s.delete(i)
+
+proc test_seq_string_clear*(s: SeqString) {.raises: [], cdecl, exportc, dynlib.} =
+  s.s.setLen(0)
+
+proc test_seq_string_unref*(s: SeqString) {.raises: [], cdecl, exportc, dynlib.} =
+  GC_unref(s)
+
+proc test_get_datas*(): SeqString {.raises: [], cdecl, exportc, dynlib.} =
+  SeqString(s: getDatas())
 

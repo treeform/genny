@@ -174,6 +174,43 @@ class SimpleObjWithProc(Structure):
     def extra_proc(self):
         dll.test_simple_obj_with_proc_extra_proc(self)
 
+class SeqString(Structure):
+    _fields_ = [("ref", c_ulonglong)]
+
+    def __bool__(self):
+        return self.ref != None
+
+    def __eq__(self, obj):
+        return self.ref == obj.ref
+
+    def __del__(self):
+        dll.test_seq_string_unref(self)
+
+    def __init__(self):
+        self.ref = dll.test_new_seq_string()
+
+    def __len__(self):
+        return dll.test_seq_string_len(self)
+
+    def __getitem__(self, index):
+        return dll.test_seq_string_get(self, index)
+
+    def __setitem__(self, index, value):
+        dll.test_seq_string_set(self, index, value)
+
+    def __delitem__(self, index):
+        dll.test_seq_string_delete(self, index)
+
+    def append(self, value):
+        dll.test_seq_string_add(self, value)
+
+    def clear(self):
+        dll.test_seq_string_clear(self)
+
+def get_datas():
+    result = dll.test_get_datas()
+    return result
+
 dll.test_simple_call.argtypes = [c_longlong]
 dll.test_simple_call.restype = c_longlong
 
@@ -248,4 +285,31 @@ dll.test_ref_obj_with_seq_data_clear.restype = None
 
 dll.test_simple_obj_with_proc_extra_proc.argtypes = [SimpleObjWithProc]
 dll.test_simple_obj_with_proc_extra_proc.restype = None
+
+dll.test_seq_string_unref.argtypes = [SeqString]
+dll.test_seq_string_unref.restype = None
+
+dll.test_new_seq_string.argtypes = []
+dll.test_new_seq_string.restype = c_ulonglong
+
+dll.test_seq_string_len.argtypes = [SeqString]
+dll.test_seq_string_len.restype = c_longlong
+
+dll.test_seq_string_get.argtypes = [SeqString, c_longlong]
+dll.test_seq_string_get.restype = c_char_p
+
+dll.test_seq_string_set.argtypes = [SeqString, c_longlong, c_char_p]
+dll.test_seq_string_set.restype = None
+
+dll.test_seq_string_delete.argtypes = [SeqString, c_longlong]
+dll.test_seq_string_delete.restype = None
+
+dll.test_seq_string_add.argtypes = [SeqString, c_char_p]
+dll.test_seq_string_add.restype = None
+
+dll.test_seq_string_clear.argtypes = [SeqString]
+dll.test_seq_string_clear.restype = None
+
+dll.test_get_datas.argtypes = []
+dll.test_get_datas.restype = SeqString
 
