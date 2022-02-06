@@ -1,5 +1,5 @@
-import genny/internal, genny/languages/c, genny/languages/nim, genny/languages/python, genny/languages/node,
-    macros, strformat
+import genny/internal, genny/languages/c, genny/languages/nim,
+    genny/languages/node, genny/languages/python, macros, strformat
 
 template discard2(f: untyped): untyped =
   when(compiles do: discard f):
