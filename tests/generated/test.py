@@ -13,6 +13,20 @@ dll = cdll.LoadLibrary(os.path.join(dir, libName))
 class testError(Exception):
     pass
 
+class SeqIterator(object):
+    def __init__(self, seq):
+        self.idx = 0
+        self.seq = seq
+    def __iter__(self):
+        return self
+    def __next__(self):
+        if self.idx < len(self.seq):
+            self.idx += 1
+            return self.seq[self.idx - 1]
+        else:
+            self.idx = 0
+            raise StopIteration
+
 SIMPLE_CONST = 123
 
 SimpleEnum = c_byte
@@ -113,6 +127,9 @@ class SeqInt(Structure):
     def clear(self):
         dll.test_seq_int_clear(self)
 
+    def __iter__(self):
+        return SeqIterator(self)
+
 class RefObjWithSeq(Structure):
     _fields_ = [("ref", c_ulonglong)]
 
@@ -151,6 +168,9 @@ class RefObjWithSeq(Structure):
 
         def clear(self):
             dll.test_ref_obj_with_seq_data_clear(self.ref_obj_with_seq)
+
+        def __iter__(self):
+            return SeqIterator(self)
 
     @property
     def data(self):
@@ -206,6 +226,9 @@ class SeqString(Structure):
 
     def clear(self):
         dll.test_seq_string_clear(self)
+
+    def __iter__(self):
+        return SeqIterator(self)
 
 def get_datas():
     result = dll.test_get_datas()
