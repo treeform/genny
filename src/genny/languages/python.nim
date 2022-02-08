@@ -320,6 +320,10 @@ proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   types.add &"{baseIndent}    dll.{procPrefix}_clear(self{selfSuffix})\n"
   types.add "\n"
 
+  types.add &"{baseIndent}def __iter__(self):\n"
+  types.add &"{baseIndent}    return SeqIterator(self)\n"
+  types.add "\n"
+
   dllProc(&"dll.{procPrefix}_len", [objName], "c_longlong")
   dllProc(&"dll.{procPrefix}_get", [objName, "c_longlong"], exportTypePy(entryType))
   dllProc(&"dll.{procPrefix}_set", [objName, "c_longlong", exportTypePy(entryType)], "None")
@@ -456,6 +460,20 @@ dll = cdll.LoadLibrary(os.path.join(dir, libName))
 
 class $LibError(Exception):
     pass
+
+class SeqIterator(object):
+    def __init__(self, seq):
+        self.idx = 0
+        self.seq = seq
+    def __iter__(self):
+        return self
+    def __next__(self):
+        if self.idx < len(self.seq):
+            self.idx += 1
+            return self.seq[self.idx - 1]
+        else:
+            self.idx = 0
+            raise StopIteration
 
 """
 
