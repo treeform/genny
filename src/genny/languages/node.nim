@@ -15,7 +15,7 @@ proc exportTypeNode(sym: NimNode): string =
     elif sym[0].repr == "seq":
       result = sym.getSeqName()
     else:
-      error(&"Unexpected bracket expression {sym[0].repr}[")
+      result = sym.getName()
   else:
     result =
       case sym.repr:
@@ -43,7 +43,7 @@ proc exportTypeNode(sym: NimNode): string =
 
       of "": "'void'"
       else:
-        sym.repr
+        sym.getName()
 
 proc convertExportFromNode*(sym: NimNode): string =
   discard
@@ -79,7 +79,7 @@ proc exportProcNode*(
   prefixes: openarray[NimNode] = []
 ) =
   let
-    procName = sym.repr
+    procName = sym.getName()
     procNameSnaked = toSnakeCase(procName)
     procType = sym.getTypeInst()
     procParams = procType[0][1 .. ^1]
@@ -181,7 +181,7 @@ proc exportProcNode*(
   dllProc(apiProcName, procParams, exportTypeNode(procReturn))
 
 proc exportObjectNode*(sym: NimNode, constructor: NimNode) =
-  let objName = sym.repr
+  let objName = sym.getName()
 
   exports.add &"exports.{objName} = {objName};\n"
   types.add &"const {objName} = Struct(" & "{\n"
@@ -298,7 +298,7 @@ proc exportRefObjectNode*(
   constructor: NimNode
 ) =
   let
-    objName = sym.repr
+    objName = sym.getName()
     objNameSnaked = toSnakeCase(objName)
     objType = sym.getType()[1].getType()
 

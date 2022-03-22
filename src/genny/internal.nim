@@ -16,13 +16,13 @@ proc exportProcInternal*(
   prefixes: openarray[NimNode] = []
 ) =
   let
-    procName = sym.repr
+    procName = getName(sym)
     procNameSnaked = toSnakeCase(procName)
     procType = sym.getTypeInst()
     procParams = procType[0][1 .. ^1]
     procReturn = procType[0][0]
     procRaises = sym.raises()
-    procReturnsSeq = procReturn.kind == nnkBracketExpr
+    procReturnsSeq = procReturn.kind == nnkBracketExpr and procReturn[0].repr == "seq"
 
   var apiProcName = &"$lib_"
   if owner != nil:
@@ -51,7 +51,7 @@ proc exportProcInternal*(
     internal.add "  "
   if procReturnsSeq:
     internal.add &"{procReturn.getSeqName()}(s: "
-  internal.add &"{procName}("
+  internal.add &"{sym.repr}("
   for param in procParams:
     for i in 0 .. param.len - 3:
       internal.add &"{toSnakeCase(param[i].repr)}"
@@ -120,11 +120,11 @@ proc exportRefObjectInternal*(
   constructor: NimNode
 ) =
   let
-    objName = sym.repr
+    objName = getName(sym)
     objNameSnaked = toSnakeCase(objName)
     objType = sym.getType()[1].getType()
 
-  internal.add &"proc $lib_{objNameSnaked}_unref*(x: {objName}) {exportProcPragmas}"
+  internal.add &"proc $lib_{objNameSnaked}_unref*(x: {repr(sym)}) {exportProcPragmas}"
   internal.add " =\n"
   internal.add "  GC_unref(x)\n"
   internal.add "\n"

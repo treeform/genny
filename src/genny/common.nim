@@ -68,18 +68,34 @@ proc toVarCase*(s: string): string =
   if i < s.len:
     result.add s[i .. ^1]
 
-proc getSeqName*(sym: NimNode): string =
-  if sym.kind == nnkBracketExpr:
-    result = &"Seq{sym[1]}"
-  else:
-    result = &"Seq{sym}"
-  result[3] = toUpperAscii(result[3])
-
 proc getName*(sym: NimNode): string =
-  if sym.kind == nnkBracketExpr:
-    sym.getSeqName()
+  if sym.kind == nnkSym:
+    let impl = sym.getImpl()
+    if impl.kind == nnkProcDef and impl[5].kind != nnkEmpty:
+      # generic procedure instance
+      # for now, just add every type to the name
+      #
+      # we could only add the generic one, but that requires smart
+      # matching between the impl & the TypeInst
+      var res= sym.repr
+      for param in sym.getTypeInst()[0][1..^1]:
+        res &= capitalizeAscii(param[1].getName())
+      res
+    else:
+      sym.repr
+  elif sym.kind == nnkBracketExpr:
+    for gen in sym:
+      result &= capitalizeAscii(gen.getName())
+    result
   else:
     sym.repr
+
+proc getSeqName*(sym: NimNode): string =
+  if sym.kind == nnkBracketExpr:
+    sym.getName()
+  else:
+    "Seq" & sym.getName()
+
 
 proc raises*(procSym: NimNode): bool =
   for pragma in procSym.getImpl()[4]:

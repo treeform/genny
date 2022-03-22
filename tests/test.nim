@@ -113,6 +113,30 @@ exportSeq seq[string]:
 exportProcs:
   getDatas
 
+## Generics
+
+type
+  #TODO this one is a bit tricky
+  # because it's harder to get it's
+  # fields. getImpl will return the generic
+  # object, so types need to be replaced
+  # manually
+  GenSimple[T] = object
+    a: T
+
+  GenRef[T] = ref GenSimple[T]
+
+proc noop[T](x: GenRef[T]): GenRef[T] = x
+
+proc newGenRef[T](v: T): GenRef[T] =
+  GenRef[T](a: v)
+
+exportRefObject GenRef[int]:
+  constructor:
+    newGenRef[int](int)
+  procs:
+    noop(GenRef[int])
+
 writeFiles("tests/generated", "test")
 
 include generated/internal

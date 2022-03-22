@@ -16,7 +16,7 @@ proc exportTypePy(sym: NimNode): string =
     elif sym[0].repr == "seq":
       result = sym.getSeqName()
     else:
-      error(&"Unexpected bracket expression {sym[0].repr}[")
+      result = sym.getName()
   else:
     result =
       case sym.repr:
@@ -204,7 +204,7 @@ proc exportProcPy*(
   dllProc(&"dll.$lib_{apiProcName}", toArgTypes(dllParams), exportTypePy(procReturn))
 
 proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
-  let objName = sym.repr
+  let objName = sym.getName()
 
   types.add &"class {objName}(Structure):\n"
   types.add "    _fields_ = [\n"
@@ -337,7 +337,7 @@ proc exportRefObjectPy*(
   constructor: NimNode
 ) =
   let
-    objName = sym.repr
+    objName = sym.getName()
     objNameSnaked = toSnakeCase(objName)
     objType = sym.getType()[1].getType()
 

@@ -234,6 +234,26 @@ def get_datas():
     result = dll.test_get_datas()
     return result
 
+class GenRefInt(Structure):
+    _fields_ = [("ref", c_ulonglong)]
+
+    def __bool__(self):
+        return self.ref != None
+
+    def __eq__(self, obj):
+        return self.ref == obj.ref
+
+    def __del__(self):
+        dll.test_gen_ref_int_unref(self)
+
+    def __init__(self, v):
+        result = dll.test_new_gen_ref(v)
+        self.ref = result
+
+    def noop(self):
+        result = dll.test_gen_ref_int_noop(self)
+        return result
+
 dll.test_simple_call.argtypes = [c_longlong]
 dll.test_simple_call.restype = c_longlong
 
@@ -335,4 +355,13 @@ dll.test_seq_string_clear.restype = None
 
 dll.test_get_datas.argtypes = []
 dll.test_get_datas.restype = SeqString
+
+dll.test_gen_ref_int_unref.argtypes = [GenRefInt]
+dll.test_gen_ref_int_unref.restype = None
+
+dll.test_new_gen_ref.argtypes = [c_longlong]
+dll.test_new_gen_ref.restype = c_ulonglong
+
+dll.test_gen_ref_int_noop.argtypes = [GenRefInt]
+dll.test_gen_ref_int_noop.restype = GenRefInt
 

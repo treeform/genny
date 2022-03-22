@@ -6,9 +6,10 @@ var
 
 proc exportTypeNim*(sym: NimNode): string =
   if sym.kind == nnkBracketExpr:
-    if sym[0].repr != "seq":
-      error(&"Unexpected bracket expression {sym[0].repr}[", sym)
-    result = sym.getSeqName()
+    if sym[0].repr == "seq":
+      result = sym.getSeqName()
+    else:
+      result = sym.repr
   else:
     if sym.repr == "string":
       result = "cstring"
@@ -28,9 +29,8 @@ proc convertExportFromNim*(sym: NimNode): string =
 
 proc convertImportToNim*(sym: NimNode): string =
   if sym.kind == nnkBracketExpr:
-    if sym[0].repr != "seq":
-      error(&"Unexpected bracket expression {sym[0].repr}[", sym)
-    result = ".s"
+    if sym[0].repr == "seq":
+      result = ".s"
   else:
     if sym.repr == "string":
       result = ".`$`"
@@ -55,7 +55,7 @@ proc exportProcNim*(
   prefixes: openarray[NimNode] = []
 ) =
   let
-    procName = sym.repr
+    procName = sym.getName()
     procNameSnaked = toSnakeCase(procName)
     procType = sym.getTypeInst()
     procParams = procType[0][1 .. ^1]
@@ -92,7 +92,7 @@ proc exportProcNim*(
   procs.add "\n"
   procs.add "\n"
 
-  procs.add &"proc {procName}*("
+  procs.add &"proc {sym.repr}*("
   for i, param in procParams:
     var paramType = param[1]
     if paramType.repr.endsWith(":type"):

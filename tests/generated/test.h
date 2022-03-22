@@ -28,6 +28,8 @@ typedef struct SimpleObjWithProc {
 
 typedef long long SeqString;
 
+typedef long long GenRefInt;
+
 /**
  * Returns the integer passed in.
  */
@@ -109,5 +111,11 @@ void test_seq_string_add(SeqString seq_string, char* value);
 void test_seq_string_clear(SeqString seq_string);
 
 SeqString test_get_datas();
+
+void test_gen_ref_int_unref(GenRefInt gen_ref_int);
+
+GenRefInt test_new_gen_ref(long long v);
+
+GenRefInt test_gen_ref_int_noop_gen_ref_int(GenRefInt);
 
 #endif
