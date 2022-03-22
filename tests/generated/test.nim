@@ -21,9 +21,9 @@ type SimpleEnum* = enum
   Third
 
 type SimpleObj* = object
-  simpleA*: int
-  simpleB*: byte
-  simpleC*: bool
+  simpleA: int
+  simpleB: byte
+  simpleC: bool
 
 proc simpleObj*(simple_a: int, simple_b: byte, simple_c: bool): SimpleObj =
   result.simple_a = simple_a
@@ -61,9 +61,9 @@ proc `=destroy`(x: var RefObjWithSeqObj) =
   test_ref_obj_with_seq_unref(x)
 
 type SimpleObjWithProc* = object
-  simpleA*: int
-  simpleB*: byte
-  simpleC*: bool
+  simpleA: int
+  simpleB: byte
+  simpleC: bool
 
 proc simpleObjWithProc*(simple_a: int, simple_b: byte, simple_c: bool): SimpleObjWithProc =
   result.simple_a = simple_a
@@ -79,6 +79,12 @@ proc test_seq_string_unref(x: SeqStringObj) {.importc: "test_seq_string_unref", 
 
 proc `=destroy`(x: var SeqStringObj) =
   test_seq_string_unref(x)
+
+type GenSimpleInt* = object
+  a: int
+
+proc genSimpleInt*(a: int): GenSimpleInt =
+  result.a = a
 
 type GenRefIntObj = object
   reference: pointer

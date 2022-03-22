@@ -28,6 +28,10 @@ typedef struct SimpleObjWithProc {
 
 typedef long long SeqString;
 
+typedef struct GenSimpleInt {
+  long long a;
+} GenSimpleInt;
+
 typedef long long GenRefInt;
 
 /**
@@ -111,6 +115,10 @@ void test_seq_string_add(SeqString seq_string, char* value);
 void test_seq_string_clear(SeqString seq_string);
 
 SeqString test_get_datas();
+
+GenSimpleInt test_gen_simple_int(long long a);
+
+char test_gen_simple_int_eq(GenSimpleInt a, GenSimpleInt b);
 
 void test_gen_ref_int_unref(GenRefInt gen_ref_int);
 

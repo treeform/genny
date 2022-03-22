@@ -131,21 +131,23 @@ proc exportProcC*(
   dllProc(&"$lib_{apiProcName}", dllParams, exportTypeC(procReturn))
 
 proc exportObjectC*(sym: NimNode, constructor: NimNode) =
-  let objName = sym.getName()
+  let
+    objName = sym.getName()
+    impl = sym.getTypeImpl()
 
   types.add &"typedef struct {objName} " & "{\n"
-  for identDefs in sym.getImpl()[2][2]:
+  for identDefs in impl[2]:
     for property in identDefs[0 .. ^3]:
-      types.add &"  {exportTypeC(identDefs[^2], toSnakeCase(property[1].repr))};\n"
+      types.add &"  {exportTypeC(identDefs[^2], toSnakeCase(property.repr))};\n"
   types.add "} " & &"{objName};\n\n"
 
   if constructor != nil:
     exportProcC(constructor)
   else:
     procs.add &"{objName} $lib_{toSnakeCase(objName)}("
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in impl[2]:
       for property in identDefs[0 .. ^3]:
-        procs.add &"{exportTypeC(identDefs[^2], toSnakeCase(property[1].repr))}, "
+        procs.add &"{exportTypeC(identDefs[^2], toSnakeCase(property.repr))}, "
     procs.removeSuffix ", "
     procs.add ");\n\n"
 

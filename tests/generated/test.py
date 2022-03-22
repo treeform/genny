@@ -234,6 +234,17 @@ def get_datas():
     result = dll.test_get_datas()
     return result
 
+class GenSimpleInt(Structure):
+    _fields_ = [
+        ("a", c_longlong)
+    ]
+
+    def __init__(self, a):
+        self.a = a
+
+    def __eq__(self, obj):
+        return self.a == obj.a
+
 class GenRefInt(Structure):
     _fields_ = [("ref", c_ulonglong)]
 

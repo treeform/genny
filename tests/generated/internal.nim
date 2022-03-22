@@ -127,6 +127,12 @@ proc test_seq_string_unref*(s: SeqString) {.raises: [], cdecl, exportc, dynlib.}
 proc test_get_datas*(): SeqString {.raises: [], cdecl, exportc, dynlib.} =
   SeqString(s: getDatas())
 
+proc test_gen_simple_int*(a: int): GenSimple[int] {.raises: [], cdecl, exportc, dynlib.} =
+  result.a = a
+
+proc test_gen_simple_int_eq*(a, b: GenSimple[int]): bool {.raises: [], cdecl, exportc, dynlib.}=
+  a.a == b.a
+
 proc test_gen_ref_int_unref*(x: GenRef[int]) {.raises: [], cdecl, exportc, dynlib.} =
   GC_unref(x)
 

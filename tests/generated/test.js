@@ -190,6 +190,18 @@ function getDatas(){
   return result
 }
 
+const GenSimpleInt = Struct({
+  'a':'int64'
+})
+genSimpleInt = function(a){
+  var v = new GenSimpleInt();
+  v.a = a
+  return v;
+}
+GenSimpleInt.prototype.isEqual = function(other){
+  return self.a == other.a;
+};
+
 GenRefInt = Struct({'nimRef': 'uint64'});
 GenRefInt.prototype.isNull = function(){
   return this.nimRef == 0;
@@ -277,5 +289,7 @@ exports.SimpleObjWithProc = SimpleObjWithProc;
 exports.simpleObjWithProc = simpleObjWithProc;
 exports.SeqStringType = SeqString
 exports.getDatas = getDatas
+exports.GenSimpleInt = GenSimpleInt;
+exports.genSimpleInt = genSimpleInt;
 exports.GenRefIntType = GenRefInt
 exports.GenRefInt = newGenRefInt

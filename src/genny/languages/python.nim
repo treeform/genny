@@ -204,13 +204,15 @@ proc exportProcPy*(
   dllProc(&"dll.$lib_{apiProcName}", toArgTypes(dllParams), exportTypePy(procReturn))
 
 proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
-  let objName = sym.getName()
+  let
+    objName = sym.getName()
+    impl = sym.getTypeImpl()
 
   types.add &"class {objName}(Structure):\n"
   types.add "    _fields_ = [\n"
-  for identDefs in sym.getImpl()[2][2]:
+  for identDefs in impl[2]:
     for property in identDefs[0 .. ^3]:
-      types.add &"        (\"{toSnakeCase(property[1].repr)}\""
+      types.add &"        (\"{toSnakeCase(property.repr)}\""
       types.add ", "
       types.add &"{exportTypePy(identDefs[^2])}),\n"
   types.removeSuffix ",\n"
@@ -234,10 +236,10 @@ proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
       types.add ", "
     types.removeSuffix ", "
     types.add ")\n"
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in impl[2]:
       for property in identDefs[0 .. ^3]:
-        types.add &"        self.{toSnakeCase(property[1].repr)} = "
-        types.add &"tmp.{toSnakeCase(property[1].repr)}\n"
+        types.add &"        self.{toSnakeCase(property.repr)} = "
+        types.add &"tmp.{toSnakeCase(property.repr)}\n"
     types.add "\n"
     var dllParams: seq[NimNode]
     for param in constructorParams:
@@ -245,27 +247,27 @@ proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
     dllProc(&"dll.$lib_{toSnakeCase(objName)}", toArgTypes(dllParams), objName)
   else:
     types.add "    def __init__(self, "
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in impl[2]:
       for property in identDefs[0 .. ^3]:
-        types.add &"{toSnakeCase(property[1].repr)}, "
+        types.add &"{toSnakeCase(property.repr)}, "
     types.removeSuffix ", "
     types.add "):\n"
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in impl[2]:
       for property in identDefs[0 .. ^3]:
         types.add "        "
-        types.add &"self.{toSnakeCase(property[1].repr)} = "
-        types.add &"{toSnakeCase(property[1].repr)}\n"
+        types.add &"self.{toSnakeCase(property.repr)} = "
+        types.add &"{toSnakeCase(property.repr)}\n"
     types.add "\n"
 
   types.add "    def __eq__(self, obj):\n"
   types.add "        return "
-  for identDefs in sym.getImpl()[2][2]:
+  for identDefs in impl[2]:
     for property in identDefs[0 .. ^3]:
       if identDefs[^2].len > 0 and identDefs[^2][0].repr == "array":
         for i in 0 ..< identDefs[^2][1].intVal:
-          types.add &"self.{toSnakeCase(property[1].repr)}[{i}] == obj.{toSnakeCase(property[1].repr)}[{i}] and "
+          types.add &"self.{toSnakeCase(property.repr)}[{i}] == obj.{toSnakeCase(property.repr)}[{i}] and "
       else:
-        types.add &"self.{toSnakeCase(property[1].repr)} == obj.{toSnakeCase(property[1].repr)} and "
+        types.add &"self.{toSnakeCase(property.repr)} == obj.{toSnakeCase(property.repr)} and "
   types.removeSuffix " and "
   types.add "\n"
   types.add "\n"

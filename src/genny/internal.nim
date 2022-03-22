@@ -71,7 +71,7 @@ proc exportProcInternal*(
 
 proc exportObjectInternal*(sym: NimNode, constructor: NimNode) =
   let
-    objName = sym.repr
+    objName = sym.getName()
     objNameSnaked = toSnakeCase(objName)
 
   if constructor != nil:
@@ -97,14 +97,14 @@ proc exportObjectInternal*(sym: NimNode, constructor: NimNode) =
         fieldType = fieldSym.getTypeInst()
       internal.add &"{toSnakeCase(fieldName)}: {exportTypeNim(fieldType)}, "
     internal.removeSuffix ", "
-    internal.add &"): {objName} {exportProcPragmas} =\n"
+    internal.add &"): {sym.repr} {exportProcPragmas} =\n"
     for fieldSym in objType[2]:
       let
         fieldName = fieldSym.repr
       internal.add &"  result.{toSnakeCase(fieldName)} = {toSnakeCase(fieldName)}\n"
     internal.add "\n"
 
-  internal.add &"proc $lib_{objNameSnaked}_eq*(a, b: {objName}): bool {exportProcPragmas}=\n"
+  internal.add &"proc $lib_{objNameSnaked}_eq*(a, b: {sym.repr}): bool {exportProcPragmas}=\n"
   let objType = sym.getType()
   internal.add "  "
   for fieldSym in objType[2]:

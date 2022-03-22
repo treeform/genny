@@ -116,11 +116,6 @@ exportProcs:
 ## Generics
 
 type
-  #TODO this one is a bit tricky
-  # because it's harder to get it's
-  # fields. getImpl will return the generic
-  # object, so types need to be replaced
-  # manually
   GenSimple[T] = object
     a: T
 
@@ -130,6 +125,9 @@ proc noop[T](x: GenRef[T]): GenRef[T] = x
 
 proc newGenRef[T](v: T): GenRef[T] =
   GenRef[T](a: v)
+
+exportObject GenSimple[int]:
+  discard
 
 exportRefObject GenRef[int]:
   constructor:
