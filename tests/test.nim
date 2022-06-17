@@ -113,6 +113,28 @@ exportSeq seq[string]:
 exportProcs:
   getDatas
 
+## Generics
+
+type
+  GenSimple[T] = object
+    a: T
+
+  GenRef[T] = ref GenSimple[T]
+
+proc noop[T](x: GenRef[T]): GenRef[T] = x
+
+proc newGenRef[T](v: T): GenRef[T] =
+  GenRef[T](a: v)
+
+exportObject GenSimple[int]:
+  discard
+
+exportRefObject GenRef[int]:
+  constructor:
+    newGenRef[int](int)
+  procs:
+    noop(GenRef[int])
+
 writeFiles("tests/generated", "test")
 
 include generated/internal

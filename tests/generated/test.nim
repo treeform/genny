@@ -21,9 +21,9 @@ type SimpleEnum* = enum
   Third
 
 type SimpleObj* = object
-  simpleA*: int
-  simpleB*: byte
-  simpleC*: bool
+  simpleA: int
+  simpleB: byte
+  simpleC: bool
 
 proc simpleObj*(simple_a: int, simple_b: byte, simple_c: bool): SimpleObj =
   result.simple_a = simple_a
@@ -61,9 +61,9 @@ proc `=destroy`(x: var RefObjWithSeqObj) =
   test_ref_obj_with_seq_unref(x)
 
 type SimpleObjWithProc* = object
-  simpleA*: int
-  simpleB*: byte
-  simpleC*: bool
+  simpleA: int
+  simpleB: byte
+  simpleC: bool
 
 proc simpleObjWithProc*(simple_a: int, simple_b: byte, simple_c: bool): SimpleObjWithProc =
   result.simple_a = simple_a
@@ -79,6 +79,22 @@ proc test_seq_string_unref(x: SeqStringObj) {.importc: "test_seq_string_unref", 
 
 proc `=destroy`(x: var SeqStringObj) =
   test_seq_string_unref(x)
+
+type GenSimpleInt* = object
+  a: int
+
+proc genSimpleInt*(a: int): GenSimpleInt =
+  result.a = a
+
+type GenRefIntObj = object
+  reference: pointer
+
+type GenRefInt* = ref GenRefIntObj
+
+proc test_gen_ref_int_unref(x: GenRefIntObj) {.importc: "test_gen_ref_int_unref", cdecl.}
+
+proc `=destroy`(x: var GenRefIntObj) =
+  test_gen_ref_int_unref(x)
 
 proc test_simple_call(a: int): int {.importc: "test_simple_call", cdecl.}
 
@@ -235,4 +251,14 @@ proc test_get_datas(): SeqString {.importc: "test_get_datas", cdecl.}
 
 proc getDatas*(): SeqString {.inline.} =
   result = test_get_datas()
+
+proc test_new_gen_ref_int(v: int): GenRef[int] {.importc: "test_new_gen_ref_int", cdecl.}
+
+proc newGenRef*(v: int): GenRef[int] {.inline.} =
+  result = test_new_gen_ref_int(v)
+
+proc test_gen_ref_int_noop_gen_ref_int(x: GenRef[int]): GenRef[int] {.importc: "test_gen_ref_int_noop_gen_ref_int", cdecl.}
+
+proc noop*(x: GenRef[int]): GenRef[int] {.inline.} =
+  result = test_gen_ref_int_noop_gen_ref_int(x)
 

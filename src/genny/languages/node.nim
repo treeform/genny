@@ -15,7 +15,7 @@ proc exportTypeNode(sym: NimNode): string =
     elif sym[0].repr == "seq":
       result = sym.getSeqName()
     else:
-      error(&"Unexpected bracket expression {sym[0].repr}[")
+      result = sym.getName()
   else:
     result =
       case sym.repr:
@@ -43,7 +43,7 @@ proc exportTypeNode(sym: NimNode): string =
 
       of "": "'void'"
       else:
-        sym.repr
+        sym.getName()
 
 proc convertExportFromNode*(sym: NimNode): string =
   discard
@@ -79,7 +79,7 @@ proc exportProcNode*(
   prefixes: openarray[NimNode] = []
 ) =
   let
-    procName = sym.repr
+    procName = sym.getName()
     procNameSnaked = toSnakeCase(procName)
     procType = sym.getTypeInst()
     procParams = procType[0][1 .. ^1]
@@ -181,13 +181,15 @@ proc exportProcNode*(
   dllProc(apiProcName, procParams, exportTypeNode(procReturn))
 
 proc exportObjectNode*(sym: NimNode, constructor: NimNode) =
-  let objName = sym.repr
+  let
+    objName = sym.getName()
+    impl = sym.getTypeImpl()
 
   exports.add &"exports.{objName} = {objName};\n"
   types.add &"const {objName} = Struct(" & "{\n"
-  for identDefs in sym.getImpl()[2][2]:
+  for identDefs in impl[2]:
     for property in identDefs[0 .. ^3]:
-      types.add &"  '{property[1].repr}':"
+      types.add &"  '{property.repr}':"
       types.add &"{exportTypeNode(identDefs[^2])},\n"
   types.removeSuffix ",\n"
   types.add "\n})\n"
@@ -217,25 +219,25 @@ proc exportObjectNode*(sym: NimNode, constructor: NimNode) =
   else:
     exports.add &"exports.{toVarCase(objName)} = {toVarCase(objName)};\n"
     types.add &"{toVarCase(objName)} = function("
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in impl[2]:
       for property in identDefs[0 .. ^3]:
-        types.add &"{toSnakeCase(property[1].repr)}, "
+        types.add &"{toSnakeCase(property.repr)}, "
     types.removeSuffix ", "
     types.add "){\n"
     types.add &"  var v = new {objName}();\n"
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in impl[2]:
       for property in identDefs[0 .. ^3]:
         types.add "  "
-        types.add &"v.{toSnakeCase(property[1].repr)} = "
-        types.add &"{toSnakeCase(property[1].repr)}\n"
+        types.add &"v.{toSnakeCase(property.repr)} = "
+        types.add &"{toSnakeCase(property.repr)}\n"
     types.add "  return v;\n"
     types.add "}\n"
 
   types.add &"{objName}.prototype.isEqual = function(other){{\n"
   types.add &"  return "
-  for identDefs in sym.getImpl()[2][2]:
+  for identDefs in impl[2]:
     for property in identDefs[0 .. ^3]:
-      types.add &"self.{property[1].repr} == other.{property[1].repr} && "
+      types.add &"self.{property.repr} == other.{property.repr} && "
   types.removeSuffix " && "
   types.add ";\n"
   types.add "};\n"
@@ -298,7 +300,7 @@ proc exportRefObjectNode*(
   constructor: NimNode
 ) =
   let
-    objName = sym.repr
+    objName = sym.getName()
     objNameSnaked = toSnakeCase(objName)
     objType = sym.getType()[1].getType()
 

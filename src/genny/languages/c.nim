@@ -14,7 +14,7 @@ proc exportTypeC(sym: NimNode): string =
     elif sym[0].repr == "seq":
       result = sym.getSeqName()
     else:
-      error(&"Unexpected bracket expression {sym[0].repr}[")
+      result = sym.getName()
   else:
     result =
       case sym.repr:
@@ -52,7 +52,7 @@ proc exportTypeC(sym: NimNode, name: string): string =
     elif sym[0].repr == "seq":
       result = sym.getSeqName() & " " & name
     else:
-      error(&"Unexpected bracket expression {sym[0].repr}[")
+      result = sym.getName()
   else:
     result = exportTypeC(sym) & " " & name
 
@@ -90,7 +90,7 @@ proc exportProcC*(
   prefixes: openarray[NimNode] = []
 ) =
   let
-    procName = sym.repr
+    procName = sym.getName()
     procNameSnaked = toSnakeCase(procName)
     procType = sym.getTypeInst()
     procParams = procType[0][1 .. ^1]
@@ -131,21 +131,23 @@ proc exportProcC*(
   dllProc(&"$lib_{apiProcName}", dllParams, exportTypeC(procReturn))
 
 proc exportObjectC*(sym: NimNode, constructor: NimNode) =
-  let objName = sym.repr
+  let
+    objName = sym.getName()
+    impl = sym.getTypeImpl()
 
   types.add &"typedef struct {objName} " & "{\n"
-  for identDefs in sym.getImpl()[2][2]:
+  for identDefs in impl[2]:
     for property in identDefs[0 .. ^3]:
-      types.add &"  {exportTypeC(identDefs[^2], toSnakeCase(property[1].repr))};\n"
+      types.add &"  {exportTypeC(identDefs[^2], toSnakeCase(property.repr))};\n"
   types.add "} " & &"{objName};\n\n"
 
   if constructor != nil:
     exportProcC(constructor)
   else:
     procs.add &"{objName} $lib_{toSnakeCase(objName)}("
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in impl[2]:
       for property in identDefs[0 .. ^3]:
-        procs.add &"{exportTypeC(identDefs[^2], toSnakeCase(property[1].repr))}, "
+        procs.add &"{exportTypeC(identDefs[^2], toSnakeCase(property.repr))}, "
     procs.removeSuffix ", "
     procs.add ");\n\n"
 
@@ -173,7 +175,7 @@ proc exportRefObjectC*(
   constructor: NimNode
 ) =
   let
-    objName = sym.repr
+    objName = sym.getName()
     objNameSnaked = toSnakeCase(objName)
     objType = sym.getType()[1].getType()
 

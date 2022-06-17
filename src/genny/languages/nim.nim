@@ -6,9 +6,10 @@ var
 
 proc exportTypeNim*(sym: NimNode): string =
   if sym.kind == nnkBracketExpr:
-    if sym[0].repr != "seq":
-      error(&"Unexpected bracket expression {sym[0].repr}[", sym)
-    result = sym.getSeqName()
+    if sym[0].repr == "seq":
+      result = sym.getSeqName()
+    else:
+      result = sym.repr
   else:
     if sym.repr == "string":
       result = "cstring"
@@ -28,9 +29,8 @@ proc convertExportFromNim*(sym: NimNode): string =
 
 proc convertImportToNim*(sym: NimNode): string =
   if sym.kind == nnkBracketExpr:
-    if sym[0].repr != "seq":
-      error(&"Unexpected bracket expression {sym[0].repr}[", sym)
-    result = ".s"
+    if sym[0].repr == "seq":
+      result = ".s"
   else:
     if sym.repr == "string":
       result = ".`$`"
@@ -55,7 +55,7 @@ proc exportProcNim*(
   prefixes: openarray[NimNode] = []
 ) =
   let
-    procName = sym.repr
+    procName = sym.getName()
     procNameSnaked = toSnakeCase(procName)
     procType = sym.getTypeInst()
     procParams = procType[0][1 .. ^1]
@@ -92,7 +92,7 @@ proc exportProcNim*(
   procs.add "\n"
   procs.add "\n"
 
-  procs.add &"proc {procName}*("
+  procs.add &"proc {sym.repr}*("
   for i, param in procParams:
     var paramType = param[1]
     if paramType.repr.endsWith(":type"):
@@ -125,13 +125,15 @@ proc exportProcNim*(
   procs.add "\n"
 
 proc exportObjectNim*(sym: NimNode, constructor: NimNode) =
-  let objName = sym.repr
+  let
+    objName = sym.getName()
+    impl = sym.getTypeImpl()
 
   if objName in ["Vector2", "Matrix3", "Rect", "Color"]:
     return
 
   types.add &"type {objName}* = object\n"
-  for identDefs in sym.getImpl()[2][2]:
+  for identDefs in impl[2]:
     for property in identDefs[0 .. ^3]:
       types.add &"  {property.repr}: {identDefs[^2].repr}\n"
   types.add "\n"
@@ -140,15 +142,15 @@ proc exportObjectNim*(sym: NimNode, constructor: NimNode) =
     exportProcNim(constructor)
   else:
     types.add &"proc {toVarCase(objName)}*("
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in impl[2]:
       for property in identDefs[0 .. ^3]:
-        types.add &"{toSnakeCase(property[1].repr)}: {identDefs[^2].repr}, "
+        types.add &"{toSnakeCase(property.repr)}: {identDefs[^2].repr}, "
     types.removeSuffix ", "
     types.add &"): {objName} =\n"
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in impl[2]:
       for property in identDefs[0 .. ^3]:
-        types.add &"  result.{toSnakeCase(property[1].repr)} = "
-        types.add &"{toSnakeCase(property[1].repr)}\n"
+        types.add &"  result.{toSnakeCase(property.repr)} = "
+        types.add &"{toSnakeCase(property.repr)}\n"
     types.add "\n"
 
 proc genRefObject(objName: string) =
