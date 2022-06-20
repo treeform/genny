@@ -4,17 +4,16 @@
 
 So you made a cool Nim library but you want it to be available to other languages as well. With `genny` you can generate a dynamically linked library with a simple C API and generated bindings for many languages. In some ways its similar to [SWIG](http://www.swig.org/) project for C or [djinni](https://github.com/dropbox/djinni) for C++.
 
+`nimble install genny`
+
 ![Github Actions](https://github.com/treeform/genny/workflows/Github%20Actions/badge.svg)
 
-## API reference:
+[API reference](https://nimdocs.com/treeform/genny)
 
-https://nimdocs.com/treeform/genny
+This library has no dependencies other than the Nim standard library.
+
 
 See [Pixie's nimble file](https://github.com/treeform/pixie/blob/master/pixie.nimble#L16) for an example of how to compile bindings with `genny`.
-
-## Installation:
-
-`nimble install genny`
 
 ## Supported features and languages:
 
