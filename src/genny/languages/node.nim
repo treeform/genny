@@ -228,6 +228,7 @@ proc exportObjectNode*(sym: NimNode, constructor: NimNode) =
         types.add "  "
         types.add &"v.{toSnakeCase(property[1].repr)} = "
         types.add &"{toSnakeCase(property[1].repr)}\n"
+
     types.add "  return v;\n"
     types.add "}\n"
 
@@ -325,6 +326,14 @@ proc exportRefObjectNode*(
       types.add ", "
     types.removeSuffix ", "
     types.add ")\n"
+
+    types.add "  const registry = new FinalizationRegistry(function(obj) {\n"
+    types.add "    console.log(\"js unref\")\n"
+    types.add "    obj.unref()\n"
+    types.add "  });\n"
+    types.add "  registry.register(result, null);\n"
+
+
     if constructorRaises:
       types.add &"  if(checkError()) "
       types.add "throw new $LibException("
@@ -400,6 +409,7 @@ proc exportSeqNode*(sym: NimNode) =
 const header = """
 var ffi = require('ffi-napi');
 var Struct = require("ref-struct-napi");
+var ArrayType = require('ref-array-napi');
 
 var dll = {};
 
