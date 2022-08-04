@@ -128,8 +128,6 @@ macro exportProcsTyped(body: typed) =
   for entry in body.asStmtList:
     procTyped(entry)
 
-    exportFunctionCpp(procTypedSym(entry))
-
 template exportProcs*(body: untyped) =
   ## Exports a list of procs.
   ## Procs can just be a name `doX` or fully qualified with `doX(int): int`.
@@ -200,6 +198,8 @@ macro exportObjectTyped(body: typed) =
       exportProcC(procSym, sym, prefixes)
       exportProcCpp(procSym, sym, prefixes)
 
+  exportCloseObjectCpp()
+
 template exportObject*(sym, body: untyped) =
   ## Exports an object, with these sections:
   ## * fields
@@ -237,6 +237,8 @@ macro exportSeqTyped(body: typed) =
 
   for entry in body.asStmtList()[1 .. ^1]:
     procTyped(entry, sym)
+
+  exportCloseObjectCpp()
 
 template exportSeq*(sym, body: untyped) =
   ## Exports a regular sequence.
@@ -328,9 +330,8 @@ macro exportRefObjectTyped(body: typed) =
       exportProcNode(procSym, sym, prefixes)
       exportProcC(procSym, sym, prefixes)
       exportProcCpp(procSym, sym, prefixes)
-      exportMemberCpp(procSym, sym, prefixes)
 
-  exportRefObjectCppDone()
+  exportCloseObjectCpp()
 
 template exportRefObject*(sym, body: untyped) =
   ## Exports a ref object, with these sections:

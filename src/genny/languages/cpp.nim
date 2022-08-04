@@ -95,8 +95,7 @@ proc exportEnumCpp*(sym: NimNode) =
 proc exportProcCpp*(
   sym: NimNode,
   owner: NimNode = nil,
-  prefixes: openarray[NimNode] = [],
-  standAlone = false
+  prefixes: openarray[NimNode] = []
 ) =
   let
     procName = sym.repr
@@ -118,139 +117,91 @@ proc exportProcCpp*(
     for entry in identDefs[0 .. ^3]:
       defaults.add((entry.repr, default))
 
-  # let comments =
-  #   if sym.getImpl()[6][0].kind == nnkCommentStmt:
-  #     sym.getImpl()[6][0].repr
-  #   elif sym.getImpl[6].kind == nnkAsgn and
-  #     sym.getImpl[6][1].kind == nnkStmtListExpr and
-  #     sym.getImpl[6][1][0].kind == nnkCommentStmt:
-  #     sym.getImpl[6][1][0].repr
-  #   else:
-  #     ""
-  # if comments != "":
-  #   let lines = comments.replace("## ", "").split("\n")
-  #   procs.add "/**\n"
-  #   for line in lines:
-  #     procs.add &" * {line}\n"
-  #   procs.add " */\n"
-
   var dllParams: seq[(NimNode, NimNode)]
   for param in procParams:
     dllParams.add((param[0], param[1]))
   dllProc(&"$lib_{apiProcName}", dllParams, exportTypeCpp(procReturn))
 
+  if owner == nil:
 
-proc exportFunctionCpp*(
-  sym: NimNode,
-) =
-  let
-    procName = sym.repr
-    procNameSnaked = toSnakeCase(procName)
-    procType = sym.getTypeInst()
-    procParams = procType[0][1 .. ^1]
-    procReturn = procType[0][0]
+    if procReturn.kind != nnkEmpty:
+      members.add exportTypeCpp(procReturn)
+      members.add " "
+    members.add procName
+    members.add "("
+    for param in procParams:
+      members.add exportTypeCpp(param[1], param[0].getName())
+      members.add ", "
+    members.removeSuffix ", "
+    members.add ") {\n"
+    members.add "  "
+    if procReturn.kind != nnkEmpty:
+      members.add "return "
+    members.add &"$lib_{apiProcName}("
+    for param in procParams:
+      members.add param[0].getName()
+      members.add ", "
+    members.removeSuffix ", "
+    members.add ");\n"
+    members.add "};\n\n"
 
-  var apiProcName = procNameSnaked
-
-  if procReturn.kind != nnkEmpty:
-    members.add exportTypeCpp(procReturn)
-    members.add " "
-  members.add procName
-  members.add "("
-  for param in procParams:
-    members.add exportTypeCpp(param[1], param[0].getName())
-    members.add ", "
-  members.removeSuffix ", "
-  members.add ") {\n"
-  members.add "  "
-  if procReturn.kind != nnkEmpty:
-    members.add "return "
-  members.add &"$lib_{apiProcName}("
-  for param in procParams:
-    members.add param[0].getName()
-    members.add ", "
-  members.removeSuffix ", "
-  members.add ");\n"
-  members.add "};\n\n"
-
-
-proc exportMemberCpp*(
-  sym: NimNode,
-  owner: NimNode = nil,
-  prefixes: openarray[NimNode] = []
-) =
-  let
-    procName = sym.repr
-    procNameSnaked = toSnakeCase(procName)
-    procType = sym.getTypeInst()
-    procParams = procType[0][1 .. ^1]
-    procReturn = procType[0][0]
-
-  var apiProcName = ""
-  if owner != nil:
-    apiProcName.add &"{toSnakeCase(owner.getName())}_"
-  for prefix in prefixes:
-    apiProcName.add &"{toSnakeCase(prefix.getName())}_"
-  apiProcName.add &"{procNameSnaked}"
-
-  let comments =
-    if sym.getImpl()[6][0].kind == nnkCommentStmt:
-      sym.getImpl()[6][0].repr
-    elif sym.getImpl[6].kind == nnkAsgn and
-      sym.getImpl[6][1].kind == nnkStmtListExpr and
-      sym.getImpl[6][1][0].kind == nnkCommentStmt:
-      sym.getImpl[6][1][0].repr
-    else:
-      ""
-  if comments != "":
-    let lines = comments.replace("## ", "").split("\n")
-    classes.add "  /**\n"
-    for line in lines:
-      classes.add &"   * {line}\n"
-    classes.add "   */\n"
-
-  classes.add &"  {exportTypeCpp(procReturn)} {procName}("
-  for param in procParams[1..^1]:
-    classes.add exportTypeCpp(param[1], param[0].getName())
-    classes.add ", "
-  classes.removeSuffix ", "
-  classes.add ");\n\n"
-
-
-
-  members.add &"{exportTypeCpp(procReturn)} {owner.getName()}::{procName}("
-  for param in procParams[1..^1]:
-    members.add exportTypeCpp(param[1], param[0].getName())
-    members.add ", "
-  members.removeSuffix ", "
-  members.add ") "
-  members.add "{\n"
-  if procReturn.kind == nnkEmpty:
-    members.add &"  "
   else:
-    members.add &"  return "
-  members.add  &"$lib_{apiProcName}("
-  members.add "*this, "
-  for param in procParams[1..^1]:
-    members.add param[0].getName()
-    members.add ", "
-  members.removeSuffix ", "
-  members.add ");\n"
-  members.add "};\n\n"
+    let comments =
+      if sym.getImpl()[6][0].kind == nnkCommentStmt:
+        sym.getImpl()[6][0].repr
+      elif sym.getImpl[6].kind == nnkAsgn and
+        sym.getImpl[6][1].kind == nnkStmtListExpr and
+        sym.getImpl[6][1][0].kind == nnkCommentStmt:
+        sym.getImpl[6][1][0].repr
+      else:
+        ""
+    if comments != "":
+      let lines = comments.replace("## ", "").split("\n")
+      classes.add "  /**\n"
+      for line in lines:
+        classes.add &"   * {line}\n"
+      classes.add "   */\n"
 
+    classes.add &"  {exportTypeCpp(procReturn)} {procName}("
+    for param in procParams[1..^1]:
+      classes.add exportTypeCpp(param[1], param[0].getName())
+      classes.add ", "
+    classes.removeSuffix ", "
+    classes.add ");\n\n"
+
+    members.add &"{exportTypeCpp(procReturn)} {owner.getName()}::{procName}("
+    for param in procParams[1..^1]:
+      members.add exportTypeCpp(param[1], param[0].getName())
+      members.add ", "
+    members.removeSuffix ", "
+    members.add ") "
+    members.add "{\n"
+    if procReturn.kind == nnkEmpty:
+      members.add &"  "
+    else:
+      members.add &"  return "
+    members.add  &"$lib_{apiProcName}("
+    members.add "*this, "
+    for param in procParams[1..^1]:
+      members.add param[0].getName()
+      members.add ", "
+    members.removeSuffix ", "
+    members.add ");\n"
+    members.add "};\n\n"
 
 proc exportObjectCpp*(sym: NimNode, constructor: NimNode) =
   let objName = sym.repr
 
-  types.add &"struct {objName} " & "{\n"
+  types.add &"struct {objName};\n\n"
+
+  classes.add &"struct {objName} " & "{\n"
   for identDefs in sym.getImpl()[2][2]:
     for property in identDefs[0 .. ^3]:
-      types.add &"  {exportTypeCpp(identDefs[^2], toSnakeCase(property[1].repr))};\n"
-  types.add "};\n\n"
+      classes.add &"  {exportTypeCpp(identDefs[^2], toSnakeCase(property[1].repr))};\n"
 
   if constructor != nil:
     exportProcCpp(constructor)
-    exportFunctionCpp(constructor)
+    #exportFunctionCpp(constructor)
   else:
     procs.add &"{objName} $lib_{toSnakeCase(objName)}("
     for identDefs in sym.getImpl()[2][2]:
@@ -277,8 +228,8 @@ proc exportObjectCpp*(sym: NimNode, constructor: NimNode) =
     members.add ");\n"
     members.add "};\n\n"
 
-
   dllProc(&"$lib_{toSnakeCase(objName)}_eq", [&"{objName} a", &"{objName} b"], "char")
+
 
 proc genRefObject(objName: string) =
 
@@ -372,7 +323,7 @@ proc exportRefObjectCpp*(
       members.add &"  return {getProcName}(*this);\n"
       members.add "}\n\n"
 
-      classes.add &"  void {setMemberName}({exportTypeCpp(fieldType)} value);\n"
+      classes.add &"  void {setMemberName}({exportTypeCpp(fieldType)} value);\n\n"
 
       members.add &"void {objName}::{setMemberName}({exportTypeCpp(fieldType)} value)" & "{\n"
       members.add &"  {setProcName}(*this, value);\n"
@@ -398,13 +349,13 @@ proc exportRefObjectCpp*(
   # members.add &"  // $lib_{toSnakeCase(objName)}_unref(*this);\n"
   # members.add "}\n\n"
 
-  classes.add &"  free();\n\n"
+  classes.add &"  void free();\n\n"
 
-  members.add &"{objName}::free()" & "{\n"
+  members.add &"void {objName}::free()" & "{\n"
   members.add &"  $lib_{toSnakeCase(objName)}_unref(*this);\n"
   members.add "}\n\n"
 
-proc exportRefObjectCppDone*() =
+proc exportCloseObjectCpp*() =
 
   classes.add "};\n\n"
 
@@ -430,10 +381,13 @@ proc exportSeqCpp*(sym: NimNode) =
   classes.add &"  private:\n\n"
   classes.add &"  uint64_t reference;\n\n"
   classes.add &"  public:\n\n"
-  # classes.add &"  ~{seqName}()" & "{\n"
-  # classes.add &"    $lib_{seqNameSnaked}_unref(*this);\n"
-  # classes.add "  }\n\n"
-  classes.add "};\n\n"
+
+  classes.add &"  void free();\n\n"
+
+  members.add &"void {seqName}::free()" & "{\n"
+  members.add &"  $lib_{toSnakeCase(seqName)}_unref(*this);\n"
+  members.add "}\n\n"
+
 
 const header = """
 #ifndef INCLUDE_$LIB_H
