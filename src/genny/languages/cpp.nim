@@ -123,7 +123,6 @@ proc exportProcCpp*(
   dllProc(&"$lib_{apiProcName}", dllParams, exportTypeCpp(procReturn))
 
   if owner == nil:
-
     if procReturn.kind != nnkEmpty:
       members.add exportTypeCpp(procReturn)
       members.add " "
@@ -201,7 +200,6 @@ proc exportObjectCpp*(sym: NimNode, constructor: NimNode) =
 
   if constructor != nil:
     exportProcCpp(constructor)
-    #exportFunctionCpp(constructor)
   else:
     procs.add &"{objName} $lib_{toSnakeCase(objName)}("
     for identDefs in sym.getImpl()[2][2]:
@@ -230,14 +228,9 @@ proc exportObjectCpp*(sym: NimNode, constructor: NimNode) =
 
   dllProc(&"$lib_{toSnakeCase(objName)}_eq", [&"{objName} a", &"{objName} b"], "char")
 
-
 proc genRefObject(objName: string) =
 
   types.add &"struct {objName};\n\n"
-
-  # types.add &"typedef uint64_t {objName};\n\n"
-
-  # types.add &"struct {objName} {{ uint64_t ref; }};\n\n"
 
   let unrefLibProc = &"$lib_{toSnakeCase(objName)}_unref"
 
@@ -329,6 +322,7 @@ proc exportRefObjectCpp*(
       members.add &"  {setProcName}(*this, value);\n"
       members.add "}\n\n"
 
+      # TODO: property
       # classes.add &"  __declspec(property(get={getMemberName},put={setMemberName})) {exportTypeCpp(fieldType)} {fieldName};\n\n"
 
     else:
@@ -343,6 +337,7 @@ proc exportRefObjectCpp*(
         fieldType[1]
       )
 
+  # TODO: ref/unref
   # classes.add &"  ~{objName}();\n\n"
 
   # members.add &"{objName}::~{objName}()" & "{\n"
@@ -402,6 +397,14 @@ const footer = """
 """
 
 proc writeCpp*(dir, lib: string) =
-  writeFile(&"{dir}/{toSnakeCase(lib)}.hpp", (header & types & classes & "extern \"C\" {\n\n" & procs & "}\n\n" & members & footer)
-    .replace("$lib", toSnakeCase(lib)).replace("$LIB", lib.toUpperAscii())
+  writeFile(&"{dir}/{toSnakeCase(lib)}.hpp", (
+      header &
+      types &
+      classes &
+      "extern \"C\" {\n\n" &
+      procs &
+      "}\n\n" &
+      members &
+      footer
+    ).replace("$lib", toSnakeCase(lib)).replace("$LIB", lib.toUpperAscii())
   )
