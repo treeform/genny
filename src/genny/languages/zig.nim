@@ -228,6 +228,27 @@ proc exportObjectZig*(sym: NimNode, constructor: NimNode) =
 
   if constructor != nil:
     exportProcZig(constructor, indent = true, rename = "init")
+  else:
+    code.add "    pub fn init("
+    for identDefs in sym.getImpl()[2][2]:
+      for property in identDefs[0 .. ^3]:
+        code.add toSnakeCase(property[1].repr)
+        code.add ": "
+        code.add exportTypeZig(identDefs[^2])
+        code.add ", "
+    code.removeSuffix ", "
+    code.add ") "
+    code.add objName
+    code.add " {\n"
+    code.add &"        return {objName}" & "{\n"
+    for identDefs in sym.getImpl()[2][2]:
+      for property in identDefs[0 .. ^3]:
+        code.add &"            .{toSnakeCase(property[1].repr)}"
+        code.add " = "
+        code.add &"{toSnakeCase(property[1].repr)}"
+        code.add ",\n"
+    code.add "        };\n"
+    code.add "    }\n\n"
 
   exportProc(
     "eql",
