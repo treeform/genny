@@ -335,7 +335,7 @@ proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
 
   exportProc(
     "orderedRemove",
-    &"{procPrefix}_add",
+    &"{procPrefix}_delete",
     @[("self", objName), ("index", "isize")],
     indent = true
   )
