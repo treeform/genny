@@ -267,6 +267,46 @@ proc genRefObject(objName: string) =
   code.add &"        return {unrefLibProc}(self);\n"
   code.add "    }\n\n"
 
+proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
+  exportProc(
+    &"len{selfSuffix}",
+    &"{procPrefix}_len",
+    @[("self", objName)],
+    "isize",
+    indent = true
+  )
+  exportProc(
+    &"get{selfSuffix}",
+    &"{procPrefix}_get",
+    @[("self", objName), ("index", "isize")],
+    entryType.exportTypeZig(),
+    indent = true
+  )
+  exportProc(
+    &"set{selfSuffix}",
+    &"{procPrefix}_set",
+    @[("self", objName), ("index", "isize"), ("value", entryType.exportTypeZig())],
+    indent = true
+  )
+  exportProc(
+    &"append{selfSuffix}",
+    &"{procPrefix}_add",
+    @[("self", objName), ("value", entryType.exportTypeZig())],
+    indent = true
+  )
+  exportProc(
+    &"orderedRemove{selfSuffix}",
+    &"{procPrefix}_delete",
+    @[("self", objName), ("index", "isize")],
+    indent = true
+  )
+  exportProc(
+    &"clear{selfSuffix}",
+    &"{procPrefix}_clear",
+    @[("self", objName)],
+    indent = true
+  )
+
 proc exportRefObjectZig*(
   sym: NimNode,
   fields: seq[(string, NimNode)],
@@ -284,68 +324,24 @@ proc exportRefObjectZig*(
     exportProcZig(constructor, indent = true, rename = "init")
 
   for (fieldName, fieldType) in fields:
-    let fieldNameSnaked = toSnakeCase(fieldName)
+    let
+      fieldNameSnaked = toSnakeCase(fieldName)
+      fieldNameCapped = capitalizeAscii(fieldName)
 
     if fieldType.kind != nnkBracketExpr:
       exportProc(
-        "get" & fieldName.capitalizeAscii(),
+        "get" & fieldNameCapped,
         &"$lib_{objNameSnaked}_get_{fieldNameSnaked}",
         @[("self", &"*{objName}")],
         fieldType.exportTypeZig(),
         indent = true
       )
-
       exportProc(
-        "set" & fieldName.capitalizeAscii(),
+        "set" & fieldNameCapped,
         &"$lib_{objNameSnaked}_set_{fieldNameSnaked}",
         @[("self", &"*{objName}"), ("value", fieldType.exportTypeZig())],
         indent = true
       )
-
-proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
-  exportProc(
-    "len",
-    &"{procPrefix}_len",
-    @[("self", objName)],
-    "isize",
-    indent = true
-  )
-
-  exportProc(
-    "get",
-    &"{procPrefix}_get",
-    @[("self", objName), ("index", "isize")],
-    entryType.exportTypeZig(),
-    indent = true
-  )
-
-  exportProc(
-    "set",
-    &"{procPrefix}_set",
-    @[("self", objName), ("index", "isize"), ("value", entryType.exportTypeZig())],
-    indent = true
-  )
-
-  exportProc(
-    "append",
-    &"{procPrefix}_add",
-    @[("self", objName), ("value", entryType.exportTypeZig())],
-    indent = true
-  )
-
-  exportProc(
-    "orderedRemove",
-    &"{procPrefix}_delete",
-    @[("self", objName), ("index", "isize")],
-    indent = true
-  )
-
-  exportProc(
-    "clear",
-    &"{procPrefix}_clear",
-    @[("self", objName)],
-    indent = true
-  )
 
 proc exportSeqZig*(sym: NimNode) =
   let
