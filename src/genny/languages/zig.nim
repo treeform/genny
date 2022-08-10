@@ -342,6 +342,14 @@ proc exportRefObjectZig*(
         @[("self", &"*{objName}"), ("value", fieldType.exportTypeZig())],
         indent = true
       )
+    else:
+      echo fieldNameCapped
+      genSeqProcs(
+        &"*{objName}",
+        &"$lib_{objNameSnaked}_{fieldNameSnaked}",
+        fieldNameCapped,
+        fieldType[1]
+      )
 
 proc exportSeqZig*(sym: NimNode) =
   let
