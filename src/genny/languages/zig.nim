@@ -82,14 +82,15 @@ proc exportProc(
   comments = ""
 ) =
   let onClass = owner notin ["void", ""]
-
-  var baseIndent =
-    if onClass or indent:
-      "    "
+  let indent =
+    if onClass:
+      true
     else:
-      ""
+      indent
 
-  code.add baseIndent
+  if indent:
+    code.add "    "
+
   code.add &"extern fn {apiProcName}("
   for i, param in procParams:
     if onClass and i == 0:
@@ -111,10 +112,13 @@ proc exportProc(
     for line in comments.split("\n"):
       var line = line
       line.removePrefix("##")
-      code.add baseIndent
+      if indent:
+        code.add "    "
       code.add "/// " & line.strip() & "\n"
 
-  code.add baseIndent
+  if indent:
+    code.add "    "
+
   code.add &"pub inline fn {procName}("
   for i, param in procParams[0 .. ^1]:
     if onClass and i == 0:
@@ -126,8 +130,6 @@ proc exportProc(
     code.add &", "
   code.removeSuffix ", "
   code.add ") "
-  if procRaises:
-    code.add "!"
   if procReturn != "":
     code.add procReturn;
   else:
@@ -135,11 +137,9 @@ proc exportProc(
   code.add " "
   code.add "{\n"
 
-  code.add baseIndent
-  if procRaises:
-    code.add "    const result = "
-  else:
-    code.add "    return "
+  if indent:
+    code.add "    "
+  code.add "    return "
 
   var call = ""
   call.add apiProcName
@@ -157,11 +157,8 @@ proc exportProc(
   call.add &")"
   code.add convertImportToZig(call, procReturn)
   code.add ";\n"
-  if procRaises:
-      code.add &"{baseIndent}    if (checkError())\n"
-      code.add &"{baseIndent}        return error.UnknownError;\n"
-      code.add &"{baseIndent}    return result;\n"
-  code.add baseIndent
+  if indent:
+    code.add "    "
   code.add "}\n\n"
 
 proc exportProcZig*(
