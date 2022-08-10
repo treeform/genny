@@ -11,7 +11,7 @@ proc exportTypeZig(sym: NimNode): string =
         entryType = exportTypeZig(sym[2])
       result = &"[{entryCount}]{entryType}"
     elif sym[0].repr == "seq":
-      result = sym.getSeqName()
+      result = &"*{sym.getSeqName()}"
     else:
       error(&"Unexpected bracket expression {sym[0].repr}[")
   else:
@@ -186,8 +186,6 @@ proc exportProcZig*(
       else:
         ""
 
-  echo owner.repr
-
   var apiProcName = ""
   apiProcName.add "$lib_"
   if owner != nil:
@@ -276,7 +274,49 @@ proc exportRefObjectZig*(
       )
 
 proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
-  discard
+  exportProc(
+    "len",
+    &"{procPrefix}_len",
+    @[("self", objName)],
+    "isize",
+    indent = true
+  )
+
+  exportProc(
+    "get",
+    &"{procPrefix}_get",
+    @[("self", objName), ("index", "isize")],
+    entryType.exportTypeZig(),
+    indent = true
+  )
+
+  exportProc(
+    "set",
+    &"{procPrefix}_set",
+    @[("self", objName), ("index", "isize"), ("value", entryType.exportTypeZig())],
+    indent = true
+  )
+
+  exportProc(
+    "append",
+    &"{procPrefix}_add",
+    @[("self", objName), ("value", entryType.exportTypeZig())],
+    indent = true
+  )
+
+  exportProc(
+    "orderedRemove",
+    &"{procPrefix}_add",
+    @[("self", objName), ("index", "isize")],
+    indent = true
+  )
+
+  exportProc(
+    "clear",
+    &"{procPrefix}_clear",
+    @[("self", objName)],
+    indent = true
+  )
 
 proc exportSeqZig*(sym: NimNode) =
   let
@@ -284,6 +324,21 @@ proc exportSeqZig*(sym: NimNode) =
     seqNameSnaked = toSnakeCase(seqName)
 
   genRefObject(seqName)
+
+  exportProc(
+    "init",
+    &"$lib_new_{seqNameSnaked}",
+    @[],
+    &"*{seqName}",
+    indent = true
+  )
+
+  genSeqProcs(
+    &"*{seqName}",
+    &"$lib_{seqNameSnaked}",
+    "",
+    sym[1]
+  )
 
 const header = """
 const std = @import("std");
