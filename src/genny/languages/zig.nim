@@ -15,7 +15,7 @@ proc exportTypeZig(sym: NimNode): string =
     else:
       error(&"Unexpected bracket expression {sym[0].repr}[")
   else:
-      if sym.typeKind == ntyRef:
+      if sym.typeKind == ntyRef and sym.repr != "nil":
         result = &"*{sym.repr}"
       else:
         result =
@@ -54,10 +54,6 @@ proc convertImportToZig*(inner: string, sym: string): string =
     "std.mem.span(" & inner & ")"
   else:
     inner
-
-proc toArgTypes(args: openarray[NimNode]): seq[string] =
-  for arg in args:
-    result.add exportTypeZig(arg)
 
 proc toArgSeq(args: seq[NimNode]): seq[(string, string)] =
   for i, arg in args[0 .. ^1]:
@@ -189,6 +185,8 @@ proc exportProcZig*(
         sym.getImpl[6][1][0].repr
       else:
         ""
+
+  echo owner.repr
 
   var apiProcName = ""
   apiProcName.add "$lib_"
