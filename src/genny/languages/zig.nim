@@ -44,13 +44,13 @@ proc exportTypeZig(sym: NimNode): string =
             sym.repr
 
 proc convertExportFromZig*(inner: string, sym: string): string =
-  if sym == "string":
+  if sym == "[:0]const u8":
     inner & ".ptr"
   else:
     inner
 
 proc convertImportToZig*(inner: string, sym: string): string =
-  if sym == "string":
+  if sym == "[:0]const u8":
     "std.mem.span(" & inner & ")"
   else:
     inner
