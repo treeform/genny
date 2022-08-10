@@ -229,6 +229,14 @@ proc exportObjectZig*(sym: NimNode, constructor: NimNode) =
   if constructor != nil:
     exportProcZig(constructor, indent = true, rename = "init")
 
+  exportProc(
+    "eql",
+    &"$lib_{toSnakeCase(objName)}_eq",
+    @[("self", objName), ("other", objName)],
+    "bool",
+    indent = true
+  )
+
 proc genRefObject(objName: string) =
   code.add &"pub const {objName} = opaque " & "{\n"
 
