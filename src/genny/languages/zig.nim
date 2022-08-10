@@ -343,7 +343,6 @@ proc exportRefObjectZig*(
         indent = true
       )
     else:
-      echo fieldNameCapped
       genSeqProcs(
         &"*{objName}",
         &"$lib_{objNameSnaked}_{fieldNameSnaked}",
