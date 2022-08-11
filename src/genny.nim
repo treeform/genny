@@ -1,6 +1,6 @@
 import genny/internal, genny/languages/c, genny/languages/cpp,
-    genny/languages/nim, genny/languages/node, genny/languages/python, macros,
-    strformat
+    genny/languages/nim, genny/languages/node, genny/languages/python,
+    genny/languages/zig, macros, strformat
 
 template discard2(f: untyped): untyped =
   when(compiles do: discard f):
@@ -38,6 +38,7 @@ macro exportConstsTyped(body: typed) =
     exportConstNode(sym)
     exportConstC(sym)
     exportConstCpp(sym)
+    exportConstZig(sym)
 
 template exportConsts*(body: untyped) =
   ## Exports a list of constants.
@@ -61,6 +62,7 @@ macro exportEnumsTyped(body: typed) =
     exportEnumNode(sym)
     exportEnumC(sym)
     exportEnumCpp(sym)
+    exportEnumZig(sym)
 
 template exportEnums*(body: untyped) =
   ## Exports a list of enums.
@@ -118,6 +120,7 @@ proc procTyped(
   exportProcNode(procSym, owner, prefixes)
   exportProcC(procSym, owner, prefixes)
   exportProcCpp(procSym, owner, prefixes)
+  exportProcZig(procSym, owner, prefixes)
 
 macro exportProcsUntyped(body: untyped) =
   result = newNimNode(nnkStmtList)
@@ -178,6 +181,7 @@ macro exportObjectTyped(body: typed) =
   exportObjectNode(sym, constructor)
   exportObjectC(sym, constructor)
   exportObjectCpp(sym, constructor)
+  exportObjectZig(sym, constructor)
 
   if procsBlock[1].len > 0:
     var procsSeen: seq[string]
@@ -197,7 +201,9 @@ macro exportObjectTyped(body: typed) =
       exportProcNode(procSym, sym, prefixes)
       exportProcC(procSym, sym, prefixes)
       exportProcCpp(procSym, sym, prefixes)
+      exportProcZig(procSym, sym, prefixes)
 
+  exportCloseObjectZig()
   exportCloseObjectCpp()
 
 template exportObject*(sym, body: untyped) =
@@ -234,11 +240,13 @@ macro exportSeqTyped(body: typed) =
   exportSeqNode(sym)
   exportSeqC(sym)
   exportSeqCpp(sym)
+  exportSeqZig(sym)
 
   for entry in body.asStmtList()[1 .. ^1]:
     procTyped(entry, sym)
 
   exportCloseObjectCpp()
+  exportCloseObjectZig()
 
 template exportSeq*(sym, body: untyped) =
   ## Exports a regular sequence.
@@ -311,6 +319,7 @@ macro exportRefObjectTyped(body: typed) =
   exportRefObjectNode(sym, fields, constructor)
   exportRefObjectC(sym, fields, constructor)
   exportRefObjectCpp(sym, fields, constructor)
+  exportRefObjectZig(sym, fields, constructor)
 
   if procsBlock[1].len > 0:
     var procsSeen: seq[string]
@@ -330,8 +339,10 @@ macro exportRefObjectTyped(body: typed) =
       exportProcNode(procSym, sym, prefixes)
       exportProcC(procSym, sym, prefixes)
       exportProcCpp(procSym, sym, prefixes)
+      exportProcZig(procSym, sym, prefixes)
 
   exportCloseObjectCpp()
+  exportCloseObjectZig()
 
 template exportRefObject*(sym, body: untyped) =
   ## Exports a ref object, with these sections:
@@ -349,3 +360,4 @@ macro writeFiles*(dir, lib: static[string]) =
   writeNode(dir, lib)
   writeC(dir, lib)
   writeCpp(dir, lib)
+  writeZig(dir, lib)
