@@ -295,7 +295,7 @@ proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
     indent = true
   )
   exportProc(
-    &"orderedRemove{selfSuffix}",
+    &"remove{selfSuffix}",
     &"{procPrefix}_delete",
     @[("self", objName), ("index", "isize")],
     indent = true
