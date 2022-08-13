@@ -1,5 +1,8 @@
 import ../common, macros, strformat, strutils
 
+# compile "pixie.dll", "--passL:\"-Wl,--output-def,pixie.def\""
+# lib /MACHINE:X64 /def:pixie.def
+
 var
   code {.compiletime.}: string
 
