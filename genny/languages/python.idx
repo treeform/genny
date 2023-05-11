@@ -1,0 +1,10 @@
+convertExportFromPy	genny/languages/python.html#convertExportFromPy,NimNode	python: convertExportFromPy(sym: NimNode): string	
+convertImportToPy	genny/languages/python.html#convertImportToPy,NimNode	python: convertImportToPy(sym: NimNode): string	
+dllProc	genny/languages/python.html#dllProc,string,openArray[string],string	python: dllProc(procName: string; args: openArray[string]; restype: string)	
+exportConstPy	genny/languages/python.html#exportConstPy,NimNode	python: exportConstPy(sym: NimNode)	
+exportEnumPy	genny/languages/python.html#exportEnumPy,NimNode	python: exportEnumPy(sym: NimNode)	
+exportProcPy	genny/languages/python.html#exportProcPy,NimNode,NimNode,openArray[NimNode]	python: exportProcPy(sym: NimNode; owner: NimNode = nil;\n             prefixes: openArray[NimNode] = [])	
+exportObjectPy	genny/languages/python.html#exportObjectPy,NimNode,NimNode	python: exportObjectPy(sym: NimNode; constructor: NimNode)	
+exportRefObjectPy	genny/languages/python.html#exportRefObjectPy,NimNode,seq[],NimNode	python: exportRefObjectPy(sym: NimNode; fields: seq[(string, NimNode)];\n                  constructor: NimNode)	
+exportSeqPy	genny/languages/python.html#exportSeqPy,NimNode	python: exportSeqPy(sym: NimNode)	
+writePy	genny/languages/python.html#writePy,string,string	python: writePy(dir, lib: string)	

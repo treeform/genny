@@ -1,0 +1,9 @@
+convertExportFromNode	genny/languages/node.html#convertExportFromNode,NimNode	node: convertExportFromNode(sym: NimNode): string	
+convertImportToNode	genny/languages/node.html#convertImportToNode,NimNode	node: convertImportToNode(sym: NimNode): string	
+exportConstNode	genny/languages/node.html#exportConstNode,NimNode	node: exportConstNode(sym: NimNode)	
+exportEnumNode	genny/languages/node.html#exportEnumNode,NimNode	node: exportEnumNode(sym: NimNode)	
+exportProcNode	genny/languages/node.html#exportProcNode,NimNode,NimNode,openArray[NimNode]	node: exportProcNode(sym: NimNode; owner: NimNode = nil;\n               prefixes: openArray[NimNode] = [])	
+exportObjectNode	genny/languages/node.html#exportObjectNode,NimNode,NimNode	node: exportObjectNode(sym: NimNode; constructor: NimNode)	
+exportRefObjectNode	genny/languages/node.html#exportRefObjectNode,NimNode,seq[],NimNode	node: exportRefObjectNode(sym: NimNode; fields: seq[(string, NimNode)];\n                    constructor: NimNode)	
+exportSeqNode	genny/languages/node.html#exportSeqNode,NimNode	node: exportSeqNode(sym: NimNode)	
+writeNode	genny/languages/node.html#writeNode,string,string	node: writeNode(dir, lib: string)	

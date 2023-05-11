@@ -1,0 +1,7 @@
+exportConstInternal	genny/internal.html#exportConstInternal,NimNode	internal: exportConstInternal(sym: NimNode)	
+exportEnumInternal	genny/internal.html#exportEnumInternal,NimNode	internal: exportEnumInternal(sym: NimNode)	
+exportProcInternal	genny/internal.html#exportProcInternal,NimNode,NimNode,openArray[NimNode]	internal: exportProcInternal(sym: NimNode; owner: NimNode = nil;\n                   prefixes: openArray[NimNode] = [])	
+exportObjectInternal	genny/internal.html#exportObjectInternal,NimNode,NimNode	internal: exportObjectInternal(sym: NimNode; constructor: NimNode)	
+exportRefObjectInternal	genny/internal.html#exportRefObjectInternal,NimNode,seq[],NimNode	internal: exportRefObjectInternal(sym: NimNode; fields: seq[(string, NimNode)];\n                        constructor: NimNode)	
+exportSeqInternal	genny/internal.html#exportSeqInternal,NimNode	internal: exportSeqInternal(sym: NimNode)	
+writeInternal	genny/internal.html#writeInternal,string,string	internal: writeInternal(dir, lib: string)	

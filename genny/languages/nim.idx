@@ -1,0 +1,10 @@
+exportTypeNim	genny/languages/nim.html#exportTypeNim,NimNode	nim: exportTypeNim(sym: NimNode): string	
+convertExportFromNim	genny/languages/nim.html#convertExportFromNim,NimNode	nim: convertExportFromNim(sym: NimNode): string	
+convertImportToNim	genny/languages/nim.html#convertImportToNim,NimNode	nim: convertImportToNim(sym: NimNode): string	
+exportConstNim	genny/languages/nim.html#exportConstNim,NimNode	nim: exportConstNim(sym: NimNode)	
+exportEnumNim	genny/languages/nim.html#exportEnumNim,NimNode	nim: exportEnumNim(sym: NimNode)	
+exportProcNim	genny/languages/nim.html#exportProcNim,NimNode,NimNode,openArray[NimNode]	nim: exportProcNim(sym: NimNode; owner: NimNode = nil;\n              prefixes: openArray[NimNode] = [])	
+exportObjectNim	genny/languages/nim.html#exportObjectNim,NimNode,NimNode	nim: exportObjectNim(sym: NimNode; constructor: NimNode)	
+exportRefObjectNim	genny/languages/nim.html#exportRefObjectNim,NimNode,seq[],NimNode	nim: exportRefObjectNim(sym: NimNode; fields: seq[(string, NimNode)];\n                   constructor: NimNode)	
+exportSeqNim	genny/languages/nim.html#exportSeqNim,NimNode	nim: exportSeqNim(sym: NimNode)	
+writeNim	genny/languages/nim.html#writeNim,string,string	nim: writeNim(dir, lib: string)	

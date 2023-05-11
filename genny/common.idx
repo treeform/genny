@@ -1,0 +1,8 @@
+basicTypes	genny/common.html#basicTypes	common: basicTypes	
+toSnakeCase	genny/common.html#toSnakeCase,string	common: toSnakeCase(s: string): string	
+toCapSnakeCase	genny/common.html#toCapSnakeCase,string	common: toCapSnakeCase(s: string): string	
+toCamelCase	genny/common.html#toCamelCase,string	common: toCamelCase(s: string): string	
+toVarCase	genny/common.html#toVarCase,string	common: toVarCase(s: string): string	
+getSeqName	genny/common.html#getSeqName,NimNode	common: getSeqName(sym: NimNode): string	
+getName	genny/common.html#getName,NimNode	common: getName(sym: NimNode): string	
+raises	genny/common.html#raises,NimNode	common: raises(procSym: NimNode): bool	
