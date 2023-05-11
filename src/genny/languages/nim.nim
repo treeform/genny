@@ -1,4 +1,4 @@
-import genny/common, macros, strformat, strutils
+import ../common, macros, strformat, strutils
 
 var
   types {.compiletime.}: string
