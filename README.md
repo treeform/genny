@@ -9,7 +9,7 @@ So you made a cool Nim library but you want it to be available to other language
 
 ![Github Actions](https://github.com/treeform/genny/workflows/Github%20Actions/badge.svg)
 
-[API reference](https://nimdocs.com/treeform/genny)
+[API reference](https://treeform.github.io/genny)
 
 This library has no dependencies other than the Nim standard library.
 
