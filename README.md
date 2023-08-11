@@ -29,7 +29,7 @@ C             | .h            | ✅     | ✅     | ✅          | ✅    | no |
 
 It would be pretty easy to just export a C API from Nim and have users call the ugly C style methods but that is not our goal with Genny. Instead, we try to generate a "nice" API for each language that feels like it was custom-made. This means, where possible, we:
 
-* Use naming conventions that are familar in the language (CamelCase, Snake_Case or Kabob-Case).
+* Use naming conventions that are familiar in the language (CamelCase, Snake_Case or Kebab-Case).
 * Make sure regular `object`s are passed by value and behave simply.
 * Make `ref object`s behave like OOP objects with members, methods and constructors.
 * Generate helper methods like `==` or `isNull`.
