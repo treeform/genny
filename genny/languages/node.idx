@@ -1,9 +1,10 @@
-convertExportFromNode	genny/languages/node.html#convertExportFromNode,NimNode	node: convertExportFromNode(sym: NimNode): string	
-convertImportToNode	genny/languages/node.html#convertImportToNode,NimNode	node: convertImportToNode(sym: NimNode): string	
-exportConstNode	genny/languages/node.html#exportConstNode,NimNode	node: exportConstNode(sym: NimNode)	
-exportEnumNode	genny/languages/node.html#exportEnumNode,NimNode	node: exportEnumNode(sym: NimNode)	
-exportProcNode	genny/languages/node.html#exportProcNode,NimNode,NimNode,openArray[NimNode]	node: exportProcNode(sym: NimNode; owner: NimNode = nil;\n               prefixes: openArray[NimNode] = [])	
-exportObjectNode	genny/languages/node.html#exportObjectNode,NimNode,NimNode	node: exportObjectNode(sym: NimNode; constructor: NimNode)	
-exportRefObjectNode	genny/languages/node.html#exportRefObjectNode,NimNode,seq[],NimNode	node: exportRefObjectNode(sym: NimNode; fields: seq[(string, NimNode)];\n                    constructor: NimNode)	
-exportSeqNode	genny/languages/node.html#exportSeqNode,NimNode	node: exportSeqNode(sym: NimNode)	
-writeNode	genny/languages/node.html#writeNode,string,string	node: writeNode(dir, lib: string)	
+nimTitle	node	genny/languages/node.html	module src/genny/languages/node		0
+nim	convertExportFromNode	genny/languages/node.html#convertExportFromNode,NimNode	proc convertExportFromNode(sym: NimNode): string		48
+nim	convertImportToNode	genny/languages/node.html#convertImportToNode,NimNode	proc convertImportToNode(sym: NimNode): string		51
+nim	exportConstNode	genny/languages/node.html#exportConstNode,NimNode	proc exportConstNode(sym: NimNode)		54
+nim	exportEnumNode	genny/languages/node.html#exportEnumNode,NimNode	proc exportEnumNode(sym: NimNode)		58
+nim	exportProcNode	genny/languages/node.html#exportProcNode,NimNode,NimNode,openArray[NimNode]	proc exportProcNode(sym: NimNode; owner: NimNode = nil;\n               prefixes: openArray[NimNode] = [])		76
+nim	exportObjectNode	genny/languages/node.html#exportObjectNode,NimNode,NimNode	proc exportObjectNode(sym: NimNode; constructor: NimNode)		183
+nim	exportRefObjectNode	genny/languages/node.html#exportRefObjectNode,NimNode,seq[],NimNode	proc exportRefObjectNode(sym: NimNode; fields: seq[(string, NimNode)];\n                    constructor: NimNode)		296
+nim	exportSeqNode	genny/languages/node.html#exportSeqNode,NimNode	proc exportSeqNode(sym: NimNode)		386
+nim	writeNode	genny/languages/node.html#writeNode,string,string	proc writeNode(dir, lib: string)		440

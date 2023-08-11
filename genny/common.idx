@@ -1,8 +1,9 @@
-basicTypes	genny/common.html#basicTypes	common: basicTypes	
-toSnakeCase	genny/common.html#toSnakeCase,string	common: toSnakeCase(s: string): string	
-toCapSnakeCase	genny/common.html#toCapSnakeCase,string	common: toCapSnakeCase(s: string): string	
-toCamelCase	genny/common.html#toCamelCase,string	common: toCamelCase(s: string): string	
-toVarCase	genny/common.html#toVarCase,string	common: toVarCase(s: string): string	
-getSeqName	genny/common.html#getSeqName,NimNode	common: getSeqName(sym: NimNode): string	
-getName	genny/common.html#getName,NimNode	common: getName(sym: NimNode): string	
-raises	genny/common.html#raises,NimNode	common: raises(procSym: NimNode): bool	
+nimTitle	common	genny/common.html	module src/genny/common		0
+nim	basicTypes	genny/common.html#basicTypes	const basicTypes		3
+nim	toSnakeCase	genny/common.html#toSnakeCase,string	proc toSnakeCase(s: string): string		20
+nim	toCapSnakeCase	genny/common.html#toCapSnakeCase,string	proc toCapSnakeCase(s: string): string		33
+nim	toCamelCase	genny/common.html#toCamelCase,string	proc toCamelCase(s: string): string		45
+nim	toVarCase	genny/common.html#toVarCase,string	proc toVarCase(s: string): string		58
+nim	getSeqName	genny/common.html#getSeqName,NimNode	proc getSeqName(sym: NimNode): string		71
+nim	getName	genny/common.html#getName,NimNode	proc getName(sym: NimNode): string		78
+nim	raises	genny/common.html#raises,NimNode	proc raises(procSym: NimNode): bool		84

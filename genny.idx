@@ -1,7 +1,8 @@
-exportConsts	genny.html#exportConsts.t,untyped	genny: exportConsts(body: untyped)	
-exportEnums	genny.html#exportEnums.t,untyped	genny: exportEnums(body: untyped)	
-exportProcs	genny.html#exportProcs.t,untyped	genny: exportProcs(body: untyped)	
-exportObject	genny.html#exportObject.t,untyped,untyped	genny: exportObject(sym, body: untyped)	
-exportSeq	genny.html#exportSeq.t,untyped,untyped	genny: exportSeq(sym, body: untyped)	
-exportRefObject	genny.html#exportRefObject.t,untyped,untyped	genny: exportRefObject(sym, body: untyped)	
-writeFiles	genny.html#writeFiles.m,static[string],static[string]	genny: writeFiles(dir, lib: static[string])	
+nimTitle	genny	genny.html	module src/genny		0
+nim	exportConsts	genny.html#exportConsts.t,untyped	template exportConsts(body: untyped)		43
+nim	exportEnums	genny.html#exportEnums.t,untyped	template exportEnums(body: untyped)		67
+nim	exportProcs	genny.html#exportProcs.t,untyped	template exportProcs(body: untyped)		134
+nim	exportObject	genny.html#exportObject.t,untyped,untyped	template exportObject(sym, body: untyped)		209
+nim	exportSeq	genny.html#exportSeq.t,untyped,untyped	template exportSeq(sym, body: untyped)		251
+nim	exportRefObject	genny.html#exportRefObject.t,untyped,untyped	template exportRefObject(sym, body: untyped)		347
+nim	writeFiles	genny.html#writeFiles.m,static[string],static[string]	macro writeFiles(dir, lib: static[string])		354

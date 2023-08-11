@@ -1,7 +1,8 @@
-exportConstInternal	genny/internal.html#exportConstInternal,NimNode	internal: exportConstInternal(sym: NimNode)	
-exportEnumInternal	genny/internal.html#exportEnumInternal,NimNode	internal: exportEnumInternal(sym: NimNode)	
-exportProcInternal	genny/internal.html#exportProcInternal,NimNode,NimNode,openArray[NimNode]	internal: exportProcInternal(sym: NimNode; owner: NimNode = nil;\n                   prefixes: openArray[NimNode] = [])	
-exportObjectInternal	genny/internal.html#exportObjectInternal,NimNode,NimNode	internal: exportObjectInternal(sym: NimNode; constructor: NimNode)	
-exportRefObjectInternal	genny/internal.html#exportRefObjectInternal,NimNode,seq[],NimNode	internal: exportRefObjectInternal(sym: NimNode; fields: seq[(string, NimNode)];\n                        constructor: NimNode)	
-exportSeqInternal	genny/internal.html#exportSeqInternal,NimNode	internal: exportSeqInternal(sym: NimNode)	
-writeInternal	genny/internal.html#writeInternal,string,string	internal: writeInternal(dir, lib: string)	
+nimTitle	internal	genny/internal.html	module src/genny/internal		0
+nim	exportConstInternal	genny/internal.html#exportConstInternal,NimNode	proc exportConstInternal(sym: NimNode)		7
+nim	exportEnumInternal	genny/internal.html#exportEnumInternal,NimNode	proc exportEnumInternal(sym: NimNode)		10
+nim	exportProcInternal	genny/internal.html#exportProcInternal,NimNode,NimNode,openArray[NimNode]	proc exportProcInternal(sym: NimNode; owner: NimNode = nil;\n                   prefixes: openArray[NimNode] = [])		13
+nim	exportObjectInternal	genny/internal.html#exportObjectInternal,NimNode,NimNode	proc exportObjectInternal(sym: NimNode; constructor: NimNode)		72
+nim	exportRefObjectInternal	genny/internal.html#exportRefObjectInternal,NimNode,seq[],NimNode	proc exportRefObjectInternal(sym: NimNode; fields: seq[(string, NimNode)];\n                        constructor: NimNode)		117
+nim	exportSeqInternal	genny/internal.html#exportSeqInternal,NimNode	proc exportSeqInternal(sym: NimNode)		247
+nim	writeInternal	genny/internal.html#writeInternal,string,string	proc writeInternal(dir, lib: string)		258
