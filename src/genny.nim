@@ -33,12 +33,12 @@ macro exportConstsTyped(body: typed) =
   for varSection in body.asStmtList:
     let sym = varSection[0][0]
     exportConstInternal(sym)
-    exportConstNim(sym)
+    #exportConstNim(sym)
     exportConstPy(sym)
-    exportConstNode(sym)
-    exportConstC(sym)
-    exportConstCpp(sym)
-    exportConstZig(sym)
+    # exportConstNode(sym)
+    # exportConstC(sym)
+    # exportConstCpp(sym)
+    # exportConstZig(sym)
 
 template exportConsts*(body: untyped) =
   ## Exports a list of constants.
@@ -57,12 +57,12 @@ macro exportEnumsTyped(body: typed) =
   for varSection in body.asStmtList:
     let sym = varSection[0][1]
     exportEnumInternal(sym)
-    exportEnumNim(sym)
+    #exportEnumNim(sym)
     exportEnumPy(sym)
-    exportEnumNode(sym)
-    exportEnumC(sym)
-    exportEnumCpp(sym)
-    exportEnumZig(sym)
+    # exportEnumNode(sym)
+    # exportEnumC(sym)
+    # exportEnumCpp(sym)
+    # exportEnumZig(sym)
 
 template exportEnums*(body: untyped) =
   ## Exports a list of enums.
@@ -115,12 +115,12 @@ proc procTyped(
 ) =
   let procSym = procTypedSym(entry)
   exportProcInternal(procSym, owner, prefixes)
-  exportProcNim(procSym, owner, prefixes)
+  #exportProcNim(procSym, owner, prefixes)
   exportProcPy(procSym, owner, prefixes)
-  exportProcNode(procSym, owner, prefixes)
-  exportProcC(procSym, owner, prefixes)
-  exportProcCpp(procSym, owner, prefixes)
-  exportProcZig(procSym, owner, prefixes)
+  # exportProcNode(procSym, owner, prefixes)
+  # exportProcC(procSym, owner, prefixes)
+  # exportProcCpp(procSym, owner, prefixes)
+  # exportProcZig(procSym, owner, prefixes)
 
 macro exportProcsUntyped(body: untyped) =
   result = newNimNode(nnkStmtList)
@@ -176,12 +176,12 @@ macro exportObjectTyped(body: typed) =
       nil
 
   exportObjectInternal(sym, constructor)
-  exportObjectNim(sym, constructor)
+  #exportObjectNim(sym, constructor)
   exportObjectPy(sym, constructor)
-  exportObjectNode(sym, constructor)
-  exportObjectC(sym, constructor)
-  exportObjectCpp(sym, constructor)
-  exportObjectZig(sym, constructor)
+  # exportObjectNode(sym, constructor)
+  # exportObjectC(sym, constructor)
+  # exportObjectCpp(sym, constructor)
+  # exportObjectZig(sym, constructor)
 
   if procsBlock[1].len > 0:
     var procsSeen: seq[string]
@@ -235,12 +235,12 @@ macro exportSeqTyped(body: typed) =
   let sym = body.asStmtList()[0][0][1]
 
   exportSeqInternal(sym)
-  exportSeqNim(sym)
+  #exportSeqNim(sym)
   exportSeqPy(sym)
-  exportSeqNode(sym)
-  exportSeqC(sym)
-  exportSeqCpp(sym)
-  exportSeqZig(sym)
+  # exportSeqNode(sym)
+  # exportSeqC(sym)
+  # exportSeqCpp(sym)
+  # exportSeqZig(sym)
 
   for entry in body.asStmtList()[1 .. ^1]:
     procTyped(entry, sym)
@@ -314,12 +314,12 @@ macro exportRefObjectTyped(body: typed) =
       nil
 
   exportRefObjectInternal(sym, fields, constructor)
-  exportRefObjectNim(sym, fields, constructor)
+  #exportRefObjectNim(sym, fields, constructor)
   exportRefObjectPy(sym, fields, constructor)
-  exportRefObjectNode(sym, fields, constructor)
-  exportRefObjectC(sym, fields, constructor)
-  exportRefObjectCpp(sym, fields, constructor)
-  exportRefObjectZig(sym, fields, constructor)
+  # exportRefObjectNode(sym, fields, constructor)
+  # exportRefObjectC(sym, fields, constructor)
+  # exportRefObjectCpp(sym, fields, constructor)
+  # exportRefObjectZig(sym, fields, constructor)
 
   if procsBlock[1].len > 0:
     var procsSeen: seq[string]
@@ -334,15 +334,15 @@ macro exportRefObjectTyped(body: typed) =
         if procType[0].len > 2:
           prefixes.add(procType[0][2][1])
       exportProcInternal(procSym, sym, prefixes)
-      exportProcNim(procSym, sym, prefixes)
+      #exportProcNim(procSym, sym, prefixes)
       exportProcPy(procSym, sym, prefixes)
-      exportProcNode(procSym, sym, prefixes)
-      exportProcC(procSym, sym, prefixes)
-      exportProcCpp(procSym, sym, prefixes)
-      exportProcZig(procSym, sym, prefixes)
+      # exportProcNode(procSym, sym, prefixes)
+      # exportProcC(procSym, sym, prefixes)
+      # exportProcCpp(procSym, sym, prefixes)
+      # exportProcZig(procSym, sym, prefixes)
 
-  exportCloseObjectCpp()
-  exportCloseObjectZig()
+  # exportCloseObjectCpp()
+  # exportCloseObjectZig()
 
 template exportRefObject*(sym, body: untyped) =
   ## Exports a ref object, with these sections:
@@ -355,9 +355,9 @@ macro writeFiles*(dir, lib: static[string]) =
   ## This needs to be and the end of the file and it needs to be followed by:
   ## `include generated/internal`
   writeInternal(dir, lib)
-  writeNim(dir, lib)
+  #writeNim(dir, lib)
   writePy(dir, lib)
-  writeNode(dir, lib)
-  writeC(dir, lib)
-  writeCpp(dir, lib)
-  writeZig(dir, lib)
+  # writeNode(dir, lib)
+  # writeC(dir, lib)
+  # writeCpp(dir, lib)
+  # writeZig(dir, lib)

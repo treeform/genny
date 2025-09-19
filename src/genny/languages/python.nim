@@ -21,6 +21,7 @@ proc exportTypePy(sym: NimNode): string =
     result =
       case sym.repr:
       of "string": "c_char_p"
+      of "pointer": "c_void_p"
       of "bool": "c_bool"
       of "int8": "c_byte"
       of "byte": "c_byte"
@@ -208,7 +209,8 @@ proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
 
   types.add &"class {objName}(Structure):\n"
   types.add "    _fields_ = [\n"
-  for identDefs in sym.getImpl()[2][2]:
+  echo "here: ", treeRepr(sym.getImpl())
+  for identDefs in sym.getImpl()[2][0][2]:
     for property in identDefs[0 .. ^3]:
       types.add &"        (\"{toSnakeCase(property[1].repr)}\""
       types.add ", "
@@ -234,7 +236,7 @@ proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
       types.add ", "
     types.removeSuffix ", "
     types.add ")\n"
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in sym.getImpl()[2][0][2]:
       for property in identDefs[0 .. ^3]:
         types.add &"        self.{toSnakeCase(property[1].repr)} = "
         types.add &"tmp.{toSnakeCase(property[1].repr)}\n"
@@ -257,18 +259,19 @@ proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
         types.add &"{toSnakeCase(property[1].repr)}\n"
     types.add "\n"
 
-  types.add "    def __eq__(self, obj):\n"
-  types.add "        return "
-  for identDefs in sym.getImpl()[2][2]:
-    for property in identDefs[0 .. ^3]:
-      if identDefs[^2].len > 0 and identDefs[^2][0].repr == "array":
-        for i in 0 ..< identDefs[^2][1].intVal:
-          types.add &"self.{toSnakeCase(property[1].repr)}[{i}] == obj.{toSnakeCase(property[1].repr)}[{i}] and "
-      else:
-        types.add &"self.{toSnakeCase(property[1].repr)} == obj.{toSnakeCase(property[1].repr)} and "
-  types.removeSuffix " and "
-  types.add "\n"
-  types.add "\n"
+  # types.add "    def __eq__(self, obj):\n"
+  # types.add "        return "
+  # for identDefs in sym.getImpl()[2][0][2]:
+  #   for property in identDefs[0 .. ^3]:
+  #     if identDefs[^2].len > 0 and identDefs[^2][0].repr == "array":
+  #       echo "here2: ", treeRepr(identDefs)
+  #       for i in 0 ..< identDefs[^2][1].intVal:
+  #         types.add &"self.{toSnakeCase(property[1].repr)}[{i}] == obj.{toSnakeCase(property[1].repr)}[{i}] and "
+  #     else:
+  #       types.add &"self.{toSnakeCase(property[1].repr)} == obj.{toSnakeCase(property[1].repr)} and "
+  # types.removeSuffix " and "
+  # types.add "\n"
+  # types.add "\n"
 
 proc genRefObject(objName: string) =
   types.add &"class {objName}(Structure):\n"

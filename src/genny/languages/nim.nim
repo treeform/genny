@@ -131,7 +131,8 @@ proc exportObjectNim*(sym: NimNode, constructor: NimNode) =
     return
 
   types.add &"type {objName}* = object\n"
-  for identDefs in sym.getImpl()[2][2]:
+  echo treeRepr(sym.getImpl())
+  for identDefs in sym.getImpl()[2][0][2]:
     for property in identDefs[0 .. ^3]:
       types.add &"  {property.repr}: {identDefs[^2].repr}\n"
   types.add "\n"
