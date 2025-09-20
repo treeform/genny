@@ -1,5 +1,6 @@
 var ffi = require('ffi-napi');
 var Struct = require("ref-struct-napi");
+var ArrayType = require('ref-array-napi');
 
 var dll = {};
 
@@ -46,6 +47,11 @@ SimpleRefObj.prototype.unref = function(){
 };
 function newSimpleRefObj(){
   var result = dll.test_new_simple_ref_obj()
+  const registry = new FinalizationRegistry(function(obj) {
+    console.log("js unref")
+    obj.unref()
+  });
+  registry.register(result, null);
   return result
 }
 Object.defineProperty(SimpleRefObj.prototype, 'simpleRefA', {
@@ -107,6 +113,11 @@ RefObjWithSeq.prototype.unref = function(){
 };
 function newRefObjWithSeq(){
   var result = dll.test_new_ref_obj_with_seq()
+  const registry = new FinalizationRegistry(function(obj) {
+    console.log("js unref")
+    obj.unref()
+  });
+  registry.register(result, null);
   return result
 }
 function RefObjWithSeqData(refObjWithSeq){
