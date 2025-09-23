@@ -1,4 +1,6 @@
-import ../common, macros, strformat, strutils
+import
+  std/[os, strformat, strutils, macros],
+  ../common
 
 var
   types {.compiletime.}: string
@@ -438,6 +440,7 @@ const footer = """
 """
 
 proc writeNode*(dir, lib: string) =
+  createDir(dir)
   writeFile(
     &"{dir}/{toSnakeCase(lib)}.js",
     (header & types & loader & procs & footer & exports)

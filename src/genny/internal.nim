@@ -1,4 +1,6 @@
-import common, languages/nim, macros, strformat, strutils
+import
+  std/[os, strformat, strutils, macros],
+  common, languages/nim
 
 const exportProcPragmas = "{.raises: [], cdecl, exportc, dynlib.}"
 
@@ -256,6 +258,7 @@ when (NimMajor, NimMinor, NimPatch) == (1, 6, 2):
 """
 
 proc writeInternal*(dir, lib: string) =
+  createDir(dir)
   writeFile(
     &"{dir}/internal.nim",
     header & internal.replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
