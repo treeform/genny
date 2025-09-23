@@ -1,4 +1,6 @@
-import ../common, macros, strformat, strutils
+import
+  std/[os, strformat, strutils, macros],
+  ../common
 
 var
   types {.compiletime.}: string
@@ -242,6 +244,7 @@ const footer = """
 """
 
 proc writeC*(dir, lib: string) =
+  createDir(dir)
   writeFile(&"{dir}/{toSnakeCase(lib)}.h", (header & types & procs & footer)
     .replace("$lib", toSnakeCase(lib)).replace("$LIB", lib.toUpperAscii())
   )

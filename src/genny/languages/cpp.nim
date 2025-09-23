@@ -1,4 +1,6 @@
-import ../common, macros, strformat, strutils
+import
+  std/[os, strformat, strutils, macros],
+  ../common
 
 var
   types {.compiletime.}: string
@@ -397,6 +399,7 @@ const footer = """
 """
 
 proc writeCpp*(dir, lib: string) =
+  createDir(dir)
   writeFile(&"{dir}/{toSnakeCase(lib)}.hpp", (
       header &
       types &

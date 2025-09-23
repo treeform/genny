@@ -1,4 +1,6 @@
-import ../common, macros, strformat, strutils
+import
+  std/[os, strformat, strutils, macros],
+  ../common
 
 var
   code {.compiletime.}: string
@@ -378,6 +380,7 @@ const std = @import("std");
 """
 
 proc writeZig*(dir, lib: string) =
+  createDir(dir)
   writeFile(&"{dir}/{toSnakeCase(lib)}.zig",
     (header & code)
     .replace("$Lib", lib)

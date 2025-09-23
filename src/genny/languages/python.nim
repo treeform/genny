@@ -1,4 +1,6 @@
-import ../common, macros, strformat, strutils
+import
+  std/[os, strformat, strutils, macros],
+  ../common
 
 var
   types {.compiletime.}: string
@@ -478,6 +480,7 @@ class SeqIterator(object):
 """
 
 proc writePy*(dir, lib: string) =
+  createDir(dir)
   writeFile(&"{dir}/{toSnakeCase(lib)}.py", (header & types & procs)
     .replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
   )
