@@ -1,12 +1,12 @@
 nimTitle	zig	genny/languages/zig.html	module src/genny/languages/zig		0
-nim	convertExportFromZig	genny/languages/zig.html#convertExportFromZig,string,string	proc convertExportFromZig(inner: string; sym: string): string		46
-nim	convertImportToZig	genny/languages/zig.html#convertImportToZig,string,string	proc convertImportToZig(inner: string; sym: string): string		52
-nim	dllProc	genny/languages/zig.html#dllProc,string,openArray[string],string	proc dllProc(procName: string; args: openArray[string]; resType: string)		62
-nim	exportConstZig	genny/languages/zig.html#exportConstZig,NimNode	proc exportConstZig(sym: NimNode)		65
-nim	exportEnumZig	genny/languages/zig.html#exportEnumZig,NimNode	proc exportEnumZig(sym: NimNode)		68
-nim	exportProcZig	genny/languages/zig.html#exportProcZig,NimNode,NimNode,openArray[NimNode],string	proc exportProcZig(sym: NimNode; owner: NimNode = nil;\n              prefixes: openArray[NimNode] = []; indent = false; rename = "")		164
-nim	exportCloseObjectZig	genny/languages/zig.html#exportCloseObjectZig	proc exportCloseObjectZig()		212
-nim	exportObjectZig	genny/languages/zig.html#exportObjectZig,NimNode,NimNode	proc exportObjectZig(sym: NimNode; constructor: NimNode)		216
-nim	exportRefObjectZig	genny/languages/zig.html#exportRefObjectZig,NimNode,seq[],NimNode	proc exportRefObjectZig(sym: NimNode; fields: seq[(string, NimNode)];\n                   constructor: NimNode)		310
-nim	exportSeqZig	genny/languages/zig.html#exportSeqZig,NimNode	proc exportSeqZig(sym: NimNode)		353
-nim	writeZig	genny/languages/zig.html#writeZig,string,string	proc writeZig(dir, lib: string)		380
+nim	convertExportFromZig	genny/languages/zig.html#convertExportFromZig,string,string	proc convertExportFromZig(inner: string; sym: string): string		48
+nim	convertImportToZig	genny/languages/zig.html#convertImportToZig,string,string	proc convertImportToZig(inner: string; sym: string): string		54
+nim	dllProc	genny/languages/zig.html#dllProc,string,openArray[string],string	proc dllProc(procName: string; args: openArray[string]; resType: string)		64
+nim	exportConstZig	genny/languages/zig.html#exportConstZig,NimNode	proc exportConstZig(sym: NimNode)		67
+nim	exportEnumZig	genny/languages/zig.html#exportEnumZig,NimNode	proc exportEnumZig(sym: NimNode)		70
+nim	exportProcZig	genny/languages/zig.html#exportProcZig,NimNode,NimNode,openArray[NimNode],string	proc exportProcZig(sym: NimNode; owner: NimNode = nil;\n              prefixes: openArray[NimNode] = []; indent = false; rename = "")		166
+nim	exportCloseObjectZig	genny/languages/zig.html#exportCloseObjectZig	proc exportCloseObjectZig()		214
+nim	exportObjectZig	genny/languages/zig.html#exportObjectZig,NimNode,NimNode	proc exportObjectZig(sym: NimNode; constructor: NimNode)		218
+nim	exportRefObjectZig	genny/languages/zig.html#exportRefObjectZig,NimNode,seq[],NimNode	proc exportRefObjectZig(sym: NimNode; fields: seq[(string, NimNode)];\n                   constructor: NimNode)		312
+nim	exportSeqZig	genny/languages/zig.html#exportSeqZig,NimNode	proc exportSeqZig(sym: NimNode)		355
+nim	writeZig	genny/languages/zig.html#writeZig,string,string	proc writeZig(dir, lib: string)		382

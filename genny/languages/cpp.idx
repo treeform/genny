@@ -1,13 +1,13 @@
 nimTitle	cpp	genny/languages/cpp.html	module src/genny/languages/cpp		0
-nim	dllProc	genny/languages/cpp.html#dllProc,string,openArray[string],string	proc dllProc(procName: string; args: openArray[string]; restype: string)		67
-nim	dllProc	genny/languages/cpp.html#dllProc,string,openArray[],string	proc dllProc(procName: string; args: openArray[(NimNode, NimNode)]; restype: string)		75
-nim	dllProc	genny/languages/cpp.html#dllProc,string,string	proc dllProc(procName: string; restype: string)		81
-nim	exportConstCpp	genny/languages/cpp.html#exportConstCpp,NimNode	proc exportConstCpp(sym: NimNode)		85
-nim	exportEnumCpp	genny/languages/cpp.html#exportEnumCpp,NimNode	proc exportEnumCpp(sym: NimNode)		89
-nim	exportProcCpp	genny/languages/cpp.html#exportProcCpp,NimNode,NimNode,openArray[NimNode]	proc exportProcCpp(sym: NimNode; owner: NimNode = nil;\n              prefixes: openArray[NimNode] = [])		95
-nim	exportObjectCpp	genny/languages/cpp.html#exportObjectCpp,NimNode,NimNode	proc exportObjectCpp(sym: NimNode; constructor: NimNode)		191
-nim	exportRefObjectCpp	genny/languages/cpp.html#exportRefObjectCpp,NimNode,seq[],NimNode	proc exportRefObjectCpp(sym: NimNode; fields: seq[(string, NimNode)];\n                   constructor: NimNode)		248
-nim	exportCloseObjectCpp	genny/languages/cpp.html#exportCloseObjectCpp	proc exportCloseObjectCpp()		353
-nim	exportSeqCpp	genny/languages/cpp.html#exportSeqCpp,NimNode	proc exportSeqCpp(sym: NimNode)		357
-nim	writeCpp	genny/languages/cpp.html#writeCpp,string,string	proc writeCpp(dir, lib: string)		399
-nimgrp	dllproc	genny/languages/cpp.html#dllProc-procs-all	proc		67
+nim	dllProc	genny/languages/cpp.html#dllProc,string,openArray[string],string	proc dllProc(procName: string; args: openArray[string]; restype: string)		69
+nim	dllProc	genny/languages/cpp.html#dllProc,string,openArray[],string	proc dllProc(procName: string; args: openArray[(NimNode, NimNode)]; restype: string)		77
+nim	dllProc	genny/languages/cpp.html#dllProc,string,string	proc dllProc(procName: string; restype: string)		83
+nim	exportConstCpp	genny/languages/cpp.html#exportConstCpp,NimNode	proc exportConstCpp(sym: NimNode)		87
+nim	exportEnumCpp	genny/languages/cpp.html#exportEnumCpp,NimNode	proc exportEnumCpp(sym: NimNode)		91
+nim	exportProcCpp	genny/languages/cpp.html#exportProcCpp,NimNode,NimNode,openArray[NimNode]	proc exportProcCpp(sym: NimNode; owner: NimNode = nil;\n              prefixes: openArray[NimNode] = [])		97
+nim	exportObjectCpp	genny/languages/cpp.html#exportObjectCpp,NimNode,NimNode	proc exportObjectCpp(sym: NimNode; constructor: NimNode)		193
+nim	exportRefObjectCpp	genny/languages/cpp.html#exportRefObjectCpp,NimNode,seq[],NimNode	proc exportRefObjectCpp(sym: NimNode; fields: seq[(string, NimNode)];\n                   constructor: NimNode)		250
+nim	exportCloseObjectCpp	genny/languages/cpp.html#exportCloseObjectCpp	proc exportCloseObjectCpp()		355
+nim	exportSeqCpp	genny/languages/cpp.html#exportSeqCpp,NimNode	proc exportSeqCpp(sym: NimNode)		359
+nim	writeCpp	genny/languages/cpp.html#writeCpp,string,string	proc writeCpp(dir, lib: string)		401
+nimgrp	dllproc	genny/languages/cpp.html#dllProc-procs-all	proc		69

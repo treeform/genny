@@ -1,11 +1,11 @@
 nimTitle	nim	genny/languages/nim.html	module src/genny/languages/nim		0
-nim	exportTypeNim	genny/languages/nim.html#exportTypeNim,NimNode	proc exportTypeNim(sym: NimNode): string		7
-nim	convertExportFromNim	genny/languages/nim.html#convertExportFromNim,NimNode	proc convertExportFromNim(sym: NimNode): string		20
-nim	convertImportToNim	genny/languages/nim.html#convertImportToNim,NimNode	proc convertImportToNim(sym: NimNode): string		29
-nim	exportConstNim	genny/languages/nim.html#exportConstNim,NimNode	proc exportConstNim(sym: NimNode)		40
-nim	exportEnumNim	genny/languages/nim.html#exportEnumNim,NimNode	proc exportEnumNim(sym: NimNode)		45
-nim	exportProcNim	genny/languages/nim.html#exportProcNim,NimNode,NimNode,openArray[NimNode]	proc exportProcNim(sym: NimNode; owner: NimNode = nil;\n              prefixes: openArray[NimNode] = [])		52
-nim	exportObjectNim	genny/languages/nim.html#exportObjectNim,NimNode,NimNode	proc exportObjectNim(sym: NimNode; constructor: NimNode)		127
-nim	exportRefObjectNim	genny/languages/nim.html#exportRefObjectNim,NimNode,seq[],NimNode	proc exportRefObjectNim(sym: NimNode; fields: seq[(string, NimNode)];\n                   constructor: NimNode)		239
-nim	exportSeqNim	genny/languages/nim.html#exportSeqNim,NimNode	proc exportSeqNim(sym: NimNode)		319
-nim	writeNim	genny/languages/nim.html#writeNim,string,string	proc writeNim(dir, lib: string)		363
+nim	exportTypeNim	genny/languages/nim.html#exportTypeNim,NimNode	proc exportTypeNim(sym: NimNode): string		9
+nim	convertExportFromNim	genny/languages/nim.html#convertExportFromNim,NimNode	proc convertExportFromNim(sym: NimNode): string		22
+nim	convertImportToNim	genny/languages/nim.html#convertImportToNim,NimNode	proc convertImportToNim(sym: NimNode): string		31
+nim	exportConstNim	genny/languages/nim.html#exportConstNim,NimNode	proc exportConstNim(sym: NimNode)		42
+nim	exportEnumNim	genny/languages/nim.html#exportEnumNim,NimNode	proc exportEnumNim(sym: NimNode)		47
+nim	exportProcNim	genny/languages/nim.html#exportProcNim,NimNode,NimNode,openArray[NimNode]	proc exportProcNim(sym: NimNode; owner: NimNode = nil;\n              prefixes: openArray[NimNode] = [])		54
+nim	exportObjectNim	genny/languages/nim.html#exportObjectNim,NimNode,NimNode	proc exportObjectNim(sym: NimNode; constructor: NimNode)		129
+nim	exportRefObjectNim	genny/languages/nim.html#exportRefObjectNim,NimNode,seq[],NimNode	proc exportRefObjectNim(sym: NimNode; fields: seq[(string, NimNode)];\n                   constructor: NimNode)		241
+nim	exportSeqNim	genny/languages/nim.html#exportSeqNim,NimNode	proc exportSeqNim(sym: NimNode)		321
+nim	writeNim	genny/languages/nim.html#writeNim,string,string	proc writeNim(dir, lib: string)		365

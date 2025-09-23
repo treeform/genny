@@ -1,12 +1,12 @@
 nimTitle	c	genny/languages/c.html	module src/genny/languages/c		0
-nim	dllProc	genny/languages/c.html#dllProc,string,openArray[string],string	proc dllProc(procName: string; args: openArray[string]; restype: string)		59
-nim	dllProc	genny/languages/c.html#dllProc,string,openArray[],string	proc dllProc(procName: string; args: openArray[(NimNode, NimNode)]; restype: string)		67
-nim	dllProc	genny/languages/c.html#dllProc,string,string	proc dllProc(procName: string; restype: string)		73
-nim	exportConstC	genny/languages/c.html#exportConstC,NimNode	proc exportConstC(sym: NimNode)		77
-nim	exportEnumC	genny/languages/c.html#exportEnumC,NimNode	proc exportEnumC(sym: NimNode)		81
-nim	exportProcC	genny/languages/c.html#exportProcC,NimNode,NimNode,openArray[NimNode]	proc exportProcC(sym: NimNode; owner: NimNode = nil;\n            prefixes: openArray[NimNode] = [])		87
-nim	exportObjectC	genny/languages/c.html#exportObjectC,NimNode,NimNode	proc exportObjectC(sym: NimNode; constructor: NimNode)		133
-nim	exportRefObjectC	genny/languages/c.html#exportRefObjectC,NimNode,seq[],NimNode	proc exportRefObjectC(sym: NimNode; fields: seq[(string, NimNode)];\n                 constructor: NimNode)		170
-nim	exportSeqC	genny/languages/c.html#exportSeqC,NimNode	proc exportSeqC(sym: NimNode)		216
-nim	writeC	genny/languages/c.html#writeC,string,string	proc writeC(dir, lib: string)		244
-nimgrp	dllproc	genny/languages/c.html#dllProc-procs-all	proc		59
+nim	dllProc	genny/languages/c.html#dllProc,string,openArray[string],string	proc dllProc(procName: string; args: openArray[string]; restype: string)		61
+nim	dllProc	genny/languages/c.html#dllProc,string,openArray[],string	proc dllProc(procName: string; args: openArray[(NimNode, NimNode)]; restype: string)		69
+nim	dllProc	genny/languages/c.html#dllProc,string,string	proc dllProc(procName: string; restype: string)		75
+nim	exportConstC	genny/languages/c.html#exportConstC,NimNode	proc exportConstC(sym: NimNode)		79
+nim	exportEnumC	genny/languages/c.html#exportEnumC,NimNode	proc exportEnumC(sym: NimNode)		83
+nim	exportProcC	genny/languages/c.html#exportProcC,NimNode,NimNode,openArray[NimNode]	proc exportProcC(sym: NimNode; owner: NimNode = nil;\n            prefixes: openArray[NimNode] = [])		89
+nim	exportObjectC	genny/languages/c.html#exportObjectC,NimNode,NimNode	proc exportObjectC(sym: NimNode; constructor: NimNode)		135
+nim	exportRefObjectC	genny/languages/c.html#exportRefObjectC,NimNode,seq[],NimNode	proc exportRefObjectC(sym: NimNode; fields: seq[(string, NimNode)];\n                 constructor: NimNode)		172
+nim	exportSeqC	genny/languages/c.html#exportSeqC,NimNode	proc exportSeqC(sym: NimNode)		218
+nim	writeC	genny/languages/c.html#writeC,string,string	proc writeC(dir, lib: string)		246
+nimgrp	dllproc	genny/languages/c.html#dllProc-procs-all	proc		61
