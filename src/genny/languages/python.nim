@@ -23,6 +23,7 @@ proc exportTypePy(sym: NimNode): string =
     result =
       case sym.repr:
       of "string": "c_char_p"
+      of "cstring": "c_char_p"
       of "bool": "c_bool"
       of "int8": "c_byte"
       of "byte": "c_byte"
