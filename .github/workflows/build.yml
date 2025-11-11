@@ -16,5 +16,5 @@ jobs:
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
         nim-version: ${{ matrix.nim-version }}
-    - run: nimble test --gc:arc -y
-    - run: nimble test --gc:orc -y
+    - run: nimble test --gc:arc -y -d:gennyNim -d:gennyPython -d:gennyNode -d:gennyC -d:gennyCpp -d:gennyZig
+    - run: nimble test --gc:orc -y -d:gennyNim -d:gennyPython -d:gennyNode -d:gennyC -d:gennyCpp -d:gennyZig
