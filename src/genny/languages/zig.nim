@@ -83,17 +83,15 @@ proc exportProc(
   indent = false,
   comments = ""
 ) =
-  let onClass = owner notin ["void", ""]
-  let indent =
-    if onClass:
-      true
-    else:
-      indent
+  let
+    onClass = owner notin ["void", ""]
+    baseIndent =
+      if onClass or indent:
+        "    "
+      else:
+        ""
 
-  if indent:
-    code.add "    "
-
-  code.add &"extern fn {apiProcName}("
+  code.add &"{baseIndent}extern fn {apiProcName}("
   for i, param in procParams:
     if onClass and i == 0:
       code.add "self"
@@ -114,14 +112,9 @@ proc exportProc(
     for line in comments.split("\n"):
       var line = line
       line.removePrefix("##")
-      if indent:
-        code.add "    "
-      code.add "/// " & line.strip() & "\n"
+      code.add &"{baseIndent}/// " & line.strip() & "\n"
 
-  if indent:
-    code.add "    "
-
-  code.add &"pub inline fn {procName}("
+  code.add &"{baseIndent}pub inline fn {procName}("
   for i, param in procParams[0 .. ^1]:
     if onClass and i == 0:
       code.add "self"
@@ -132,6 +125,8 @@ proc exportProc(
     code.add &", "
   code.removeSuffix ", "
   code.add ") "
+  if procRaises:
+    code.add "Error!"
   if procReturn != "":
     code.add procReturn;
   else:
@@ -139,9 +134,10 @@ proc exportProc(
   code.add " "
   code.add "{\n"
 
-  if indent:
-    code.add "    "
-  code.add "    return "
+  if procRaises:
+    code.add &"{baseIndent}    const result = "
+  else:
+    code.add &"{baseIndent}    return "
 
   var call = ""
   call.add apiProcName
@@ -159,9 +155,11 @@ proc exportProc(
   call.add &")"
   code.add convertImportToZig(call, procReturn)
   code.add ";\n"
-  if indent:
-    code.add "    "
-  code.add "}\n\n"
+  if procRaises:
+    code.add &"{baseIndent}    if (checkError())\n"
+    code.add &"{baseIndent}        return error.$LibError;\n"
+    code.add &"{baseIndent}    return result;\n"
+  code.add baseIndent & "}\n\n"
 
 proc exportProcZig*(
   sym: NimNode,
@@ -376,6 +374,10 @@ proc exportSeqZig*(sym: NimNode) =
 
 const header = """
 const std = @import("std");
+
+pub const Error = error{
+    $LibError,
+};
 
 """
 
