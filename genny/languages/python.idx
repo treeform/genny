@@ -1,11 +1,11 @@
 nimTitle	python	genny/languages/python.html	module src/genny/languages/python		0
-nim	convertExportFromPy	genny/languages/python.html#convertExportFromPy,NimNode	proc convertExportFromPy(sym: NimNode): string		49
-nim	convertImportToPy	genny/languages/python.html#convertImportToPy,NimNode	proc convertImportToPy(sym: NimNode): string		53
-nim	dllProc	genny/languages/python.html#dllProc,string,openArray[string],string	proc dllProc(procName: string; args: openArray[string]; restype: string)		61
-nim	exportConstPy	genny/languages/python.html#exportConstPy,NimNode	proc exportConstPy(sym: NimNode)		68
-nim	exportEnumPy	genny/languages/python.html#exportEnumPy,NimNode	proc exportEnumPy(sym: NimNode)		72
-nim	exportProcPy	genny/languages/python.html#exportProcPy,NimNode,NimNode,openArray[NimNode]	proc exportProcPy(sym: NimNode; owner: NimNode = nil;\n             prefixes: openArray[NimNode] = [])		78
-nim	exportObjectPy	genny/languages/python.html#exportObjectPy,NimNode,NimNode	proc exportObjectPy(sym: NimNode; constructor: NimNode)		209
-nim	exportRefObjectPy	genny/languages/python.html#exportRefObjectPy,NimNode,seq[],NimNode	proc exportRefObjectPy(sym: NimNode; fields: seq[(string, NimNode)];\n                  constructor: NimNode)		337
-nim	exportSeqPy	genny/languages/python.html#exportSeqPy,NimNode	proc exportSeqPy(sym: NimNode)		429
-nim	writePy	genny/languages/python.html#writePy,string,string	proc writePy(dir, lib: string)		483
+nim	convertExportFromPy	genny/languages/python.html#convertExportFromPy,NimNode	proc convertExportFromPy(sym: NimNode): string		50
+nim	convertImportToPy	genny/languages/python.html#convertImportToPy,NimNode	proc convertImportToPy(sym: NimNode): string		54
+nim	dllProc	genny/languages/python.html#dllProc,string,openArray[string],string	proc dllProc(procName: string; args: openArray[string]; restype: string)		62
+nim	exportConstPy	genny/languages/python.html#exportConstPy,NimNode	proc exportConstPy(sym: NimNode)		69
+nim	exportEnumPy	genny/languages/python.html#exportEnumPy,NimNode	proc exportEnumPy(sym: NimNode)		73
+nim	exportProcPy	genny/languages/python.html#exportProcPy,NimNode,NimNode,openArray[NimNode]	proc exportProcPy(sym: NimNode; owner: NimNode = nil;\n             prefixes: openArray[NimNode] = [])		79
+nim	exportObjectPy	genny/languages/python.html#exportObjectPy,NimNode,NimNode	proc exportObjectPy(sym: NimNode; constructor: NimNode)		210
+nim	exportRefObjectPy	genny/languages/python.html#exportRefObjectPy,NimNode,seq[],NimNode	proc exportRefObjectPy(sym: NimNode; fields: seq[(string, NimNode)];\n                  constructor: NimNode)		338
+nim	exportSeqPy	genny/languages/python.html#exportSeqPy,NimNode	proc exportSeqPy(sym: NimNode)		430
+nim	writePy	genny/languages/python.html#writePy,string,string	proc writePy(dir, lib: string)		484
