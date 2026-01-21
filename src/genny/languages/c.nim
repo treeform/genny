@@ -154,7 +154,7 @@ proc exportObjectC*(sym: NimNode, constructor: NimNode) =
   dllProc(&"$lib_{toSnakeCase(objName)}_eq", [&"{objName} a", &"{objName} b"], "char")
 
 proc genRefObject(objName: string) =
-  types.add &"typedef long long {objName};\n\n"
+  types.add &"typedef struct _{objName}* {objName};\n\n"
 
   let unrefLibProc = &"$lib_{toSnakeCase(objName)}_unref"
 
