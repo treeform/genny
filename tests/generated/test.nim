@@ -35,30 +35,33 @@ type SimpleRefObjObj = object
 
 type SimpleRefObj* = ref SimpleRefObjObj
 
-proc test_simple_ref_obj_unref(x: SimpleRefObjObj) {.importc: "test_simple_ref_obj_unref", cdecl.}
+proc test_simple_ref_obj_unref(x: pointer) {.importc: "test_simple_ref_obj_unref", cdecl.}
 
-proc `=destroy`(x: var SimpleRefObjObj) =
-  test_simple_ref_obj_unref(x)
+proc `=destroy`(x: SimpleRefObjObj) =
+  if x.reference != nil:
+    test_simple_ref_obj_unref(x.reference)
 
 type SeqIntObj = object
   reference: pointer
 
 type SeqInt* = ref SeqIntObj
 
-proc test_seq_int_unref(x: SeqIntObj) {.importc: "test_seq_int_unref", cdecl.}
+proc test_seq_int_unref(x: pointer) {.importc: "test_seq_int_unref", cdecl.}
 
-proc `=destroy`(x: var SeqIntObj) =
-  test_seq_int_unref(x)
+proc `=destroy`(x: SeqIntObj) =
+  if x.reference != nil:
+    test_seq_int_unref(x.reference)
 
 type RefObjWithSeqObj = object
   reference: pointer
 
 type RefObjWithSeq* = ref RefObjWithSeqObj
 
-proc test_ref_obj_with_seq_unref(x: RefObjWithSeqObj) {.importc: "test_ref_obj_with_seq_unref", cdecl.}
+proc test_ref_obj_with_seq_unref(x: pointer) {.importc: "test_ref_obj_with_seq_unref", cdecl.}
 
-proc `=destroy`(x: var RefObjWithSeqObj) =
-  test_ref_obj_with_seq_unref(x)
+proc `=destroy`(x: RefObjWithSeqObj) =
+  if x.reference != nil:
+    test_ref_obj_with_seq_unref(x.reference)
 
 type SimpleObjWithProc* = object
   simpleA*: int
@@ -75,85 +78,86 @@ type SeqStringObj = object
 
 type SeqString* = ref SeqStringObj
 
-proc test_seq_string_unref(x: SeqStringObj) {.importc: "test_seq_string_unref", cdecl.}
+proc test_seq_string_unref(x: pointer) {.importc: "test_seq_string_unref", cdecl.}
 
-proc `=destroy`(x: var SeqStringObj) =
-  test_seq_string_unref(x)
+proc `=destroy`(x: SeqStringObj) =
+  if x.reference != nil:
+    test_seq_string_unref(x.reference)
 
 proc test_simple_call(a: int): int {.importc: "test_simple_call", cdecl.}
 
 proc simpleCall*(a: int): int {.inline.} =
   result = test_simple_call(a)
 
-proc test_new_simple_ref_obj(): SimpleRefObj {.importc: "test_new_simple_ref_obj", cdecl.}
+proc test_new_simple_ref_obj(): pointer {.importc: "test_new_simple_ref_obj", cdecl.}
 
 proc newSimpleRefObj*(): SimpleRefObj {.inline.} =
-  result = test_new_simple_ref_obj()
+  result = SimpleRefObj(reference: test_new_simple_ref_obj())
 
-proc test_simple_ref_obj_get_simple_ref_a(simpleRefObj: SimpleRefObj): int {.importc: "test_simple_ref_obj_get_simple_ref_a", cdecl.}
+proc test_simple_ref_obj_get_simple_ref_a(simpleRefObj: pointer): int {.importc: "test_simple_ref_obj_get_simple_ref_a", cdecl.}
 
 proc simpleRefA*(simpleRefObj: SimpleRefObj): int {.inline.} =
-  test_simple_ref_obj_get_simple_ref_a(simpleRefObj)
+  test_simple_ref_obj_get_simple_ref_a(simpleRefObj.reference)
 
-proc test_simple_ref_obj_set_simple_ref_a(simpleRefObj: SimpleRefObj, simpleRefA: int) {.importc: "test_simple_ref_obj_set_simple_ref_a", cdecl.}
+proc test_simple_ref_obj_set_simple_ref_a(simpleRefObj: pointer, simpleRefA: int) {.importc: "test_simple_ref_obj_set_simple_ref_a", cdecl.}
 
 proc `simpleRefA=`*(simpleRefObj: SimpleRefObj, simpleRefA: int) =
-  test_simple_ref_obj_set_simple_ref_a(simpleRefObj, simpleRefA)
+  test_simple_ref_obj_set_simple_ref_a(simpleRefObj.reference, simpleRefA)
 
-proc test_simple_ref_obj_get_simple_ref_b(simpleRefObj: SimpleRefObj): byte {.importc: "test_simple_ref_obj_get_simple_ref_b", cdecl.}
+proc test_simple_ref_obj_get_simple_ref_b(simpleRefObj: pointer): byte {.importc: "test_simple_ref_obj_get_simple_ref_b", cdecl.}
 
 proc simpleRefB*(simpleRefObj: SimpleRefObj): byte {.inline.} =
-  test_simple_ref_obj_get_simple_ref_b(simpleRefObj)
+  test_simple_ref_obj_get_simple_ref_b(simpleRefObj.reference)
 
-proc test_simple_ref_obj_set_simple_ref_b(simpleRefObj: SimpleRefObj, simpleRefB: byte) {.importc: "test_simple_ref_obj_set_simple_ref_b", cdecl.}
+proc test_simple_ref_obj_set_simple_ref_b(simpleRefObj: pointer, simpleRefB: byte) {.importc: "test_simple_ref_obj_set_simple_ref_b", cdecl.}
 
 proc `simpleRefB=`*(simpleRefObj: SimpleRefObj, simpleRefB: byte) =
-  test_simple_ref_obj_set_simple_ref_b(simpleRefObj, simpleRefB)
+  test_simple_ref_obj_set_simple_ref_b(simpleRefObj.reference, simpleRefB)
 
-proc test_simple_ref_obj_doit(s: SimpleRefObj) {.importc: "test_simple_ref_obj_doit", cdecl.}
+proc test_simple_ref_obj_doit(s: pointer) {.importc: "test_simple_ref_obj_doit", cdecl.}
 
 proc doit*(s: SimpleRefObj) {.inline.} =
-  test_simple_ref_obj_doit(s)
+  test_simple_ref_obj_doit(s.reference)
 
-proc test_seq_int_len(s: SeqInt): int {.importc: "test_seq_int_len", cdecl.}
+proc test_seq_int_len(s: pointer): int {.importc: "test_seq_int_len", cdecl.}
 
 proc len*(s: SeqInt): int =
-  test_seq_int_len(s)
+  test_seq_int_len(s.reference)
 
-proc test_seq_int_add(s: SeqInt, v: int) {.importc: "test_seq_int_add", cdecl.}
+proc test_seq_int_add(s: pointer, v: int) {.importc: "test_seq_int_add", cdecl.}
 
 proc add*(s: SeqInt, v: int) =
-  test_seq_int_add(s, v)
+  test_seq_int_add(s.reference, v)
 
-proc test_seq_int_get(s: SeqInt, i: int): int {.importc: "test_seq_int_get", cdecl.}
+proc test_seq_int_get(s: pointer, i: int): int {.importc: "test_seq_int_get", cdecl.}
 
 proc `[]`*(s: SeqInt, i: int): int =
-  test_seq_int_get(s, i)
+  test_seq_int_get(s.reference, i)
 
-proc test_seq_int_set(s: SeqInt, i: int, v: int) {.importc: "test_seq_int_set", cdecl.}
+proc test_seq_int_set(s: pointer, i: int, v: int) {.importc: "test_seq_int_set", cdecl.}
 
 proc `[]=`*(s: SeqInt, i: int, v: int) =
-  test_seq_int_set(s, i, v)
+  test_seq_int_set(s.reference, i, v)
 
-proc test_seq_int_delete(s: SeqInt, i: int) {.importc: "test_seq_int_delete", cdecl.}
+proc test_seq_int_delete(s: pointer, i: int) {.importc: "test_seq_int_delete", cdecl.}
 
 proc delete*(s: SeqInt, i: int) =
-  test_seq_int_delete(s, i)
+  test_seq_int_delete(s.reference, i)
 
-proc test_seq_int_clear(s: SeqInt) {.importc: "test_seq_int_clear", cdecl.}
+proc test_seq_int_clear(s: pointer) {.importc: "test_seq_int_clear", cdecl.}
 
 proc clear*(s: SeqInt) =
-  test_seq_int_clear(s)
+  test_seq_int_clear(s.reference)
 
-proc test_new_seq_int*(): SeqInt {.importc: "test_new_seq_int", cdecl.}
+proc test_new_seq_int*(): pointer {.importc: "test_new_seq_int", cdecl.}
 
 proc newSeqInt*(): SeqInt =
-  test_new_seq_int()
+  SeqInt(reference: test_new_seq_int())
 
-proc test_new_ref_obj_with_seq(): RefObjWithSeq {.importc: "test_new_ref_obj_with_seq", cdecl.}
+proc test_new_ref_obj_with_seq(): pointer {.importc: "test_new_ref_obj_with_seq", cdecl.}
 
 proc newRefObjWithSeq*(): RefObjWithSeq {.inline.} =
-  result = test_new_ref_obj_with_seq()
+  result = RefObjWithSeq(reference: test_new_ref_obj_with_seq())
 
 type RefObjWithSeqData = object
     refObjWithSeq: RefObjWithSeq
@@ -161,78 +165,78 @@ type RefObjWithSeqData = object
 proc data*(refObjWithSeq: RefObjWithSeq): RefObjWithSeqData =
   RefObjWithSeqData(refObjWithSeq: refObjWithSeq)
 
-proc test_ref_obj_with_seq_data_len(s: RefObjWithSeq): int {.importc: "test_ref_obj_with_seq_data_len", cdecl.}
+proc test_ref_obj_with_seq_data_len(s: pointer): int {.importc: "test_ref_obj_with_seq_data_len", cdecl.}
 
 proc len*(s: RefObjWithSeqData): int =
-  test_ref_obj_with_seq_data_len(s.refObjWithSeq)
+  test_ref_obj_with_seq_data_len(s.refObjWithSeq.reference)
 
-proc test_ref_obj_with_seq_data_add(s: RefObjWithSeq, v: byte) {.importc: "test_ref_obj_with_seq_data_add", cdecl.}
+proc test_ref_obj_with_seq_data_add(s: pointer, v: byte) {.importc: "test_ref_obj_with_seq_data_add", cdecl.}
 
 proc add*(s: RefObjWithSeqData, v: byte) =
-  test_ref_obj_with_seq_data_add(s.refObjWithSeq, v)
+  test_ref_obj_with_seq_data_add(s.refObjWithSeq.reference, v)
 
-proc test_ref_obj_with_seq_data_get(s: RefObjWithSeq, i: int): byte {.importc: "test_ref_obj_with_seq_data_get", cdecl.}
+proc test_ref_obj_with_seq_data_get(s: pointer, i: int): byte {.importc: "test_ref_obj_with_seq_data_get", cdecl.}
 
 proc `[]`*(s: RefObjWithSeqData, i: int): byte =
-  test_ref_obj_with_seq_data_get(s.refObjWithSeq, i)
+  test_ref_obj_with_seq_data_get(s.refObjWithSeq.reference, i)
 
-proc test_ref_obj_with_seq_data_set(s: RefObjWithSeq, i: int, v: byte) {.importc: "test_ref_obj_with_seq_data_set", cdecl.}
+proc test_ref_obj_with_seq_data_set(s: pointer, i: int, v: byte) {.importc: "test_ref_obj_with_seq_data_set", cdecl.}
 
 proc `[]=`*(s: RefObjWithSeqData, i: int, v: byte) =
-  test_ref_obj_with_seq_data_set(s.refObjWithSeq, i, v)
+  test_ref_obj_with_seq_data_set(s.refObjWithSeq.reference, i, v)
 
-proc test_ref_obj_with_seq_data_delete(s: RefObjWithSeq, i: int) {.importc: "test_ref_obj_with_seq_data_delete", cdecl.}
+proc test_ref_obj_with_seq_data_delete(s: pointer, i: int) {.importc: "test_ref_obj_with_seq_data_delete", cdecl.}
 
 proc delete*(s: RefObjWithSeqData, i: int) =
-  test_ref_obj_with_seq_data_delete(s.refObjWithSeq, i)
+  test_ref_obj_with_seq_data_delete(s.refObjWithSeq.reference, i)
 
-proc test_ref_obj_with_seq_data_clear(s: RefObjWithSeq) {.importc: "test_ref_obj_with_seq_data_clear", cdecl.}
+proc test_ref_obj_with_seq_data_clear(s: pointer) {.importc: "test_ref_obj_with_seq_data_clear", cdecl.}
 
 proc clear*(s: RefObjWithSeqData) =
-  test_ref_obj_with_seq_data_clear(s.refObjWithSeq)
+  test_ref_obj_with_seq_data_clear(s.refObjWithSeq.reference)
 
 proc test_simple_obj_with_proc_extra_proc(s: SimpleObjWithProc) {.importc: "test_simple_obj_with_proc_extra_proc", cdecl.}
 
 proc extraProc*(s: SimpleObjWithProc) {.inline.} =
   test_simple_obj_with_proc_extra_proc(s)
 
-proc test_seq_string_len(s: SeqString): int {.importc: "test_seq_string_len", cdecl.}
+proc test_seq_string_len(s: pointer): int {.importc: "test_seq_string_len", cdecl.}
 
 proc len*(s: SeqString): int =
-  test_seq_string_len(s)
+  test_seq_string_len(s.reference)
 
-proc test_seq_string_add(s: SeqString, v: string) {.importc: "test_seq_string_add", cdecl.}
+proc test_seq_string_add(s: pointer, v: string) {.importc: "test_seq_string_add", cdecl.}
 
 proc add*(s: SeqString, v: string) =
-  test_seq_string_add(s, v)
+  test_seq_string_add(s.reference, v)
 
-proc test_seq_string_get(s: SeqString, i: int): string {.importc: "test_seq_string_get", cdecl.}
+proc test_seq_string_get(s: pointer, i: int): string {.importc: "test_seq_string_get", cdecl.}
 
 proc `[]`*(s: SeqString, i: int): string =
-  test_seq_string_get(s, i)
+  test_seq_string_get(s.reference, i)
 
-proc test_seq_string_set(s: SeqString, i: int, v: string) {.importc: "test_seq_string_set", cdecl.}
+proc test_seq_string_set(s: pointer, i: int, v: string) {.importc: "test_seq_string_set", cdecl.}
 
 proc `[]=`*(s: SeqString, i: int, v: string) =
-  test_seq_string_set(s, i, v)
+  test_seq_string_set(s.reference, i, v)
 
-proc test_seq_string_delete(s: SeqString, i: int) {.importc: "test_seq_string_delete", cdecl.}
+proc test_seq_string_delete(s: pointer, i: int) {.importc: "test_seq_string_delete", cdecl.}
 
 proc delete*(s: SeqString, i: int) =
-  test_seq_string_delete(s, i)
+  test_seq_string_delete(s.reference, i)
 
-proc test_seq_string_clear(s: SeqString) {.importc: "test_seq_string_clear", cdecl.}
+proc test_seq_string_clear(s: pointer) {.importc: "test_seq_string_clear", cdecl.}
 
 proc clear*(s: SeqString) =
-  test_seq_string_clear(s)
+  test_seq_string_clear(s.reference)
 
-proc test_new_seq_string*(): SeqString {.importc: "test_new_seq_string", cdecl.}
+proc test_new_seq_string*(): pointer {.importc: "test_new_seq_string", cdecl.}
 
 proc newSeqString*(): SeqString =
-  test_new_seq_string()
+  SeqString(reference: test_new_seq_string())
 
-proc test_get_datas(): SeqString {.importc: "test_get_datas", cdecl.}
+proc test_get_datas(): pointer {.importc: "test_get_datas", cdecl.}
 
 proc getDatas*(): SeqString {.inline.} =
-  result = test_get_datas()
+  result = SeqString(reference: test_get_datas())
 
