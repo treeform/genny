@@ -28,5 +28,5 @@ jobs:
     - name: Run Zig test
       working-directory: tests
       run: |
-        zig build-exe test_zig.zig -lc -Lgenerated -ltest --search-dynamic-linker
+        zig build-exe test_zig.zig -lc -Lgenerated -ltest
         LD_LIBRARY_PATH=$PWD/generated ./test_zig
