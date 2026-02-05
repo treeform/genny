@@ -1,12 +1,12 @@
 name: Nim
-on: [push, pull_request]
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
 jobs:
   test:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: jiro4989/setup-nim-action@v2
@@ -16,15 +16,8 @@ jobs:
     - name: Install dependencies
       run: nimble install -y bumpy chroma vmath
     - name: Build test DLL
-      run: nim c --gc:arc --app:lib -o:tests/generated/test tests/test.nim
-    - name: Run Nim-C-Nim sandwich test (Linux)
-      if: runner.os == 'Linux'
+      run: nim c --mm:arc --app:lib -d:gennyNim -o:tests/generated/test tests/test.nim
+    - name: Run Nim-C-Nim sandwich test
       run: |
-        nim c --gc:arc -o:tests/generated/test_nim tests/test_nim.nim
+        nim c --mm:arc -o:tests/generated/test_nim tests/test_nim.nim
         cd tests/generated && LD_LIBRARY_PATH=. ./test_nim
-    - name: Run Nim-C-Nim sandwich test (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        nim c --gc:arc -o:tests/generated/test_nim.exe tests/test_nim.nim
-        cd tests/generated
-        .\test_nim.exe

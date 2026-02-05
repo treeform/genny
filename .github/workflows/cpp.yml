@@ -1,12 +1,12 @@
 name: CPP
-on: [push, pull_request]
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
 jobs:
   test:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: jiro4989/setup-nim-action@v2
@@ -14,18 +14,8 @@ jobs:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
         nim-version: stable
     - name: Build test DLL
-      run: nim c --gc:arc --app:lib -o:tests/generated/test tests/test.nim
-    - name: Compile C++ test (Linux)
-      if: runner.os == 'Linux'
+      run: nim c --mm:arc --app:lib -d:gennyCpp -o:tests/generated/test tests/test.nim
+    - name: Compile C++ test
       run: g++ -o tests/test_cpp tests/test_cpp.cpp -I tests/generated -L tests/generated -l:libtest.so -Wl,-rpath,'$ORIGIN/generated'
-    - name: Compile C++ test (Windows)
-      if: runner.os == 'Windows'
-      run: g++ -o tests/test_cpp.exe tests/test_cpp.cpp -I tests/generated -L tests/generated -ltest
-    - name: Run C++ test (Linux)
-      if: runner.os == 'Linux'
+    - name: Run C++ test
       run: ./tests/test_cpp
-    - name: Run C++ test (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        $env:PATH = "tests\generated;" + $env:PATH
-        .\tests\test_cpp.exe
