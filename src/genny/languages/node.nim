@@ -4,7 +4,7 @@ import
 
 var
   types {.compiletime.}: string
-  funcs {.compiletime.}: string
+  procs {.compiletime.}: string
   exports {.compiletime.}: string
   refObjects {.compiletime.}: HashSet[string]
 
@@ -63,13 +63,13 @@ proc exportEnumNode*(sym: NimNode) =
     exports.add &"exports.{toCapSnakeCase(entry.repr)} = {i};\n"
 
 proc declareFunc(funcName: string, procParams: seq[NimNode], returnType: string) =
-  funcs.add &"const {funcName} = lib.func('{funcName}', {returnType}, ["
+  procs.add &"const {funcName} = lib.func('{funcName}', {returnType}, ["
   for param in procParams:
     for i in 0 .. param.len - 3:
       var paramType = param[^2]
-      funcs.add &"{exportTypeNode(paramType)}, "
-  funcs.removeSuffix ", "
-  funcs.add "]);\n"
+      procs.add &"{exportTypeNode(paramType)}, "
+  procs.removeSuffix ", "
+  procs.add "]);\n"
 
 proc exportProcNode*(
   sym: NimNode,
@@ -212,41 +212,41 @@ proc genRefObject(objName: string) =
   exports.add &"exports.{objName} = {objName};\n"
 
   # Declare unref function
-  funcs.add &"const $lib_{toSnakeCase(objName)}_unref = lib.func('$lib_{toSnakeCase(objName)}_unref', 'void', ['uint64']);\n"
+  procs.add &"const $lib_{toSnakeCase(objName)}_unref = lib.func('$lib_{toSnakeCase(objName)}_unref', 'void', ['uint64']);\n"
 
 proc genSeqProcs(objName, className, procPrefix, selfAccessor: string, entryType: NimNode) =
   # len
-  funcs.add &"const {procPrefix}_len = lib.func('{procPrefix}_len', 'int64', ['uint64']);\n"
+  procs.add &"const {procPrefix}_len = lib.func('{procPrefix}_len', 'int64', ['uint64']);\n"
   types.add &"{className}.prototype.length = function() {{\n"
   types.add &"  return {procPrefix}_len({selfAccessor});\n"
   types.add "};\n"
 
   # get
-  funcs.add &"const {procPrefix}_get = lib.func('{procPrefix}_get', {exportTypeNode(entryType)}, ['uint64', 'int64']);\n"
+  procs.add &"const {procPrefix}_get = lib.func('{procPrefix}_get', {exportTypeNode(entryType)}, ['uint64', 'int64']);\n"
   types.add &"{className}.prototype.get = function(index) {{\n"
   types.add &"  return {procPrefix}_get({selfAccessor}, index);\n"
   types.add "};\n"
 
   # set
-  funcs.add &"const {procPrefix}_set = lib.func('{procPrefix}_set', 'void', ['uint64', 'int64', {exportTypeNode(entryType)}]);\n"
+  procs.add &"const {procPrefix}_set = lib.func('{procPrefix}_set', 'void', ['uint64', 'int64', {exportTypeNode(entryType)}]);\n"
   types.add &"{className}.prototype.set = function(index, value) {{\n"
   types.add &"  {procPrefix}_set({selfAccessor}, index, value);\n"
   types.add "};\n"
 
   # delete
-  funcs.add &"const {procPrefix}_delete = lib.func('{procPrefix}_delete', 'void', ['uint64', 'int64']);\n"
+  procs.add &"const {procPrefix}_delete = lib.func('{procPrefix}_delete', 'void', ['uint64', 'int64']);\n"
   types.add &"{className}.prototype.delete = function(index) {{\n"
   types.add &"  {procPrefix}_delete({selfAccessor}, index);\n"
   types.add "};\n"
 
   # add
-  funcs.add &"const {procPrefix}_add = lib.func('{procPrefix}_add', 'void', ['uint64', {exportTypeNode(entryType)}]);\n"
+  procs.add &"const {procPrefix}_add = lib.func('{procPrefix}_add', 'void', ['uint64', {exportTypeNode(entryType)}]);\n"
   types.add &"{className}.prototype.add = function(value) {{\n"
   types.add &"  {procPrefix}_add({selfAccessor}, value);\n"
   types.add "};\n"
 
   # clear
-  funcs.add &"const {procPrefix}_clear = lib.func('{procPrefix}_clear', 'void', ['uint64']);\n"
+  procs.add &"const {procPrefix}_clear = lib.func('{procPrefix}_clear', 'void', ['uint64']);\n"
   types.add &"{className}.prototype.clear = function() {{\n"
   types.add &"  {procPrefix}_clear({selfAccessor});\n"
   types.add "};\n"
@@ -295,8 +295,8 @@ proc exportRefObjectNode*(
       let setProcName = &"$lib_{objNameSnaked}_set_{fieldNameSnaked}"
 
       # Declare getter/setter C functions
-      funcs.add &"const {getProcName} = lib.func('{getProcName}', {exportTypeNode(fieldType)}, ['uint64']);\n"
-      funcs.add &"const {setProcName} = lib.func('{setProcName}', 'void', ['uint64', {exportTypeNode(fieldType)}]);\n"
+      procs.add &"const {getProcName} = lib.func('{getProcName}', {exportTypeNode(fieldType)}, ['uint64']);\n"
+      procs.add &"const {setProcName} = lib.func('{setProcName}', 'void', ['uint64', {exportTypeNode(fieldType)}]);\n"
 
       types.add &"Object.defineProperty({objName}.prototype, '{fieldName}', {{\n"
       types.add &"  get: function() {{ return {getProcName}(this.ref); }},\n"
@@ -338,7 +338,7 @@ proc exportSeqNode*(sym: NimNode) =
   let newSeqProc = &"$lib_new_{toSnakeCase(seqName)}"
 
   # Declare constructor C function
-  funcs.add &"const {newSeqProc} = lib.func('{newSeqProc}', 'uint64', []);\n"
+  procs.add &"const {newSeqProc} = lib.func('{newSeqProc}', 'uint64', []);\n"
 
   exports.add &"exports.new{seqName} = new{seqName};\n"
   types.add &"function new{seqName}() {{\n"
@@ -382,6 +382,6 @@ proc writeNode*(dir, lib: string) =
   createDir(dir)
   writeFile(
     &"{dir}/{toSnakeCase(lib)}.js",
-    (header & funcs & "\n" & types & "\n" & exports)
+    (header & procs & "\n" & types & "\n" & exports)
       .replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
   )
