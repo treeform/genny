@@ -16,7 +16,7 @@ jobs:
     - name: Install dependencies
       run: nimble install -y bumpy chroma vmath
     - name: Build test DLL
-      run: nim c --mm:arc --app:lib -d:gennyNim -o:tests/generated/test tests/test.nim
+      run: nim c --mm:arc --app:lib -d:gennyNim -o:tests/generated/libtest.so tests/test.nim
     - name: Run Nim-C-Nim sandwich test
       run: |
         nim c --mm:arc -o:tests/generated/test_nim tests/test_nim.nim

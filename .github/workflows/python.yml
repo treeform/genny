@@ -17,6 +17,6 @@ jobs:
       with:
         python-version: '3.12'
     - name: Build test DLL
-      run: nim c --mm:arc --app:lib -d:gennyPython -o:tests/generated/test tests/test.nim
+      run: nim c --mm:arc --app:lib -d:gennyPython -o:tests/generated/libtest.so tests/test.nim
     - name: Run Python test
       run: python tests/test_python.py

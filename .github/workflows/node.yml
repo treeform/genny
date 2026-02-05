@@ -17,7 +17,7 @@ jobs:
       with:
         node-version: '20'
     - name: Build test DLL
-      run: nim c --mm:arc --app:lib -d:gennyNode -o:tests/generated/test tests/test.nim
+      run: nim c --mm:arc --app:lib -d:gennyNode -o:tests/generated/libtest.so tests/test.nim
     - name: Install Node dependencies
       run: npm install ffi-napi ref-struct-napi ref-array-napi
       working-directory: tests
