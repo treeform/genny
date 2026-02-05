@@ -30,35 +30,38 @@ proc simpleObj*(simple_a: int, simple_b: byte, simple_c: bool): SimpleObj =
   result.simple_b = simple_b
   result.simple_c = simple_c
 
-type SimpleRefObj* = object
+type SimpleRefObjObj = object
   reference: pointer
+
+type SimpleRefObj* = ref SimpleRefObjObj
 
 proc test_simple_ref_obj_unref(x: pointer) {.importc: "test_simple_ref_obj_unref", cdecl.}
 
-proc `=destroy`(x: var SimpleRefObj) =
+proc `=destroy`(x: SimpleRefObjObj) =
   if x.reference != nil:
     test_simple_ref_obj_unref(x.reference)
-    x.reference = nil
 
-type SeqInt* = object
+type SeqIntObj = object
   reference: pointer
+
+type SeqInt* = ref SeqIntObj
 
 proc test_seq_int_unref(x: pointer) {.importc: "test_seq_int_unref", cdecl.}
 
-proc `=destroy`(x: var SeqInt) =
+proc `=destroy`(x: SeqIntObj) =
   if x.reference != nil:
     test_seq_int_unref(x.reference)
-    x.reference = nil
 
-type RefObjWithSeq* = object
+type RefObjWithSeqObj = object
   reference: pointer
+
+type RefObjWithSeq* = ref RefObjWithSeqObj
 
 proc test_ref_obj_with_seq_unref(x: pointer) {.importc: "test_ref_obj_with_seq_unref", cdecl.}
 
-proc `=destroy`(x: var RefObjWithSeq) =
+proc `=destroy`(x: RefObjWithSeqObj) =
   if x.reference != nil:
     test_ref_obj_with_seq_unref(x.reference)
-    x.reference = nil
 
 type SimpleObjWithProc* = object
   simpleA*: int
@@ -70,15 +73,16 @@ proc simpleObjWithProc*(simple_a: int, simple_b: byte, simple_c: bool): SimpleOb
   result.simple_b = simple_b
   result.simple_c = simple_c
 
-type SeqString* = object
+type SeqStringObj = object
   reference: pointer
+
+type SeqString* = ref SeqStringObj
 
 proc test_seq_string_unref(x: pointer) {.importc: "test_seq_string_unref", cdecl.}
 
-proc `=destroy`(x: var SeqString) =
+proc `=destroy`(x: SeqStringObj) =
   if x.reference != nil:
     test_seq_string_unref(x.reference)
-    x.reference = nil
 
 proc test_simple_call(a: int): int {.importc: "test_simple_call", cdecl.}
 

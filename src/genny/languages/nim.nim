@@ -199,8 +199,11 @@ proc exportObjectNim*(sym: NimNode, constructor: NimNode) =
 proc genRefObject(objName: string) =
   refObjectNames.incl(objName)
 
-  types.add &"type {objName}* = object\n"
+  types.add &"type {objName}Obj = object\n"
   types.add "  reference: pointer\n"
+  types.add "\n"
+
+  types.add &"type {objName}* = ref {objName}Obj\n"
   types.add "\n"
 
   let apiProcName = &"$lib_{toSnakeCase(objName)}_unref"
@@ -211,10 +214,9 @@ proc genRefObject(objName: string) =
   types.add "\n"
   types.add "\n"
 
-  types.add &"proc `=destroy`(x: var {objName}) =\n"
+  types.add &"proc `=destroy`(x: {objName}Obj) =\n"
   types.add &"  if x.reference != nil:\n"
   types.add &"    {apiProcName}(x.reference)\n"
-  types.add &"    x.reference = nil\n"
   types.add "\n"
 
 proc genSeqProcs(objName, niceName, procPrefix, refAccessor, entryName: string) =
