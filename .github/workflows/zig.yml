@@ -20,9 +20,9 @@ jobs:
       run: nim c --mm:arc --app:lib -d:gennyZig -o:tests/generated/libtest.so tests/test.nim
     - name: Check library exports
       working-directory: tests/generated
-      run: nm -D libtest.so | head -20
+      run: nm -D libtest.so | grep test_simple
     - name: Run Zig test
       working-directory: tests
       run: |
-        zig build-exe test_zig.zig -Lgenerated -l:libtest.so -dynamic -rpath '$ORIGIN/generated'
+        zig build-exe test_zig.zig -Lgenerated -ltest -rpath '$ORIGIN/generated'
         LD_LIBRARY_PATH=generated ./test_zig
