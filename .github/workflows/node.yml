@@ -1,0 +1,26 @@
+name: Node
+on: [push, pull_request]
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: jiro4989/setup-nim-action@v2
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        nim-version: stable
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    - name: Build test DLL
+      run: nim c --gc:arc --app:lib -o:tests/generated/test tests/test.nim
+    - name: Install Node dependencies
+      run: npm install ffi-napi ref-struct-napi ref-array-napi
+      working-directory: tests
+    - name: Run Node test
+      run: node test_node.js
+      working-directory: tests

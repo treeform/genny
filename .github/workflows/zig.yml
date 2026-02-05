@@ -1,0 +1,33 @@
+name: Zig
+on: [push, pull_request]
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: jiro4989/setup-nim-action@v2
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        nim-version: stable
+    - uses: goto-bus-stop/setup-zig@v2
+      with:
+        version: 0.13.0
+    - name: Build test DLL
+      run: nim c --gc:arc --app:lib -o:tests/generated/test tests/test.nim
+    - name: Run Zig test (Linux)
+      if: runner.os == 'Linux'
+      working-directory: tests
+      run: |
+        zig build-exe test_zig.zig -Lgenerated -ltest -rpath generated
+        LD_LIBRARY_PATH=generated ./test_zig
+    - name: Run Zig test (Windows)
+      if: runner.os == 'Windows'
+      working-directory: tests
+      run: |
+        zig build-exe test_zig.zig -Lgenerated -ltest
+        $env:PATH = "generated;" + $env:PATH
+        .\test_zig.exe
