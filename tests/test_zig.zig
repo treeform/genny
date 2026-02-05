@@ -5,7 +5,7 @@ pub fn main() !void {
     try stdout.print("Testing Zig bindings\n", .{});
 
     // Load the library explicitly at runtime
-    const lib = std.DynLib.open("generated/libtest.so") catch |err| {
+    var lib = std.DynLib.open("generated/libtest.so") catch |err| {
         try stdout.print("Failed to open library: {}\n", .{err});
         return err;
     };
