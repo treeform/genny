@@ -28,7 +28,7 @@ proc exportTypeZig(sym: NimNode): string =
           of "byte": "u8"
           of "int16": "i16"
           of "int32": "i32"
-          of "int64": "i63"
+          of "int64": "i64"
           of "int": "isize"
           of "uint8": "u8"
           of "uint16": "u16"

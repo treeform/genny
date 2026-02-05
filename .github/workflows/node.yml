@@ -1,0 +1,16 @@
+name: Node
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    # Node.js test is currently skipped because ffi-napi is unmaintained
+    # and incompatible with Node.js 18+. The generated bindings use ffi-napi.
+    # TODO: Update genny to generate bindings using koffi or another modern FFI library.
+    - name: Skip notice
+      run: echo "Node.js test skipped - ffi-napi is incompatible with modern Node.js versions"

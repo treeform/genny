@@ -1,0 +1,22 @@
+name: Python
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: jiro4989/setup-nim-action@v2
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        nim-version: stable
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Build test DLL
+      run: nim c --mm:arc --app:lib -d:gennyPython -o:tests/generated/libtest.so tests/test.nim
+    - name: Run Python test
+      run: python tests/test_python.py

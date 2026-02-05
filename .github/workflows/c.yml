@@ -1,0 +1,21 @@
+name: C
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: jiro4989/setup-nim-action@v2
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        nim-version: stable
+    - name: Build test DLL
+      run: nim c --mm:arc --app:lib -d:gennyC -o:tests/generated/libtest.so tests/test.nim
+    - name: Compile C test
+      run: gcc -o tests/test_c tests/test_c.c -I tests/generated -L tests/generated -l:libtest.so -Wl,-rpath,'$ORIGIN/generated'
+    - name: Run C test
+      run: ./tests/test_c
