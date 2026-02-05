@@ -17,18 +17,20 @@ console.assert(obj.simpleB === 20, "simpleB should be 20");
 console.assert(obj.simpleC === true, "simpleC should be true");
 
 console.log("Testing SimpleRefObj");
-const refObj = test.SimpleRefObj();
+const refObj = test.newSimpleRefObj();
+console.assert(!refObj.isNull(), "refObj should not be null");
 refObj.simpleRefA = 100;
 console.assert(refObj.simpleRefA === 100, "simpleRefA should be 100");
 refObj.simpleRefB = 50;
 console.assert(refObj.simpleRefB === 50, "simpleRefB should be 50");
 refObj.doit();
 
-console.log("Testing getDatas");
-const datas = test.getDatas();
-console.assert(datas.length() === 3, "datas should have 3 elements");
-console.assert(datas.get(0) === "a", "datas[0] should be a");
-console.assert(datas.get(1) === "b", "datas[1] should be b");
-console.assert(datas.get(2) === "c", "datas[2] should be c");
+console.log("Testing SeqInt");
+const seqInt = test.newSeqInt();
+console.assert(!seqInt.isNull(), "seqInt should not be null");
+console.assert(seqInt.length() === 0, "seqInt should be empty");
+seqInt.add(42);
+console.assert(seqInt.length() === 1, "seqInt should have 1 element");
+console.assert(seqInt.get(0) === 42, "seqInt[0] should be 42");
 
 console.log("All Node.js tests passed!");

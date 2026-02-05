@@ -4,7 +4,6 @@ on:
     branches:
       - master
 env:
-  nim-version: 'stable'
   nim-src: src/${{ github.event.repository.name }}.nim
   deploy-dir: .gh-pages
 jobs:
@@ -12,9 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: jiro4989/setup-nim-action@v1
-        with:
-          nim-version: ${{ env.nim-version }}
+      - uses: treeform/setup-nim-action@v6
       - run: nimble install -Y
       - run: nimble doc --index:on --project --git.url:https://github.com/${{ github.repository }} --git.commit:master  --out:${{ env.deploy-dir }} ${{ env.nim-src }} -d:gennyNim
       - name: "Copy to index.html"

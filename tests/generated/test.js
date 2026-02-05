@@ -1,267 +1,262 @@
-var ffi = require('ffi-napi');
-var Struct = require("ref-struct-napi");
-var ArrayType = require('ref-array-napi');
+const koffi = require('koffi');
+const path = require('path');
 
-var dll = {};
-
-function testException(message) {
-  this.message = message;
-  this.name = 'testException';
+// Determine library path based on platform.
+let libName;
+if (process.platform === 'win32') {
+  libName = 'test.dll';
+} else if (process.platform === 'darwin') {
+  libName = 'libtest.dylib';
+} else {
+  libName = 'libtest.so';
 }
 
-const SimpleEnum = 'int8'
+const lib = koffi.load(path.join(__dirname, libName));
+
+class testException extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'testException';
+  }
+}
+
+const test_simple_call = lib.func('test_simple_call', 'int64', ['int64']);
+const test_simple_ref_obj_unref = lib.func('test_simple_ref_obj_unref', 'void', ['uint64']);
+const test_new_simple_ref_obj = lib.func('test_new_simple_ref_obj', 'uint64', []);
+const test_simple_ref_obj_get_simple_ref_a = lib.func('test_simple_ref_obj_get_simple_ref_a', 'int64', ['uint64']);
+const test_simple_ref_obj_set_simple_ref_a = lib.func('test_simple_ref_obj_set_simple_ref_a', 'void', ['uint64', 'int64']);
+const test_simple_ref_obj_get_simple_ref_b = lib.func('test_simple_ref_obj_get_simple_ref_b', 'uint8', ['uint64']);
+const test_simple_ref_obj_set_simple_ref_b = lib.func('test_simple_ref_obj_set_simple_ref_b', 'void', ['uint64', 'uint8']);
+const test_simple_ref_obj_doit = lib.func('test_simple_ref_obj_doit', 'void', ['uint64']);
+const test_seq_int_unref = lib.func('test_seq_int_unref', 'void', ['uint64']);
+const test_new_seq_int = lib.func('test_new_seq_int', 'uint64', []);
+const test_seq_int_len = lib.func('test_seq_int_len', 'int64', ['uint64']);
+const test_seq_int_get = lib.func('test_seq_int_get', 'int64', ['uint64', 'int64']);
+const test_seq_int_set = lib.func('test_seq_int_set', 'void', ['uint64', 'int64', 'int64']);
+const test_seq_int_delete = lib.func('test_seq_int_delete', 'void', ['uint64', 'int64']);
+const test_seq_int_add = lib.func('test_seq_int_add', 'void', ['uint64', 'int64']);
+const test_seq_int_clear = lib.func('test_seq_int_clear', 'void', ['uint64']);
+const test_ref_obj_with_seq_unref = lib.func('test_ref_obj_with_seq_unref', 'void', ['uint64']);
+const test_new_ref_obj_with_seq = lib.func('test_new_ref_obj_with_seq', 'uint64', []);
+const test_ref_obj_with_seq_data_len = lib.func('test_ref_obj_with_seq_data_len', 'int64', ['uint64']);
+const test_ref_obj_with_seq_data_get = lib.func('test_ref_obj_with_seq_data_get', 'uint8', ['uint64', 'int64']);
+const test_ref_obj_with_seq_data_set = lib.func('test_ref_obj_with_seq_data_set', 'void', ['uint64', 'int64', 'uint8']);
+const test_ref_obj_with_seq_data_delete = lib.func('test_ref_obj_with_seq_data_delete', 'void', ['uint64', 'int64']);
+const test_ref_obj_with_seq_data_add = lib.func('test_ref_obj_with_seq_data_add', 'void', ['uint64', 'uint8']);
+const test_ref_obj_with_seq_data_clear = lib.func('test_ref_obj_with_seq_data_clear', 'void', ['uint64']);
+const test_simple_obj_with_proc_extra_proc = lib.func('test_simple_obj_with_proc_extra_proc', 'void', ['uint64']);
+const test_seq_string_unref = lib.func('test_seq_string_unref', 'void', ['uint64']);
+const test_new_seq_string = lib.func('test_new_seq_string', 'uint64', []);
+const test_seq_string_len = lib.func('test_seq_string_len', 'int64', ['uint64']);
+const test_seq_string_get = lib.func('test_seq_string_get', 'str', ['uint64', 'int64']);
+const test_seq_string_set = lib.func('test_seq_string_set', 'void', ['uint64', 'int64', 'str']);
+const test_seq_string_delete = lib.func('test_seq_string_delete', 'void', ['uint64', 'int64']);
+const test_seq_string_add = lib.func('test_seq_string_add', 'void', ['uint64', 'str']);
+const test_seq_string_clear = lib.func('test_seq_string_clear', 'void', ['uint64']);
+const test_get_datas = lib.func('test_get_datas', 'uint64', []);
 
 /**
  * Returns the integer passed in.
  */
-function simpleCall(a){
-  result = dll.test_simple_call(a)
-  return result
+function simpleCall(a) {
+  return test_simple_call(a);
 }
 
-const SimpleObj = Struct({
-  'simpleA':'int64',
-  'simpleB':'int8',
-  'simpleC':'bool'
-})
-simpleObj = function(simple_a, simple_b, simple_c){
-  var v = new SimpleObj();
-  v.simple_a = simple_a
-  v.simple_b = simple_b
-  v.simple_c = simple_c
-  return v;
-}
-SimpleObj.prototype.isEqual = function(other){
-  return self.simpleA == other.simpleA && self.simpleB == other.simpleB && self.simpleC == other.simpleC;
-};
+const SimpleObj = koffi.struct('SimpleObj', {
+  simpleA: 'int64',
+  simpleB: 'uint8',
+  simpleC: 'bool'
+});
 
-SimpleRefObj = Struct({'nimRef': 'uint64'});
-SimpleRefObj.prototype.isNull = function(){
-  return this.nimRef == 0;
-};
-SimpleRefObj.prototype.isEqual = function(other){
-  return this.nimRef == other.nimRef;
-};
-SimpleRefObj.prototype.unref = function(){
-  return dll.test_simple_ref_obj_unref(this)
-};
-function newSimpleRefObj(){
-  var result = dll.test_new_simple_ref_obj()
-  const registry = new FinalizationRegistry(function(obj) {
-    console.log("js unref")
-    obj.unref()
-  });
-  registry.register(result, null);
-  return result
+function simpleObj(simple_a, simple_b, simple_c) {
+  return {
+    simpleA: simple_a,
+    simpleB: simple_b,
+    simpleC: simple_c
+  };
 }
+
+class SimpleRefObj {
+  constructor(ref) {
+    this.ref = ref;
+  }
+  isNull() {
+    return this.ref === 0n || this.ref === 0;
+  }
+  isEqual(other) {
+    return this.ref === other.ref;
+  }
+}
+function newSimpleRefObj() {
+  const ref = test_new_simple_ref_obj();
+  return new SimpleRefObj(ref);
+}
+
 Object.defineProperty(SimpleRefObj.prototype, 'simpleRefA', {
-  get: function() {return dll.test_simple_ref_obj_get_simple_ref_a(this)},
-  set: function(v) {dll.test_simple_ref_obj_set_simple_ref_a(this, v)}
+  get: function() { return test_simple_ref_obj_get_simple_ref_a(this.ref); },
+  set: function(v) { test_simple_ref_obj_set_simple_ref_a(this.ref, v); }
 });
 Object.defineProperty(SimpleRefObj.prototype, 'simpleRefB', {
-  get: function() {return dll.test_simple_ref_obj_get_simple_ref_b(this)},
-  set: function(v) {dll.test_simple_ref_obj_set_simple_ref_b(this, v)}
+  get: function() { return test_simple_ref_obj_get_simple_ref_b(this.ref); },
+  set: function(v) { test_simple_ref_obj_set_simple_ref_b(this.ref, v); }
 });
 
 /**
  * Does some thing with SimpleRefObj.
  */
-SimpleRefObj.prototype.doit = function(){
-  dll.test_simple_ref_obj_doit(this)
+SimpleRefObj.prototype.doit = function() {
+  test_simple_ref_obj_doit(this.ref);
 }
 
-SeqInt = Struct({'nimRef': 'uint64'});
-SeqInt.prototype.isNull = function(){
-  return this.nimRef == 0;
-};
-SeqInt.prototype.isEqual = function(other){
-  return this.nimRef == other.nimRef;
-};
-SeqInt.prototype.unref = function(){
-  return dll.test_seq_int_unref(this)
-};
-function seqInt(){
-  return dll.test_new_seq_int();
+class SeqInt {
+  constructor(ref) {
+    this.ref = ref;
+  }
+  isNull() {
+    return this.ref === 0n || this.ref === 0;
+  }
+  isEqual(other) {
+    return this.ref === other.ref;
+  }
 }
-SeqInt.prototype.length = function(){
-  return dll.test_seq_int_len(this)
-};
-SeqInt.prototype.get = function(index){
-  return dll.test_seq_int_get(this, index)
-};
-SeqInt.prototype.set = function(index, value){
-  dll.test_seq_int_set(this, index, value)
-};
-SeqInt.prototype.delete = function(index){
-  dll.test_seq_int_delete(this, index)
-};
-SeqInt.prototype.add = function(value){
-  dll.test_seq_int_add(this, value)
-};
-SeqInt.prototype.clear = function(){
-  dll.test_seq_int_clear(this)
-};
-RefObjWithSeq = Struct({'nimRef': 'uint64'});
-RefObjWithSeq.prototype.isNull = function(){
-  return this.nimRef == 0;
-};
-RefObjWithSeq.prototype.isEqual = function(other){
-  return this.nimRef == other.nimRef;
-};
-RefObjWithSeq.prototype.unref = function(){
-  return dll.test_ref_obj_with_seq_unref(this)
-};
-function newRefObjWithSeq(){
-  var result = dll.test_new_ref_obj_with_seq()
-  const registry = new FinalizationRegistry(function(obj) {
-    console.log("js unref")
-    obj.unref()
-  });
-  registry.register(result, null);
-  return result
+function newSeqInt() {
+  return new SeqInt(test_new_seq_int());
 }
-function RefObjWithSeqData(refObjWithSeq){
-  this.refObjWithSeq = refObjWithSeq;
+
+SeqInt.prototype.length = function() {
+  return test_seq_int_len(this.ref);
+};
+SeqInt.prototype.get = function(index) {
+  return test_seq_int_get(this.ref, index);
+};
+SeqInt.prototype.set = function(index, value) {
+  test_seq_int_set(this.ref, index, value);
+};
+SeqInt.prototype.delete = function(index) {
+  test_seq_int_delete(this.ref, index);
+};
+SeqInt.prototype.add = function(value) {
+  test_seq_int_add(this.ref, value);
+};
+SeqInt.prototype.clear = function() {
+  test_seq_int_clear(this.ref);
+};
+class RefObjWithSeq {
+  constructor(ref) {
+    this.ref = ref;
+  }
+  isNull() {
+    return this.ref === 0n || this.ref === 0;
+  }
+  isEqual(other) {
+    return this.ref === other.ref;
+  }
 }
-RefObjWithSeqData.prototype.length = function(){
-  return dll.test_ref_obj_with_seq_data_len(this.ref_obj_with_seq)
+function newRefObjWithSeq() {
+  const ref = test_new_ref_obj_with_seq();
+  return new RefObjWithSeq(ref);
+}
+
+class RefObjWithSeqData {
+  constructor(refObjWithSeq) {
+    this.refObjWithSeq = refObjWithSeq;
+  }
+}
+RefObjWithSeqData.prototype.length = function() {
+  return test_ref_obj_with_seq_data_len(this.refObjWithSeq.ref);
 };
-RefObjWithSeqData.prototype.get = function(index){
-  return dll.test_ref_obj_with_seq_data_get(this.ref_obj_with_seq, index)
+RefObjWithSeqData.prototype.get = function(index) {
+  return test_ref_obj_with_seq_data_get(this.refObjWithSeq.ref, index);
 };
-RefObjWithSeqData.prototype.set = function(index, value){
-  dll.test_ref_obj_with_seq_data_set(this.ref_obj_with_seq, index, value)
+RefObjWithSeqData.prototype.set = function(index, value) {
+  test_ref_obj_with_seq_data_set(this.refObjWithSeq.ref, index, value);
 };
-RefObjWithSeqData.prototype.delete = function(index){
-  dll.test_ref_obj_with_seq_data_delete(this.ref_obj_with_seq, index)
+RefObjWithSeqData.prototype.delete = function(index) {
+  test_ref_obj_with_seq_data_delete(this.refObjWithSeq.ref, index);
 };
-RefObjWithSeqData.prototype.add = function(value){
-  dll.test_ref_obj_with_seq_data_add(this.ref_obj_with_seq, value)
+RefObjWithSeqData.prototype.add = function(value) {
+  test_ref_obj_with_seq_data_add(this.refObjWithSeq.ref, value);
 };
-RefObjWithSeqData.prototype.clear = function(){
-  dll.test_ref_obj_with_seq_data_clear(this.ref_obj_with_seq)
+RefObjWithSeqData.prototype.clear = function() {
+  test_ref_obj_with_seq_data_clear(this.refObjWithSeq.ref);
 };
 Object.defineProperty(RefObjWithSeq.prototype, 'data', {
-  get: function() {return new RefObjWithSeqData(this)},
+  get: function() { return new RefObjWithSeqData(this); }
 });
 
-const SimpleObjWithProc = Struct({
-  'simpleA':'int64',
-  'simpleB':'int8',
-  'simpleC':'bool'
-})
-simpleObjWithProc = function(simple_a, simple_b, simple_c){
-  var v = new SimpleObjWithProc();
-  v.simple_a = simple_a
-  v.simple_b = simple_b
-  v.simple_c = simple_c
-  return v;
-}
-SimpleObjWithProc.prototype.isEqual = function(other){
-  return self.simpleA == other.simpleA && self.simpleB == other.simpleB && self.simpleC == other.simpleC;
-};
-
-SimpleObjWithProc.prototype.extraProc = function(){
-  dll.test_simple_obj_with_proc_extra_proc(this)
-}
-
-SeqString = Struct({'nimRef': 'uint64'});
-SeqString.prototype.isNull = function(){
-  return this.nimRef == 0;
-};
-SeqString.prototype.isEqual = function(other){
-  return this.nimRef == other.nimRef;
-};
-SeqString.prototype.unref = function(){
-  return dll.test_seq_string_unref(this)
-};
-function seqString(){
-  return dll.test_new_seq_string();
-}
-SeqString.prototype.length = function(){
-  return dll.test_seq_string_len(this)
-};
-SeqString.prototype.get = function(index){
-  return dll.test_seq_string_get(this, index)
-};
-SeqString.prototype.set = function(index, value){
-  dll.test_seq_string_set(this, index, value)
-};
-SeqString.prototype.delete = function(index){
-  dll.test_seq_string_delete(this, index)
-};
-SeqString.prototype.add = function(value){
-  dll.test_seq_string_add(this, value)
-};
-SeqString.prototype.clear = function(){
-  dll.test_seq_string_clear(this)
-};
-function getDatas(){
-  result = dll.test_get_datas()
-  return result
-}
-
-
-var dllPath = ""
-if(process.platform == "win32") {
-  dllPath = __dirname + '/test.dll'
-} else if (process.platform == "darwin") {
-  dllPath = __dirname + '/libtest.dylib'
-} else {
-  dllPath = __dirname + '/libtest.so'
-}
-
-dll = ffi.Library(dllPath, {
-  'test_simple_call': ['int64', ['int64']],
-  'test_simple_ref_obj_unref': ['void', [SimpleRefObj]],
-  'test_new_simple_ref_obj': [SimpleRefObj, []],
-  'test_simple_ref_obj_get_simple_ref_a': ['int64', [SimpleRefObj]],
-  'test_simple_ref_obj_set_simple_ref_a': ['void', [SimpleRefObj, 'int64']],
-  'test_simple_ref_obj_get_simple_ref_b': ['int8', [SimpleRefObj]],
-  'test_simple_ref_obj_set_simple_ref_b': ['void', [SimpleRefObj, 'int8']],
-  'test_simple_ref_obj_doit': ['void', [SimpleRefObj]],
-  'test_seq_int_unref': ['void', [SeqInt]],
-  'test_new_seq_int': [SeqInt, []],
-  'test_seq_int_len': ['uint64', [SeqInt]],
-  'test_seq_int_get': ['int64', [SeqInt, 'uint64']],
-  'test_seq_int_set': ['void', [SeqInt, 'uint64', 'int64']],
-  'test_seq_int_delete': ['void', [SeqInt, 'uint64']],
-  'test_seq_int_add': ['void', [SeqInt, 'int64']],
-  'test_seq_int_clear': ['void', [SeqInt]],
-  'test_ref_obj_with_seq_unref': ['void', [RefObjWithSeq]],
-  'test_new_ref_obj_with_seq': [RefObjWithSeq, []],
-  'test_ref_obj_with_seq_data_len': ['uint64', [RefObjWithSeq]],
-  'test_ref_obj_with_seq_data_get': ['int8', [RefObjWithSeq, 'uint64']],
-  'test_ref_obj_with_seq_data_set': ['void', [RefObjWithSeq, 'uint64', 'int8']],
-  'test_ref_obj_with_seq_data_delete': ['void', [RefObjWithSeq, 'uint64']],
-  'test_ref_obj_with_seq_data_add': ['void', [RefObjWithSeq, 'int8']],
-  'test_ref_obj_with_seq_data_clear': ['void', [RefObjWithSeq]],
-  'test_simple_obj_with_proc_extra_proc': ['void', [SimpleObjWithProc]],
-  'test_seq_string_unref': ['void', [SeqString]],
-  'test_new_seq_string': [SeqString, []],
-  'test_seq_string_len': ['uint64', [SeqString]],
-  'test_seq_string_get': ['string', [SeqString, 'uint64']],
-  'test_seq_string_set': ['void', [SeqString, 'uint64', 'string']],
-  'test_seq_string_delete': ['void', [SeqString, 'uint64']],
-  'test_seq_string_add': ['void', [SeqString, 'string']],
-  'test_seq_string_clear': ['void', [SeqString]],
-  'test_get_datas': [SeqString, []],
+const SimpleObjWithProc = koffi.struct('SimpleObjWithProc', {
+  simpleA: 'int64',
+  simpleB: 'uint8',
+  simpleC: 'bool'
 });
 
-exports.SIMPLE_CONST = 123
-exports.SimpleEnum = SimpleEnum
-exports.FIRST = 0
-exports.SECOND = 1
-exports.THIRD = 2
-exports.simpleCall = simpleCall
+function simpleObjWithProc(simple_a, simple_b, simple_c) {
+  return {
+    simpleA: simple_a,
+    simpleB: simple_b,
+    simpleC: simple_c
+  };
+}
+
+function simpleObjWithProcExtraProc(s) {
+  test_simple_obj_with_proc_extra_proc(s);
+}
+
+class SeqString {
+  constructor(ref) {
+    this.ref = ref;
+  }
+  isNull() {
+    return this.ref === 0n || this.ref === 0;
+  }
+  isEqual(other) {
+    return this.ref === other.ref;
+  }
+}
+function newSeqString() {
+  return new SeqString(test_new_seq_string());
+}
+
+SeqString.prototype.length = function() {
+  return test_seq_string_len(this.ref);
+};
+SeqString.prototype.get = function(index) {
+  return test_seq_string_get(this.ref, index);
+};
+SeqString.prototype.set = function(index, value) {
+  test_seq_string_set(this.ref, index, value);
+};
+SeqString.prototype.delete = function(index) {
+  test_seq_string_delete(this.ref, index);
+};
+SeqString.prototype.add = function(value) {
+  test_seq_string_add(this.ref, value);
+};
+SeqString.prototype.clear = function() {
+  test_seq_string_clear(this.ref);
+};
+function getDatas() {
+  return test_get_datas();
+}
+
+
+exports.SIMPLE_CONST = 123;
+exports.SimpleEnum = 'int8';
+exports.FIRST = 0;
+exports.SECOND = 1;
+exports.THIRD = 2;
+exports.simpleCall = simpleCall;
 exports.SimpleObj = SimpleObj;
 exports.simpleObj = simpleObj;
-exports.SimpleRefObjType = SimpleRefObj
-exports.SimpleRefObj = newSimpleRefObj
-exports.SeqIntType = SeqInt
-exports.RefObjWithSeqType = RefObjWithSeq
-exports.RefObjWithSeq = newRefObjWithSeq
+exports.SimpleRefObj = SimpleRefObj;
+exports.newSimpleRefObj = newSimpleRefObj;
+exports.SeqInt = SeqInt;
+exports.newSeqInt = newSeqInt;
+exports.RefObjWithSeq = RefObjWithSeq;
+exports.newRefObjWithSeq = newRefObjWithSeq;
 exports.SimpleObjWithProc = SimpleObjWithProc;
 exports.simpleObjWithProc = simpleObjWithProc;
-exports.SeqStringType = SeqString
-exports.getDatas = getDatas
+exports.simpleObjWithProcExtraProc = simpleObjWithProcExtraProc;
+exports.SeqString = SeqString;
+exports.newSeqString = newSeqString;
+exports.getDatas = getDatas;

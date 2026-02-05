@@ -9,10 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: jiro4989/setup-nim-action@v2
-      with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-        nim-version: stable
+    - uses: treeform/setup-nim-action@v6
     - name: Build test DLL
       run: nim c --mm:arc --app:lib -d:gennyCpp -o:tests/generated/libtest.so tests/test.nim
     - name: Compile C++ test

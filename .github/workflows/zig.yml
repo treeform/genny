@@ -9,10 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: jiro4989/setup-nim-action@v2
-      with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-        nim-version: stable
+    - uses: treeform/setup-nim-action@v6
     - uses: goto-bus-stop/setup-zig@v2
       with:
         version: 0.13.0
