@@ -18,8 +18,15 @@ jobs:
         version: 0.13.0
     - name: Build test DLL
       run: nim c --mm:arc --app:lib -d:gennyZig -o:tests/generated/libtest.so tests/test.nim
+    - name: Check library symbols
+      working-directory: tests/generated
+      run: |
+        echo "Library file:"
+        ls -la libtest.so
+        echo "Exported symbols:"
+        nm -D libtest.so | grep -E "test_simple|test_new" | head -10
     - name: Run Zig test
       working-directory: tests
       run: |
-        zig build-exe test_zig.zig
-        ./test_zig
+        zig build-exe test_zig.zig -lc -Lgenerated -ltest --search-dynamic-linker
+        LD_LIBRARY_PATH=$PWD/generated ./test_zig
