@@ -15,7 +15,7 @@ jobs:
         nim-version: stable
     - uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '18'
     - name: Build test DLL
       run: nim c --mm:arc --app:lib -d:gennyNode -o:tests/generated/libtest.so tests/test.nim
     - name: Install Node dependencies

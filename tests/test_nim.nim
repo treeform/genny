@@ -40,8 +40,9 @@ doAssert seqInt.len == 0, "seqInt should be empty after clear"
 echo "Testing getDatas"
 let datas = getDatas()
 doAssert datas.len == 3, "datas should have 3 elements"
-doAssert datas[0] == "a", "datas[0] should be a"
-doAssert datas[1] == "b", "datas[1] should be b"
-doAssert datas[2] == "c", "datas[2] should be c"
+echo "datas[0] = '", datas[0], "'"
+doAssert $datas[0] == "a", "datas[0] should be a"
+doAssert $datas[1] == "b", "datas[1] should be b"
+doAssert $datas[2] == "c", "datas[2] should be c"
 
 echo "All Nim-C-Nim sandwich tests passed!"
