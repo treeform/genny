@@ -71,9 +71,9 @@
 
 </ul>
 <ul class="simple nested-toc-section">exportProcInternal
-  <li><a class="reference" href="#exportProcInternal%2CNimNode%2CNimNode%2CopenArray%5BNimNode%5D" title="exportProcInternal(sym: NimNode; owner: NimNode = nil;
-                   prefixes: openArray[NimNode] = [])">exportProcInternal(sym: NimNode; owner: NimNode = nil;
-                   prefixes: openArray[NimNode] = [])</a></li>
+  <li><a class="reference" href="#exportProcInternal%2CNimNode%2CNimNode%2CopenArray%5BNimNode%5D%2Cbool" title="exportProcInternal(sym: NimNode; owner: NimNode = nil;
+                   prefixes: openArray[NimNode] = []; gcRefResult: bool = false)">exportProcInternal(sym: NimNode; owner: NimNode = nil;
+                   prefixes: openArray[NimNode] = []; gcRefResult: bool = false)</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">exportRefObjectInternal
@@ -147,18 +147,19 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/internal.nim#L74" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/internal.nim#L74" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/internal.nim#L79" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/internal.nim#L79" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
 
 </div>
 <div id="exportProcInternal-procs-all">
-  <div id="exportProcInternal,NimNode,NimNode,openArray[NimNode]">
-  <dt><pre><span class="Keyword">proc</span> <a href="#exportProcInternal%2CNimNode%2CNimNode%2CopenArray%5BNimNode%5D"><span class="Identifier">exportProcInternal</span></a><span class="Other">(</span><span class="Identifier">sym</span><span class="Other">:</span> <span class="Identifier">NimNode</span><span class="Other">;</span> <span class="Identifier">owner</span><span class="Other">:</span> <span class="Identifier">NimNode</span> <span class="Other">=</span> <span class="Keyword">nil</span><span class="Other">;</span>
-                        <span class="Identifier">prefixes</span><span class="Other">:</span> <span class="Identifier">openArray</span><span class="Other">[</span><span class="Identifier">NimNode</span><span class="Other">]</span> <span class="Other">=</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <div id="exportProcInternal,NimNode,NimNode,openArray[NimNode],bool">
+  <dt><pre><span class="Keyword">proc</span> <a href="#exportProcInternal%2CNimNode%2CNimNode%2CopenArray%5BNimNode%5D%2Cbool"><span class="Identifier">exportProcInternal</span></a><span class="Other">(</span><span class="Identifier">sym</span><span class="Other">:</span> <span class="Identifier">NimNode</span><span class="Other">;</span> <span class="Identifier">owner</span><span class="Other">:</span> <span class="Identifier">NimNode</span> <span class="Other">=</span> <span class="Keyword">nil</span><span class="Other">;</span>
+                        <span class="Identifier">prefixes</span><span class="Other">:</span> <span class="Identifier">openArray</span><span class="Other">[</span><span class="Identifier">NimNode</span><span class="Other">]</span> <span class="Other">=</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">;</span>
+                        <span class="Identifier">gcRefResult</span><span class="Other">:</span> <span class="Identifier">bool</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     
@@ -177,8 +178,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/internal.nim#L119" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/internal.nim#L119" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/internal.nim#L124" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/internal.nim#L124" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -190,8 +191,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/internal.nim#L249" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/internal.nim#L249" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/internal.nim#L255" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/internal.nim#L255" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -204,8 +205,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/internal.nim#L260" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/internal.nim#L260" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/internal.nim#L266" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/internal.nim#L266" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -221,7 +222,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-05 16:08:34 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-24 23:16:37 UTC</small>
       </div>
     </div>
   </div>

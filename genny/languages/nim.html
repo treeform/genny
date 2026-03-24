@@ -66,6 +66,10 @@
   <li><a class="reference" href="#convertImportToNim%2CNimNode" title="convertImportToNim(sym: NimNode): string">convertImportToNim(sym: NimNode): string</a></li>
 
 </ul>
+<ul class="simple nested-toc-section">convertToPointer
+  <li><a class="reference" href="#convertToPointer%2CNimNode" title="convertToPointer(sym: NimNode): string">convertToPointer(sym: NimNode): string</a></li>
+
+</ul>
 <ul class="simple nested-toc-section">exportConstNim
   <li><a class="reference" href="#exportConstNim%2CNimNode" title="exportConstNim(sym: NimNode)">exportConstNim(sym: NimNode)</a></li>
 
@@ -92,6 +96,10 @@
 </ul>
 <ul class="simple nested-toc-section">exportSeqNim
   <li><a class="reference" href="#exportSeqNim%2CNimNode" title="exportSeqNim(sym: NimNode)">exportSeqNim(sym: NimNode)</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">exportTypeCImport
+  <li><a class="reference" href="#exportTypeCImport%2CNimNode" title="exportTypeCImport(sym: NimNode): string">exportTypeCImport(sym: NimNode): string</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">exportTypeNim
@@ -132,9 +140,9 @@
     <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L22" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L22" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    Converts Nim value to C value (used by DLL side).
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L40" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L40" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -147,8 +155,21 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L31" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L31" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L62" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L62" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="convertToPointer-procs-all">
+  <div id="convertToPointer,NimNode">
+  <dt><pre><span class="Keyword">proc</span> <a href="#convertToPointer%2CNimNode"><span class="Identifier">convertToPointer</span></a><span class="Other">(</span><span class="Identifier">sym</span><span class="Other">:</span> <span class="Identifier">NimNode</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Converts client-side wrapper to pointer for C call.
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L50" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L50" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -160,8 +181,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L42" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L42" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L73" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L73" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -173,8 +194,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L47" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L47" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L78" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L78" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -187,8 +208,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L129" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L129" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L172" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L172" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -202,8 +223,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L54" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L54" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L85" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L85" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -217,8 +238,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L241" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L241" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L290" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L290" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -230,8 +251,21 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L321" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L321" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L374" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L374" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="exportTypeCImport-procs-all">
+  <div id="exportTypeCImport,NimNode">
+  <dt><pre><span class="Keyword">proc</span> <a href="#exportTypeCImport%2CNimNode"><span class="Identifier">exportTypeCImport</span></a><span class="Other">(</span><span class="Identifier">sym</span><span class="Other">:</span> <span class="Identifier">NimNode</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Returns type for C import declaration. Ref objects become pointer.
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L24" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L24" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -242,9 +276,9 @@
   <dt><pre><span class="Keyword">proc</span> <a href="#exportTypeNim%2CNimNode"><span class="Identifier">exportTypeNim</span></a><span class="Other">(</span><span class="Identifier">sym</span><span class="Other">:</span> <span class="Identifier">NimNode</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L9" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L9" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    Returns type for Nim wrapper proc signature.
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L10" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L10" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -257,8 +291,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L365" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L365" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/languages/nim.nim#L420" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/languages/nim.nim#L420" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -274,7 +308,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-05 16:08:34 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-24 23:16:37 UTC</small>
       </div>
     </div>
   </div>

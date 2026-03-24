@@ -62,6 +62,10 @@
 <li><a class="reference external"
           data-doc-search-tag="zig: proc convertImportToZig(inner: string; sym: string): string" href="genny/languages/zig.html#convertImportToZig%2Cstring%2Cstring">zig: proc convertImportToZig(inner: string; sym: string): string</a></li>
           </ul></dd>
+<dt><a name="convertToPointer" href="#convertToPointer"><span>convertToPointer:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nim: proc convertToPointer(sym: NimNode): string" href="genny/languages/nim.html#convertToPointer%2CNimNode">nim: proc convertToPointer(sym: NimNode): string</a></li>
+          </ul></dd>
 <dt><a name="dllProc" href="#dllProc"><span>dllProc:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="c: proc dllProc(procName: string; args: openArray[(NimNode, NimNode)]; restype: string)" href="genny/languages/c.html#dllProc%2Cstring%2CopenArray%5B%5D%2Cstring">c: proc dllProc(procName: string; args: openArray[(NimNode, NimNode)]; restype: string)</a></li>
@@ -199,8 +203,8 @@
 <dt><a name="exportProcInternal" href="#exportProcInternal"><span>exportProcInternal:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="internal: proc exportProcInternal(sym: NimNode; owner: NimNode = nil;
-                   prefixes: openArray[NimNode] = [])" href="genny/internal.html#exportProcInternal%2CNimNode%2CNimNode%2CopenArray%5BNimNode%5D">internal: proc exportProcInternal(sym: NimNode; owner: NimNode = nil;
-                   prefixes: openArray[NimNode] = [])</a></li>
+                   prefixes: openArray[NimNode] = []; gcRefResult: bool = false)" href="genny/internal.html#exportProcInternal%2CNimNode%2CNimNode%2CopenArray%5BNimNode%5D%2Cbool">internal: proc exportProcInternal(sym: NimNode; owner: NimNode = nil;
+                   prefixes: openArray[NimNode] = []; gcRefResult: bool = false)</a></li>
           </ul></dd>
 <dt><a name="exportProcNim" href="#exportProcNim"><span>exportProcNim:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -308,6 +312,10 @@
 <li><a class="reference external"
           data-doc-search-tag="zig: proc exportSeqZig(sym: NimNode)" href="genny/languages/zig.html#exportSeqZig%2CNimNode">zig: proc exportSeqZig(sym: NimNode)</a></li>
           </ul></dd>
+<dt><a name="exportTypeCImport" href="#exportTypeCImport"><span>exportTypeCImport:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nim: proc exportTypeCImport(sym: NimNode): string" href="genny/languages/nim.html#exportTypeCImport%2CNimNode">nim: proc exportTypeCImport(sym: NimNode): string</a></li>
+          </ul></dd>
 <dt><a name="exportTypeNim" href="#exportTypeNim"><span>exportTypeNim:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nim: proc exportTypeNim(sym: NimNode): string" href="genny/languages/nim.html#exportTypeNim%2CNimNode">nim: proc exportTypeNim(sym: NimNode): string</a></li>
@@ -376,7 +384,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-05 16:08:34 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-24 23:16:37 UTC</small>
       </div>
     </div>
   </div>
