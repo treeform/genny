@@ -2,33 +2,9 @@
 ## collection via GC_ref in genny-generated constructors.
 
 import
-  std/[osproc, os],
+  std/[osproc, os, strutils],
   genny,
   test
-
-# When invoked with "--segfault-test", simulate the old broken codegen.
-if paramCount() > 0 and paramStr(1) == "--segfault-test":
-  # Create a ref object via the FFI constructor (which now has GC_ref).
-  let obj = test_new_ref_obj_with_seq()
-  for i in 0 ..< 10:
-    test_ref_obj_with_seq_data_add(obj, byte(i))
-
-  # Undo the GC_ref to simulate the old broken codegen (no GC_ref).
-  GC_unref(obj)
-
-  # The object now has refcount 0 from Nim's perspective.
-  # Force ORC to destroy it.
-  GC_fullCollect()
-
-  # Scribble over the freed memory so any access crashes.
-  let raw = cast[ptr UncheckedArray[byte]](obj)
-  for i in 0 ..< 128:
-    raw[i] = 0xFF
-
-  # Attempt the unref that Python's __del__ would do.
-  # This hits corrupted memory and should crash.
-  test_ref_obj_with_seq_unref(obj)
-  quit(0)
 
 block:
   ## Verify that an exported ref object survives GC collection.
@@ -60,10 +36,21 @@ block:
   echo "PASS: ref object with seq data survives GC collection"
 
 block:
-  ## Prove that without GC_ref, using a freed ref object crashes.
-  ## Runs the broken path in a subprocess so the test runner does not die.
+  ## Compile and run test_gc_ref_segfault.nim which reproduces the original bug:
+  ## a ref object created without GC_ref, held only as a raw pointer.
+  ## The subprocess should crash, proving the bug exists without the fix.
   let
-    exe = getAppFilename()
-    (output, exitCode) = execCmdEx(exe & " --segfault-test")
-  assert exitCode != 0, "Expected crash from missing GC_ref, but process exited cleanly."
-  echo "PASS: missing GC_ref causes crash (exit code: " & $exitCode & ")"
+    thisDir = parentDir(currentSourcePath())
+    segfaultSrc = thisDir / "test_gc_ref_segfault.nim"
+    segfaultBin = thisDir / "test_gc_ref_segfault"
+
+  # Compile the segfault test.
+  let (compileOutput, compileExit) = execCmdEx(
+    "nim c --gc:orc -d:gennyNim -d:gennyPython -d:gennyNode -d:gennyC -d:gennyCpp -d:gennyZig " & segfaultSrc
+  )
+  assert compileExit == 0, "Failed to compile segfault test:\n" & compileOutput
+
+  # Run it and expect a crash.
+  let (runOutput, runExit) = execCmdEx(segfaultBin)
+  assert runExit != 0, "Expected crash from missing GC_ref, but process exited cleanly."
+  echo "PASS: missing GC_ref causes crash (exit code: " & $runExit & ")"
