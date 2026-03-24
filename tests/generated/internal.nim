@@ -18,7 +18,8 @@ proc test_simple_ref_obj_unref*(x: SimpleRefObj) {.raises: [], cdecl, exportc, d
   GC_unref(x)
 
 proc test_new_simple_ref_obj*(): SimpleRefObj {.raises: [], cdecl, exportc, dynlib.} =
-  newSimpleRefObj()
+  result = newSimpleRefObj()
+  GC_ref(result)
 
 proc test_simple_ref_obj_get_simple_ref_a*(simple_ref_obj: SimpleRefObj): int {.raises: [], cdecl, exportc, dynlib.} =
   simple_ref_obj.simpleRefA
@@ -39,7 +40,8 @@ type SeqInt* = ref object
   s: seq[int]
 
 proc test_new_seq_int*(): SeqInt {.raises: [], cdecl, exportc, dynlib.} =
-  SeqInt()
+  result = SeqInt()
+  GC_ref(result)
 
 proc test_seq_int_len*(s: SeqInt): int {.raises: [], cdecl, exportc, dynlib.} =
   s.s.len
@@ -66,7 +68,8 @@ proc test_ref_obj_with_seq_unref*(x: RefObjWithSeq) {.raises: [], cdecl, exportc
   GC_unref(x)
 
 proc test_new_ref_obj_with_seq*(): RefObjWithSeq {.raises: [], cdecl, exportc, dynlib.} =
-  newRefObjWithSeq()
+  result = newRefObjWithSeq()
+  GC_ref(result)
 
 proc test_ref_obj_with_seq_data_len*(ref_obj_with_seq: RefObjWithSeq): int {.raises: [], cdecl, exportc, dynlib.} =
   ref_obj_with_seq.data.len
@@ -101,7 +104,8 @@ type SeqString* = ref object
   s: seq[string]
 
 proc test_new_seq_string*(): SeqString {.raises: [], cdecl, exportc, dynlib.} =
-  SeqString()
+  result = SeqString()
+  GC_ref(result)
 
 proc test_seq_string_len*(s: SeqString): int {.raises: [], cdecl, exportc, dynlib.} =
   s.s.len
