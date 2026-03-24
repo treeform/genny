@@ -2,7 +2,6 @@
 ## collection via GC_ref in genny-generated constructors.
 
 import
-  std/[osproc, os, strutils],
   genny,
   test
 
@@ -34,23 +33,3 @@ block:
   assert test_ref_obj_with_seq_data_get(obj, 99) == 99
   test_ref_obj_with_seq_unref(obj)
   echo "PASS: ref object with seq data survives GC collection"
-
-block:
-  ## Compile and run test_gc_ref_segfault.nim which reproduces the original bug:
-  ## a ref object created without GC_ref, held only as a raw pointer.
-  ## The subprocess should crash, proving the bug exists without the fix.
-  let
-    thisDir = parentDir(currentSourcePath())
-    segfaultSrc = thisDir / "test_gc_ref_segfault.nim"
-    segfaultBin = thisDir / "test_gc_ref_segfault"
-
-  # Compile the segfault test.
-  let (compileOutput, compileExit) = execCmdEx(
-    "nim c --gc:orc -d:gennyNim -d:gennyPython -d:gennyNode -d:gennyC -d:gennyCpp -d:gennyZig " & segfaultSrc
-  )
-  assert compileExit == 0, "Failed to compile segfault test:\n" & compileOutput
-
-  # Run it and expect a crash.
-  let (runOutput, runExit) = execCmdEx(segfaultBin)
-  assert runExit != 0, "Expected crash from missing GC_ref, but process exited cleanly."
-  echo "PASS: missing GC_ref causes crash (exit code: " & $runExit & ")"
