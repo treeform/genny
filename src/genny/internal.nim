@@ -15,7 +15,8 @@ proc exportEnumInternal*(sym: NimNode) =
 proc exportProcInternal*(
   sym: NimNode,
   owner: NimNode = nil,
-  prefixes: openarray[NimNode] = []
+  prefixes: openarray[NimNode] = [],
+  gcRefResult: bool = false
 ) =
   let
     procName = sym.repr
@@ -49,6 +50,8 @@ proc exportProcInternal*(
     internal.add "  try:\n  "
   if procRaises and procReturn.kind != nnkEmpty:
     internal.add "  result = "
+  elif gcRefResult:
+    internal.add "  result = "
   else:
     internal.add "  "
   if procReturnsSeq:
@@ -68,6 +71,8 @@ proc exportProcInternal*(
     internal.add "\n"
     internal.add "  except $LibError as e:\n"
     internal.add "    lastError = e"
+  if gcRefResult:
+    internal.add "\n  GC_ref(result)"
   internal.add "\n"
   internal.add "\n"
 
@@ -132,7 +137,7 @@ proc exportRefObjectInternal*(
   internal.add "\n"
 
   if constructor != nil:
-    exportProcInternal(constructor)
+    exportProcInternal(constructor, gcRefResult = true)
 
   for (fieldName, fieldType) in fields:
     let fieldNameSnaked = toSnakeCase(fieldName)
@@ -201,7 +206,8 @@ proc generateSeqs(sym: NimNode) =
   internal.add &"proc $lib_new_{seqNameSnaked}*(): {seqName}"
   internal.add &" {exportProcPragmas}"
   internal.add " =\n"
-  internal.add &"  {seqName}()\n"
+  internal.add &"  result = {seqName}()\n"
+  internal.add "  GC_ref(result)\n"
   internal.add "\n"
 
   internal.add &"proc $lib_{seqNameSnaked}_len*(s: {seqName}): int"
