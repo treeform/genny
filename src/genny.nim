@@ -1,9 +1,15 @@
-import genny/internal, genny/languages/c, genny/languages/cpp,
-    genny/languages/nim, genny/languages/node, genny/languages/python,
-    genny/languages/zig, macros, strformat
+import genny/internal, macros, strformat
 
-when not defined(gennyNim) and not defined(gennyPython) and not defined(gennyNode) and not defined(gennyC) and not defined(gennyCpp) and not defined(gennyZig):
-  {.error: "Please define one of the genny languages. Use -d:gennyNim, -d:gennyPython, -d:gennyNode, -d:gennyC, -d:gennyCpp, -d:gennyZig to define the languages you want to export.".}
+when defined(gennyC): import genny/languages/c
+when defined(gennyCpp): import genny/languages/cpp
+when defined(gennyNim): import genny/languages/nim
+when defined(gennyNode): import genny/languages/node
+when defined(gennyPython): import genny/languages/python
+when defined(gennyPythonNative): import genny/languages/python_native
+when defined(gennyZig): import genny/languages/zig
+
+when not defined(gennyNim) and not defined(gennyPython) and not defined(gennyPythonNative) and not defined(gennyNode) and not defined(gennyC) and not defined(gennyCpp) and not defined(gennyZig):
+  {.error: "Please define one of the genny languages. Use -d:gennyNim, -d:gennyPython, -d:gennyPythonNative, -d:gennyNode, -d:gennyC, -d:gennyCpp, -d:gennyZig to define the languages you want to export.".}
 
 template discard2(f: untyped): untyped =
   when(compiles do: discard f):
@@ -38,6 +44,7 @@ macro exportConstsTyped(body: typed) =
     exportConstInternal(sym)
     when defined(gennyNim): exportConstNim(sym)
     when defined(gennyPython): exportConstPy(sym)
+    when defined(gennyPythonNative): exportConstPyNative(sym)
     when defined(gennyNode): exportConstNode(sym)
     when defined(gennyC): exportConstC(sym)
     when defined(gennyCpp): exportConstCpp(sym)
@@ -62,6 +69,7 @@ macro exportEnumsTyped(body: typed) =
     exportEnumInternal(sym)
     when defined(gennyNim): exportEnumNim(sym)
     when defined(gennyPython): exportEnumPy(sym)
+    when defined(gennyPythonNative): exportEnumPyNative(sym)
     when defined(gennyNode): exportEnumNode(sym)
     when defined(gennyC): exportEnumC(sym)
     when defined(gennyCpp): exportEnumCpp(sym)
@@ -120,6 +128,7 @@ proc procTyped(
   exportProcInternal(procSym, owner, prefixes)
   when defined(gennyNim): exportProcNim(procSym, owner, prefixes)
   when defined(gennyPython): exportProcPy(procSym, owner, prefixes)
+  when defined(gennyPythonNative): exportProcPyNative(procSym, owner, prefixes)
   when defined(gennyNode): exportProcNode(procSym, owner, prefixes)
   when defined(gennyC): exportProcC(procSym, owner, prefixes)
   when defined(gennyCpp): exportProcCpp(procSym, owner, prefixes)
@@ -179,12 +188,13 @@ macro exportObjectTyped(body: typed) =
       nil
 
   exportObjectInternal(sym, constructor)
-  exportObjectNim(sym, constructor)
-  exportObjectPy(sym, constructor)
-  exportObjectNode(sym, constructor)
-  exportObjectC(sym, constructor)
-  exportObjectCpp(sym, constructor)
-  exportObjectZig(sym, constructor)
+  when defined(gennyNim): exportObjectNim(sym, constructor)
+  when defined(gennyPython): exportObjectPy(sym, constructor)
+  when defined(gennyPythonNative): exportObjectPyNative(sym, constructor)
+  when defined(gennyNode): exportObjectNode(sym, constructor)
+  when defined(gennyC): exportObjectC(sym, constructor)
+  when defined(gennyCpp): exportObjectCpp(sym, constructor)
+  when defined(gennyZig): exportObjectZig(sym, constructor)
 
   if procsBlock[1].len > 0:
     var procsSeen: seq[string]
@@ -201,13 +211,14 @@ macro exportObjectTyped(body: typed) =
       exportProcInternal(procSym, sym, prefixes)
       when defined(gennyNim): exportProcNim(procSym, sym, prefixes)
       when defined(gennyPython): exportProcPy(procSym, sym, prefixes)
+      when defined(gennyPythonNative): exportProcPyNative(procSym, sym, prefixes)
       when defined(gennyNode): exportProcNode(procSym, sym, prefixes)
       when defined(gennyC): exportProcC(procSym, sym, prefixes)
       when defined(gennyCpp): exportProcCpp(procSym, sym, prefixes)
       when defined(gennyZig): exportProcZig(procSym, sym, prefixes)
 
-  exportCloseObjectZig()
-  exportCloseObjectCpp()
+  when defined(gennyZig): exportCloseObjectZig()
+  when defined(gennyCpp): exportCloseObjectCpp()
 
 template exportObject*(sym, body: untyped) =
   ## Exports an object, with these sections:
@@ -240,6 +251,7 @@ macro exportSeqTyped(body: typed) =
   exportSeqInternal(sym)
   when defined(gennyNim): exportSeqNim(sym)
   when defined(gennyPython): exportSeqPy(sym)
+  when defined(gennyPythonNative): exportSeqPyNative(sym)
   when defined(gennyNode): exportSeqNode(sym)
   when defined(gennyC): exportSeqC(sym)
   when defined(gennyCpp): exportSeqCpp(sym)
@@ -248,8 +260,8 @@ macro exportSeqTyped(body: typed) =
   for entry in body.asStmtList()[1 .. ^1]:
     procTyped(entry, sym)
 
-  exportCloseObjectCpp()
-  exportCloseObjectZig()
+  when defined(gennyCpp): exportCloseObjectCpp()
+  when defined(gennyZig): exportCloseObjectZig()
 
 template exportSeq*(sym, body: untyped) =
   ## Exports a regular sequence.
@@ -317,12 +329,13 @@ macro exportRefObjectTyped(body: typed) =
       nil
 
   exportRefObjectInternal(sym, fields, constructor)
-  exportRefObjectNim(sym, fields, constructor)
-  exportRefObjectPy(sym, fields, constructor)
-  exportRefObjectNode(sym, fields, constructor)
-  exportRefObjectC(sym, fields, constructor)
-  exportRefObjectCpp(sym, fields, constructor)
-  exportRefObjectZig(sym, fields, constructor)
+  when defined(gennyNim): exportRefObjectNim(sym, fields, constructor)
+  when defined(gennyPython): exportRefObjectPy(sym, fields, constructor)
+  when defined(gennyPythonNative): exportRefObjectPyNative(sym, fields, constructor)
+  when defined(gennyNode): exportRefObjectNode(sym, fields, constructor)
+  when defined(gennyC): exportRefObjectC(sym, fields, constructor)
+  when defined(gennyCpp): exportRefObjectCpp(sym, fields, constructor)
+  when defined(gennyZig): exportRefObjectZig(sym, fields, constructor)
 
   if procsBlock[1].len > 0:
     var procsSeen: seq[string]
@@ -339,13 +352,14 @@ macro exportRefObjectTyped(body: typed) =
       exportProcInternal(procSym, sym, prefixes)
       when defined(gennyNim): exportProcNim(procSym, sym, prefixes)
       when defined(gennyPython): exportProcPy(procSym, sym, prefixes)
+      when defined(gennyPythonNative): exportProcPyNative(procSym, sym, prefixes)
       when defined(gennyNode): exportProcNode(procSym, sym, prefixes)
       when defined(gennyC): exportProcC(procSym, sym, prefixes)
       when defined(gennyCpp): exportProcCpp(procSym, sym, prefixes)
       when defined(gennyZig): exportProcZig(procSym, sym, prefixes)
 
-  exportCloseObjectCpp()
-  exportCloseObjectZig()
+  when defined(gennyCpp): exportCloseObjectCpp()
+  when defined(gennyZig): exportCloseObjectZig()
 
 template exportRefObject*(sym, body: untyped) =
   ## Exports a ref object, with these sections:
@@ -357,9 +371,11 @@ template exportRefObject*(sym, body: untyped) =
 macro writeFiles*(dir, lib: static[string]) =
   ## This needs to be and the end of the file and it needs to be followed by:
   ## `include generated/internal`
+  result = newStmtList()
   writeInternal(dir, lib)
   when defined(gennyNim): writeNim(dir, lib)
   when defined(gennyPython): writePy(dir, lib)
+  when defined(gennyPythonNative): result.add writePyNative(dir, lib)
   when defined(gennyNode): writeNode(dir, lib)
   when defined(gennyC): writeC(dir, lib)
   when defined(gennyCpp): writeCpp(dir, lib)

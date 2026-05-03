@@ -7,68 +7,99 @@ var
   procs {.compiletime.}: string
   refObjectNames {.compiletime.}: HashSet[string]
 
+proc isSeqLike(sym: NimNode): bool =
+  ## Returns true for sequence-shaped types that Genny should expose through
+  ## generated seq wrappers. `openArray[T]` is normalized to the same wrapper
+  ## shape as `seq[T]` because exported bindings pass it through the internal
+  ## Nim ABI as an owned/generated sequence handle.
+  sym.kind == nnkBracketExpr and sym[0].repr in ["seq", "openArray"]
+
+proc stripSink(sym: NimNode): NimNode =
+  ## Removes Nim's `sink[T]` ownership wrapper so backend type generation can
+  ## reason about the payload type. The binding ABI does not expose `sink`
+  ## itself; it only needs to know that a `T` value is crossing the boundary.
+  if sym.kind == nnkBracketExpr and sym[0].repr == "sink":
+    return sym[1]
+  else:
+    return sym
+
 proc exportTypeNim*(sym: NimNode): string =
   ## Returns type for Nim wrapper proc signature.
-  if sym.kind == nnkBracketExpr:
-    if sym[0].repr != "seq":
-      error(&"Unexpected bracket expression {sym[0].repr}[", sym)
-    result = sym.getSeqName()
+  let typ = sym.stripSink
+  if typ.kind == nnkBracketExpr:
+    if not typ.isSeqLike:
+      error(&"Unexpected bracket expression {typ[0].repr}[", typ)
+    return typ.getSeqName()
   else:
-    if sym.repr == "string":
-      result = "cstring"
-    elif sym.repr == "Rune":
-      result = "int32"
+    if typ.repr == "string":
+      return "cstring"
+    elif typ.repr == "Rune":
+      return "int32"
     else:
-      result = sym.repr
+      return typ.repr
 
 proc exportTypeCImport*(sym: NimNode): string =
   ## Returns type for C import declaration. Ref objects become pointer.
-  if sym.kind == nnkBracketExpr:
-    if sym[0].repr != "seq":
-      error(&"Unexpected bracket expression {sym[0].repr}[", sym)
-    result = "pointer"  # Sequences are ref objects
+  let typ = sym.stripSink
+  if typ.kind == nnkBracketExpr:
+    if not typ.isSeqLike:
+      error(&"Unexpected bracket expression {typ[0].repr}[", typ)
+    return "pointer"  # Sequences are ref objects
   else:
-    if sym.repr == "string":
-      result = "cstring"
-    elif sym.repr == "Rune":
-      result = "int32"
-    elif sym.repr in refObjectNames:
-      result = "pointer"
+    if typ.repr == "string":
+      return "cstring"
+    elif typ.repr == "Rune":
+      return "int32"
+    elif typ.repr in refObjectNames:
+      return "pointer"
     else:
-      result = sym.repr
+      return typ.repr
 
 proc convertExportFromNim*(sym: NimNode): string =
   ## Converts Nim value to C value (used by DLL side).
-  if sym.kind == nnkBracketExpr:
-    discard
+  let typ = sym.stripSink
+  if typ.kind == nnkBracketExpr:
+    if not typ.isSeqLike:
+      error(&"Unexpected bracket expression {typ[0].repr}[", typ)
+    return ""
   else:
-    if sym.repr == "string":
-      result = ".cstring"
-    elif sym.repr == "Rune":
-      result = ".int32"
+    if typ.repr == "string":
+      return ".cstring"
+    elif typ.repr == "Rune":
+      return ".int32"
+    else:
+      return ""
 
 proc convertToPointer*(sym: NimNode): string =
   ## Converts client-side wrapper to pointer for C call.
-  if sym.kind == nnkBracketExpr:
-    result = ".reference"  # Pass the pointer from ref wrapper
+  let typ = sym.stripSink
+  if typ.kind == nnkBracketExpr:
+    if not typ.isSeqLike:
+      error(&"Unexpected bracket expression {typ[0].repr}[", typ)
+    return ".reference"  # Pass the pointer from ref wrapper
   else:
-    if sym.repr == "string":
-      result = ".cstring"
-    elif sym.repr == "Rune":
-      result = ".int32"
-    elif sym.repr in refObjectNames:
-      result = ".reference"
+    if typ.repr == "string":
+      return ".cstring"
+    elif typ.repr == "Rune":
+      return ".int32"
+    elif typ.repr in refObjectNames:
+      return ".reference"
+    else:
+      return ""
 
 proc convertImportToNim*(sym: NimNode): string =
-  if sym.kind == nnkBracketExpr:
-    if sym[0].repr != "seq":
-      error(&"Unexpected bracket expression {sym[0].repr}[", sym)
-    result = ".s"
+  let typ = sym.stripSink
+  if typ.kind == nnkBracketExpr:
+    if not typ.isSeqLike:
+      error(&"Unexpected bracket expression {typ[0].repr}[", typ)
+    return ".s"
   else:
-    if sym.repr == "string":
-      result = ".`$`"
-    elif sym.repr == "Rune":
-      result = ".Rune"
+    if typ.repr == "string":
+      return ".`$`"
+    elif typ.repr == "Rune":
+      return ".Rune"
+    else:
+      return ""
 
 proc exportConstNim*(sym: NimNode) =
   let impl = sym.getImpl()

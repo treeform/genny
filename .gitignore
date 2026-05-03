@@ -7,7 +7,13 @@
 *.exe
 *.dll
 *.so
+*.pyd
+*.deps
 nimcache
+__pycache__/
+tests/generated/*_native.c
 *.pdb
 *.ilk
 .*
+!.github/
+!.github/**

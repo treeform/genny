@@ -17,3 +17,6 @@ jobs:
       run: nim c --mm:arc --app:lib -d:gennyPython -o:tests/generated/libtest.so tests/test.nim
     - name: Run Python test
       run: python tests/test_python.py
+    - name: Run non-gating benchmark
+      continue-on-error: true
+      run: python tests/bench_python.py

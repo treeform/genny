@@ -8,20 +8,37 @@ var
 
 const operators = ["add", "sub", "mul", "div"]
 
+proc stripSink(sym: NimNode): NimNode =
+  ## Removes Nim's `sink[T]` ownership wrapper before mapping a type to ctypes.
+  ## Python callers pass the payload value; the generated Nim side handles the
+  ## ownership semantics at the ABI boundary.
+  if sym.kind == nnkBracketExpr and sym[0].repr == "sink":
+    sym[1]
+  else:
+    sym
+
+proc isSeqLike(sym: NimNode): bool =
+  ## Returns true for sequence-shaped types that should reuse Genny's generated
+  ## seq wrapper classes. `openArray[T]` is treated like `seq[T]` for Python
+  ## bindings because the internal ABI receives a generated sequence handle.
+  let typ = sym.stripSink
+  typ.kind == nnkBracketExpr and typ[0].repr in ["seq", "openArray"]
+
 proc exportTypePy(sym: NimNode): string =
-  if sym.kind == nnkBracketExpr:
-    if sym[0].repr == "array":
+  let typ = sym.stripSink
+  if typ.kind == nnkBracketExpr:
+    if typ[0].repr == "array":
       let
-        entryCount = sym[1].repr
-        entryType = exportTypePy(sym[2])
+        entryCount = typ[1].repr
+        entryType = exportTypePy(typ[2])
       result = &"{entryType} * {entryCount}"
-    elif sym[0].repr == "seq":
-      result = sym.getSeqName()
+    elif typ.isSeqLike:
+      result = typ.getSeqName()
     else:
-      error(&"Unexpected bracket expression {sym[0].repr}[")
+      error(&"Unexpected bracket expression {typ[0].repr}[")
   else:
     result =
-      case sym.repr:
+      case typ.repr:
       of "string": "c_char_p"
       of "cstring": "c_char_p"
       of "pointer": "c_void_p"
@@ -45,14 +62,16 @@ proc exportTypePy(sym: NimNode): string =
       of "Mat3": "Matrix3"
       of "", "nil": "None"
       else:
-        sym.repr
+        typ.repr
 
 proc convertExportFromPy*(sym: NimNode): string =
-  if sym.repr == "string":
+  let typ = sym.stripSink
+  if typ.repr == "string":
     result = ".encode(\"utf8\")"
 
 proc convertImportToPy*(sym: NimNode): string =
-  if sym.repr == "string":
+  let typ = sym.stripSink
+  if typ.repr == "string":
     result = ".decode(\"utf8\")"
 
 proc toArgTypes(args: openarray[NimNode]): seq[string] =
