@@ -3,6 +3,11 @@
 #include <cstring>
 #include <iostream>
 #include <string>
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <sys/stat.h>
+#endif
 #include "pixie.hpp"
 
 #ifndef PIXIE_ROOT
@@ -11,6 +16,11 @@
 
 #define FONT_PATH PIXIE_ROOT "/tests/fonts/Inter-Regular.ttf"
 #define IMAGE_PATH PIXIE_ROOT "/tests/images/turtle.png"
+
+static const std::string renderOutputDir = "tests/generated/pixie_images";
+static const std::string goldenDir = "tests/goldens";
+static constexpr float maxChannelDelta = 0.02f;
+static constexpr double maxAvgDelta = 0.002;
 
 static void approx(float value, float expected, float eps = 0.0001f) {
     assert(std::fabs(value - expected) <= eps);
@@ -21,6 +31,93 @@ static void assertColor(Color actual, Color expected) {
     approx(actual.g, expected.g);
     approx(actual.b, expected.b);
     approx(actual.a, expected.a);
+}
+
+static void recordDelta(float delta, double &totalDelta, float &maxDelta) {
+    totalDelta += delta;
+    if (delta > maxDelta) {
+        maxDelta = delta;
+    }
+}
+
+static void ensureRenderOutputDir() {
+#ifdef _WIN32
+    _mkdir("tests/generated");
+    _mkdir(renderOutputDir.c_str());
+#else
+    mkdir("tests/generated", 0777);
+    mkdir(renderOutputDir.c_str(), 0777);
+#endif
+}
+
+static void assertImagesNearlyEqual(const std::string &actualPath, const std::string &goldenPath) {
+    Image actual = readImage(actualPath.c_str());
+    Image golden = readImage(goldenPath.c_str());
+
+    int width = actual.getWidth();
+    int height = actual.getHeight();
+    assert(width == golden.getWidth());
+    assert(height == golden.getHeight());
+
+    double totalDelta = 0;
+    float maxDelta = 0;
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            Color actualColor = actual.getColor(x, y);
+            Color goldenColor = golden.getColor(x, y);
+            recordDelta(std::fabs(actualColor.r - goldenColor.r), totalDelta, maxDelta);
+            recordDelta(std::fabs(actualColor.g - goldenColor.g), totalDelta, maxDelta);
+            recordDelta(std::fabs(actualColor.b - goldenColor.b), totalDelta, maxDelta);
+            recordDelta(std::fabs(actualColor.a - goldenColor.a), totalDelta, maxDelta);
+        }
+    }
+
+    double avgDelta = totalDelta / static_cast<double>(width * height * 4);
+    assert(maxDelta <= maxChannelDelta);
+    assert(avgDelta <= maxAvgDelta);
+}
+
+static void writeRenderStep(Image &image, const std::string &label, const std::string &step) {
+    std::string actualPath = renderOutputDir + "/" + label + "_" + step + ".png";
+    std::string goldenPath = goldenDir + "/pixie_render_" + step + ".png";
+    image.writeFile(actualPath.c_str());
+    assertImagesNearlyEqual(actualPath, goldenPath);
+}
+
+static void runRenderGoldens(const std::string &label) {
+    ensureRenderOutputDir();
+
+    Image image(32, 32);
+    image.fill(parseColor("#112233"));
+    Color orange = parseColor("#f29e4c");
+    for (int y = 2; y < 10; y++) {
+        for (int x = 2; x < 10; x++) {
+            image.setColor(x, y, orange);
+        }
+    }
+    writeRenderStep(image, label, "step1");
+
+    Paint rectPaint(SOLID_PAINT);
+    rectPaint.setColor(parseColor("#209cee"));
+    Path rectPath;
+    rectPath.rect(12, 3, 14, 16, true);
+    image.fillPath(rectPath, rectPaint, translate(1, 2), NON_ZERO);
+    writeRenderStep(image, label, "step2");
+
+    Paint circlePaint(SOLID_PAINT);
+    circlePaint.setColor(parseColor("#8ac926"));
+    Path circlePath;
+    circlePath.circle(12, 22, 7);
+    image.fillPath(circlePath, circlePaint, translate(0, 0), NON_ZERO);
+
+    Paint strokePaint(SOLID_PAINT);
+    strokePaint.setColor(parseColor("#ffffff"));
+    Path borderPath;
+    borderPath.rect(0.75f, 0.75f, 30.5f, 30.5f, true);
+    SeqFloat32 dashes;
+    image.strokePath(borderPath, strokePaint, translate(0, 0), 1.5f, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, dashes);
+    image.setColor(31, 31, parseColor("#ff00ff"));
+    writeRenderStep(image, label, "step3");
 }
 
 int main() {
@@ -247,6 +344,7 @@ int main() {
     assert(readImageDimensions(IMAGE_PATH).height == 40);
     approx(readFont(FONT_PATH).getSize(), 12);
     assert(parsePath("M0 0 L10 0 L10 10 Z").computeBounds(identity).w == 10);
+    runRenderGoldens("cpp");
     parseColor("bad");
     assert(checkError());
     assert(takeError().find("bad") != std::string::npos);

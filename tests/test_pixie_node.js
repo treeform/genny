@@ -1,4 +1,5 @@
 const assert = require('assert');
+const fs = require('fs');
 const Module = require('module');
 const path = require('path');
 
@@ -10,6 +11,10 @@ Module._initPaths();
 const pixieRoot = path.resolve(process.env.PIXIE_ROOT || path.join(__dirname, '..', '..', 'pixie'));
 const bindingsDir = path.resolve(process.env.PIXIE_BINDINGS_DIR || path.join(pixieRoot, 'bindings', 'generated'));
 const pixie = require(path.join(bindingsDir, 'pixie.js'));
+const renderOutputDir = path.join(__dirname, 'generated', 'pixie_images');
+const goldenDir = path.join(__dirname, 'goldens');
+const maxChannelDelta = 0.02;
+const maxAvgDelta = 0.002;
 
 function asset(...parts) {
   return path.join(pixieRoot, ...parts);
@@ -24,6 +29,77 @@ function assertColor(actual, expected) {
   approx(actual.g, expected.g);
   approx(actual.b, expected.b);
   approx(actual.a, expected.a);
+}
+
+function recordDelta(delta, totals) {
+  totals.total += delta;
+  totals.max = Math.max(totals.max, delta);
+}
+
+function assertImagesNearlyEqual(actualPath, goldenPath) {
+  const actual = pixie.readImage(actualPath);
+  const golden = pixie.readImage(goldenPath);
+  assert.strictEqual(actual.width, golden.width);
+  assert.strictEqual(actual.height, golden.height);
+
+  const totals = { total: 0, max: 0 };
+  for (let y = 0; y < actual.height; y++) {
+    for (let x = 0; x < actual.width; x++) {
+      const actualColor = actual.getColor(x, y);
+      const goldenColor = golden.getColor(x, y);
+      recordDelta(Math.abs(actualColor.r - goldenColor.r), totals);
+      recordDelta(Math.abs(actualColor.g - goldenColor.g), totals);
+      recordDelta(Math.abs(actualColor.b - goldenColor.b), totals);
+      recordDelta(Math.abs(actualColor.a - goldenColor.a), totals);
+    }
+  }
+
+  const avg = totals.total / (actual.width * actual.height * 4);
+  assert(totals.max <= maxChannelDelta, `${actualPath} differs from ${goldenPath}: max delta ${totals.max}`);
+  assert(avg <= maxAvgDelta, `${actualPath} differs from ${goldenPath}: avg delta ${avg}`);
+}
+
+function writeRenderStep(image, label, step) {
+  fs.mkdirSync(renderOutputDir, { recursive: true });
+  const actualPath = path.join(renderOutputDir, `${label}_${step}.png`);
+  const goldenPath = path.join(goldenDir, `pixie_render_${step}.png`);
+  image.writeFile(actualPath);
+  assertImagesNearlyEqual(actualPath, goldenPath);
+}
+
+function runRenderGoldens(label) {
+  const render = pixie.newImage(32, 32);
+  render.fill(pixie.parseColor('#112233'));
+
+  const orange = pixie.parseColor('#f29e4c');
+  for (let y = 2; y < 10; y++) {
+    for (let x = 2; x < 10; x++) {
+      render.setColor(x, y, orange);
+    }
+  }
+  writeRenderStep(render, label, 'step1');
+
+  const rectPaint = pixie.newPaint(pixie.SOLID_PAINT);
+  rectPaint.color = pixie.parseColor('#209cee');
+  const rectPath = pixie.newPath();
+  rectPath.rect(12, 3, 14, 16, true);
+  render.fillPath(rectPath, rectPaint, pixie.translate(1, 2), pixie.NON_ZERO);
+  writeRenderStep(render, label, 'step2');
+
+  const circlePaint = pixie.newPaint(pixie.SOLID_PAINT);
+  circlePaint.color = pixie.parseColor('#8ac926');
+  const circlePath = pixie.newPath();
+  circlePath.circle(12, 22, 7);
+  render.fillPath(circlePath, circlePaint, pixie.translate(0, 0), pixie.NON_ZERO);
+
+  const strokePaint = pixie.newPaint(pixie.SOLID_PAINT);
+  strokePaint.color = pixie.parseColor('#ffffff');
+  const borderPath = pixie.newPath();
+  borderPath.rect(0.75, 0.75, 30.5, 30.5, true);
+  const dashes = pixie.newSeqFloat32();
+  render.strokePath(borderPath, strokePaint, pixie.translate(0, 0), 1.5, pixie.BUTT_CAP, pixie.MITER_JOIN, pixie.DEFAULT_MITER_LIMIT, dashes);
+  render.setColor(31, 31, pixie.parseColor('#ff00ff'));
+  writeRenderStep(render, label, 'step3');
 }
 
 const fontPath = asset('tests', 'fonts', 'Inter-Regular.ttf');
@@ -243,6 +319,7 @@ assert.strictEqual(pixie.readImage(imagePath).width, 40);
 assert.strictEqual(pixie.readImageDimensions(imagePath).height, 40);
 assert.strictEqual(pixie.readFont(fontPath).size, 12);
 assert.strictEqual(pixie.parsePath('M0 0 L10 0 L10 10 Z').computeBounds(identity).w, 10);
+runRenderGoldens('node');
 pixie.parseColor('bad');
 assert(pixie.checkError());
 assert(pixie.takeError().includes('bad'));

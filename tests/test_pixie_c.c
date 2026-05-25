@@ -3,6 +3,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <sys/stat.h>
+#endif
 #include "pixie.h"
 
 #ifndef PIXIE_ROOT
@@ -11,6 +16,10 @@
 
 #define FONT_PATH PIXIE_ROOT "/tests/fonts/Inter-Regular.ttf"
 #define IMAGE_PATH PIXIE_ROOT "/tests/images/turtle.png"
+#define PIXIE_RENDER_DIR "tests/generated/pixie_images"
+#define PIXIE_GOLDEN_DIR "tests/goldens"
+#define PIXIE_MAX_CHANNEL_DELTA 0.02f
+#define PIXIE_MAX_AVG_DELTA 0.002f
 
 static void approx(float value, float expected) {
     assert(fabsf(value - expected) < 0.0001f);
@@ -45,6 +54,112 @@ static void assert_buffer_equals(GennyBuffer buffer, const char *expected) {
     assert(len == (intptr_t)strlen(expected));
     assert(memcmp(pixie_genny_buffer_data(buffer), expected, (size_t)len) == 0);
     pixie_genny_buffer_unref(buffer);
+}
+
+static void ensure_render_output_dir(void) {
+#ifdef _WIN32
+    _mkdir("tests/generated");
+    _mkdir(PIXIE_RENDER_DIR);
+#else
+    mkdir("tests/generated", 0777);
+    mkdir(PIXIE_RENDER_DIR, 0777);
+#endif
+}
+
+static void record_delta(float delta, double *total_delta, float *max_delta) {
+    *total_delta += delta;
+    if (delta > *max_delta) {
+        *max_delta = delta;
+    }
+}
+
+static void assert_images_nearly_equal(const char *actual_path, const char *golden_path) {
+    Image actual = pixie_read_image(actual_path);
+    assert(!pixie_check_error());
+    Image golden = pixie_read_image(golden_path);
+    assert(!pixie_check_error());
+
+    intptr_t width = pixie_image_get_width(actual);
+    intptr_t height = pixie_image_get_height(actual);
+    assert(width == pixie_image_get_width(golden));
+    assert(height == pixie_image_get_height(golden));
+
+    double total_delta = 0;
+    float max_delta = 0;
+    for (intptr_t y = 0; y < height; y++) {
+        for (intptr_t x = 0; x < width; x++) {
+            Color actual_color = pixie_image_get_color(actual, x, y);
+            Color golden_color = pixie_image_get_color(golden, x, y);
+            record_delta(fabsf(actual_color.r - golden_color.r), &total_delta, &max_delta);
+            record_delta(fabsf(actual_color.g - golden_color.g), &total_delta, &max_delta);
+            record_delta(fabsf(actual_color.b - golden_color.b), &total_delta, &max_delta);
+            record_delta(fabsf(actual_color.a - golden_color.a), &total_delta, &max_delta);
+        }
+    }
+
+    double avg_delta = total_delta / (double)(width * height * 4);
+    assert(max_delta <= PIXIE_MAX_CHANNEL_DELTA);
+    assert(avg_delta <= PIXIE_MAX_AVG_DELTA);
+    pixie_image_unref(actual);
+    pixie_image_unref(golden);
+}
+
+static void write_render_step(Image image, const char *label, const char *step) {
+    char actual_path[256];
+    char golden_path[256];
+    snprintf(actual_path, sizeof(actual_path), "%s/%s_%s.png", PIXIE_RENDER_DIR, label, step);
+    snprintf(golden_path, sizeof(golden_path), "%s/pixie_render_%s.png", PIXIE_GOLDEN_DIR, step);
+    pixie_image_write_file(image, actual_path);
+    assert(!pixie_check_error());
+    assert_images_nearly_equal(actual_path, golden_path);
+}
+
+static void run_render_goldens(const char *label) {
+    ensure_render_output_dir();
+
+    Image image = pixie_new_image(32, 32);
+    pixie_image_fill(image, pixie_parse_color("#112233"));
+    Color orange = pixie_parse_color("#f29e4c");
+    for (intptr_t y = 2; y < 10; y++) {
+        for (intptr_t x = 2; x < 10; x++) {
+            pixie_image_set_color(image, x, y, orange);
+        }
+    }
+    write_render_step(image, label, "step1");
+
+    Paint rect_paint = pixie_new_paint(SOLID_PAINT);
+    pixie_paint_set_color(rect_paint, pixie_parse_color("#209cee"));
+    Path rect_path = pixie_new_path();
+    pixie_path_rect(rect_path, 12, 3, 14, 16, 1);
+    pixie_image_fill_path(image, rect_path, rect_paint, pixie_translate(1, 2), NON_ZERO);
+    assert(!pixie_check_error());
+    write_render_step(image, label, "step2");
+
+    Paint circle_paint = pixie_new_paint(SOLID_PAINT);
+    pixie_paint_set_color(circle_paint, pixie_parse_color("#8ac926"));
+    Path circle_path = pixie_new_path();
+    pixie_path_circle(circle_path, 12, 22, 7);
+    pixie_image_fill_path(image, circle_path, circle_paint, pixie_translate(0, 0), NON_ZERO);
+    assert(!pixie_check_error());
+
+    Paint stroke_paint = pixie_new_paint(SOLID_PAINT);
+    pixie_paint_set_color(stroke_paint, pixie_parse_color("#ffffff"));
+    Path border_path = pixie_new_path();
+    pixie_path_rect(border_path, 0.75f, 0.75f, 30.5f, 30.5f, 1);
+    SeqFloat32 dashes = pixie_new_seq_float32();
+    pixie_image_stroke_path(image, border_path, stroke_paint, pixie_translate(0, 0), 1.5f, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, dashes);
+    assert(!pixie_check_error());
+    pixie_image_set_color(image, 31, 31, pixie_parse_color("#ff00ff"));
+    write_render_step(image, label, "step3");
+
+    pixie_seq_float32_unref(dashes);
+    pixie_path_unref(border_path);
+    pixie_paint_unref(stroke_paint);
+    pixie_path_unref(circle_path);
+    pixie_paint_unref(circle_paint);
+    pixie_path_unref(rect_path);
+    pixie_paint_unref(rect_paint);
+    pixie_image_unref(image);
 }
 
 int main() {
@@ -272,6 +387,7 @@ int main() {
     assert(pixie_read_image_dimensions(IMAGE_PATH).height == 40);
     approx(pixie_font_get_size(pixie_read_font(FONT_PATH)), 12);
     assert(pixie_path_compute_bounds(pixie_parse_path("M0 0 L10 0 L10 10 Z"), identity).w == 10);
+    run_render_goldens("c");
     pixie_parse_color("bad");
     assert(pixie_check_error());
     assert_buffer_contains(pixie_take_error(), "bad");

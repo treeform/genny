@@ -1,8 +1,83 @@
 import os, strutils
 import ../../pixie/bindings/generated/pixie
 
+const
+  renderOutputDir = "tests" / "generated" / "pixie_images"
+  goldenDir = "tests" / "goldens"
+  maxChannelDelta = 0.02'f32
+  maxAvgDelta = 0.002'f32
+
 proc approx(value, expected: float32; eps: float32 = 0.0001) =
   doAssert abs(value - expected) <= eps
+
+proc recordDelta(delta: float32; totalDelta, maxDelta: var float32) =
+  totalDelta += delta
+  if delta > maxDelta:
+    maxDelta = delta
+
+proc assertImagesNearlyEqual(actualPath, goldenPath: string) =
+  let
+    actual = readImage(actualPath)
+    golden = readImage(goldenPath)
+  doAssert actual.width == golden.width
+  doAssert actual.height == golden.height
+
+  var
+    totalDelta = 0'f32
+    maxDelta = 0'f32
+  for y in 0 ..< actual.height:
+    for x in 0 ..< actual.width:
+      let
+        actualColor = actual.getColor(x, y)
+        goldenColor = golden.getColor(x, y)
+      recordDelta(abs(actualColor.r - goldenColor.r), totalDelta, maxDelta)
+      recordDelta(abs(actualColor.g - goldenColor.g), totalDelta, maxDelta)
+      recordDelta(abs(actualColor.b - goldenColor.b), totalDelta, maxDelta)
+      recordDelta(abs(actualColor.a - goldenColor.a), totalDelta, maxDelta)
+
+  let avgDelta = totalDelta / float32(actual.width * actual.height * 4)
+  doAssert maxDelta <= maxChannelDelta
+  doAssert avgDelta <= maxAvgDelta
+
+proc writeRenderStep(image: Image; label, step: string) =
+  createDir(renderOutputDir)
+  let
+    actualPath = renderOutputDir / (label & "_" & step & ".png")
+    goldenPath = goldenDir / ("pixie_render_" & step & ".png")
+  image.writeFile(actualPath)
+  assertImagesNearlyEqual(actualPath, goldenPath)
+
+proc runRenderGoldens(label: string) =
+  let image = newImage(32, 32)
+  image.fill(parseColor("#112233"))
+
+  let orange = parseColor("#f29e4c")
+  for y in 2 ..< 10:
+    for x in 2 ..< 10:
+      image.setColor(x, y, orange)
+  writeRenderStep(image, label, "step1")
+
+  let rectPaint = newPaint(SolidPaint)
+  rectPaint.color = parseColor("#209cee")
+  let rectPath = newPath()
+  rectPath.rect(12, 3, 14, 16, true)
+  image.fillPath(rectPath, rectPaint, translate(1, 2), NonZero)
+  writeRenderStep(image, label, "step2")
+
+  let circlePaint = newPaint(SolidPaint)
+  circlePaint.color = parseColor("#8ac926")
+  let circlePath = newPath()
+  circlePath.circle(12, 22, 7)
+  image.fillPath(circlePath, circlePaint, translate(0, 0), NonZero)
+
+  let strokePaint = newPaint(SolidPaint)
+  strokePaint.color = parseColor("#ffffff")
+  let borderPath = newPath()
+  borderPath.rect(0.75, 0.75, 30.5, 30.5, true)
+  let dashes = newSeqFloat32()
+  image.strokePath(borderPath, strokePaint, translate(0, 0), 1.5, ButtCap, MiterJoin, defaultMiterLimit, dashes)
+  image.setColor(31, 31, parseColor("#ff00ff"))
+  writeRenderStep(image, label, "step3")
 
 let
   pixieRoot = getEnv("PIXIE_ROOT", "../pixie")
@@ -221,6 +296,7 @@ doAssert readImage(imagePath).width == 40
 doAssert readImageDimensions(imagePath).height == 40
 approx(readFont(fontPath).size, 12)
 doAssert parsePath("M0 0 L10 0 L10 10 Z").computeBounds(identity).w == 10
+runRenderGoldens("nim")
 try:
   discard parseColor("bad")
   doAssert false
