@@ -14,6 +14,8 @@ fn approxEps(value: f32, expected: f32, eps: f32) !void {
 }
 
 pub fn main() !void {
+    @setEvalBranchQuota(10000);
+
     const font_path = "../../pixie/tests/fonts/Inter-Regular.ttf";
     const image_path = "../../pixie/tests/images/turtle.png";
     const ppm = "P3\n2 1\n255\n255 0 0 0 255 0\n";
