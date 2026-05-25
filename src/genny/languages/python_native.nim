@@ -290,16 +290,16 @@ proc addModuleMethod(pyName, wrapperName: string) =
 proc addErrorCheck(procRaises: bool): string =
   if procRaises:
     needsErrorBridge = true
-    result.add "  if (pixie_native_check_error != NULL && pixie_native_check_error()) {\n"
-    result.add "    genny_set_error_from_buffer(pixie_native_take_error());\n"
+    result.add "  if ($lib_native_check_error != NULL && $lib_native_check_error()) {\n"
+    result.add "    genny_set_error_from_buffer($lib_native_take_error());\n"
     result.add "    return NULL;\n"
     result.add "  }\n"
 
 proc addErrorCheckInt(procRaises: bool): string =
   if procRaises:
     needsErrorBridge = true
-    result.add "  if (pixie_native_check_error != NULL && pixie_native_check_error()) {\n"
-    result.add "    genny_set_error_from_buffer(pixie_native_take_error());\n"
+    result.add "  if ($lib_native_check_error != NULL && $lib_native_check_error()) {\n"
+    result.add "    genny_set_error_from_buffer($lib_native_take_error());\n"
     result.add "    return -1;\n"
     result.add "  }\n"
 
@@ -1030,8 +1030,8 @@ proc writePyNative*(dir, lib: string): NimNode =
   if needsErrorBridge:
     code.add "extern char $lib_check_error(void);\n"
     code.add "extern void *$lib_take_error(void);\n"
-    code.add "static char (*pixie_native_check_error)(void) = $lib_check_error;\n"
-    code.add "static void *(*pixie_native_take_error)(void) = $lib_take_error;\n\n"
+    code.add "static char (*$lib_native_check_error)(void) = $lib_check_error;\n"
+    code.add "static void *(*$lib_native_take_error)(void) = $lib_take_error;\n\n"
   code.add cTypes
   code.add "\n"
   code.add cForwardDecls
