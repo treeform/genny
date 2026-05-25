@@ -275,7 +275,7 @@ proc exportObjectNim*(sym: NimNode, constructor: NimNode) =
   if objName in ["Rect", "Color"]:
     return
 
-  types.add &"type {objName}* = object\n"
+  types.add &"type {objName}* {{.bycopy.}} = object\n"
   for identDefs in sym.getImpl()[2][2]:
     for property in identDefs[0 .. ^3]:
       types.add &"  {property.repr}: {identDefs[^2].repr}\n"
