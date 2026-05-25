@@ -106,17 +106,15 @@ proc exportProc(
   indent = false,
   comments = ""
 ) =
-  let onClass = owner notin ["void", ""]
-  let indent =
-    if onClass:
-      true
-    else:
-      indent
+  let
+    onClass = owner notin ["void", ""]
+    baseIndent =
+      if onClass or indent:
+        "    "
+      else:
+        ""
 
-  if indent:
-    code.add "    "
-
-  code.add &"extern fn {apiProcName}("
+  code.add &"{baseIndent}extern fn {apiProcName}("
   for i, param in procParams:
     if onClass and i == 0:
       code.add "self"
@@ -126,7 +124,7 @@ proc exportProc(
     code.add exportTypeZigAbi(param[1])
     code.add &", "
   code.removeSuffix ", "
-  code.add ") callconv(.C) "
+  code.add ") "
   if procReturn != "":
     code.add exportTypeZigAbi(procReturn);
   else:
@@ -137,14 +135,9 @@ proc exportProc(
     for line in comments.split("\n"):
       var line = line
       line.removePrefix("##")
-      if indent:
-        code.add "    "
-      code.add "/// " & line.strip() & "\n"
+      code.add &"{baseIndent}/// " & line.strip() & "\n"
 
-  if indent:
-    code.add "    "
-
-  code.add &"pub inline fn {procName}("
+  code.add &"{baseIndent}pub inline fn {procName}("
   for i, param in procParams[0 .. ^1]:
     if onClass and i == 0:
       code.add "self"
@@ -155,16 +148,14 @@ proc exportProc(
     code.add &", "
   code.removeSuffix ", "
   code.add ") "
+  if procRaises:
+    code.add "Error!"
   if procReturn != "":
     code.add procReturn;
   else:
     code.add "void"
   code.add " "
   code.add "{\n"
-
-  if indent:
-    code.add "    "
-  code.add "    return "
 
   var call = ""
   call.add apiProcName
@@ -180,11 +171,22 @@ proc exportProc(
     call.add ", "
   call.removeSuffix ", "
   call.add &")"
-  code.add convertImportToZig(call, procReturn)
-  code.add ";\n"
-  if indent:
-    code.add "    "
-  code.add "}\n\n"
+
+  if procRaises:
+    let hasReturn = procReturn notin ["", "void"]
+    if hasReturn:
+      code.add &"{baseIndent}    const result = {call};\n"
+    else:
+      code.add &"{baseIndent}    {call};\n"
+    code.add &"{baseIndent}    if (checkError()) return error.$LibError;\n"
+    if hasReturn:
+      let resultValue = convertImportToZig("result", procReturn)
+      code.add &"{baseIndent}    return {resultValue};\n"
+    else:
+      code.add &"{baseIndent}    return;\n"
+  else:
+    code.add &"{baseIndent}    return {convertImportToZig(call, procReturn)};\n"
+  code.add baseIndent & "}\n\n"
 
 proc exportProcZig*(
   sym: NimNode,
@@ -287,7 +289,7 @@ proc genRefObject(objName: string) =
   code.add &"pub const {objName} = opaque " & "{\n"
 
   let unrefLibProc = &"$lib_{toSnakeCase(objName)}_unref"
-  code.add &"    extern fn {unrefLibProc}(self: *{objName}) callconv(.C) void;\n"
+  code.add &"    extern fn {unrefLibProc}(self: *{objName}) void;\n"
   code.add &"    pub inline fn deinit(self: *{objName}) void " & "{\n"
   code.add &"        return {unrefLibProc}(self);\n"
   code.add "    }\n\n"
@@ -399,6 +401,10 @@ proc exportSeqZig*(sym: NimNode) =
 
 const header = """
 const std = @import("std");
+
+pub const Error = error{
+    $LibError,
+};
 
 """
 
