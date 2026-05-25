@@ -41,5 +41,6 @@ jobs:
     - name: Run Pixie Zig test
       working-directory: tests
       run: |
+        cp ../../pixie/bindings/generated/pixie.zig generated/pixie.zig
         zig build-exe test_pixie_zig.zig -lc -L../../pixie/bindings/generated -lpixie
         LD_LIBRARY_PATH=$PWD/../../pixie/bindings/generated ./test_pixie_zig
