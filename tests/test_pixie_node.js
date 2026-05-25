@@ -48,6 +48,7 @@ assert.strictEqual(pixie.inverse(mat).values[6], -3);
 const a = pixie.vec2(1, 2);
 const b = pixie.vec2(3, 4);
 assert.deepStrictEqual(pixie.vec2Add(a, b), pixie.vec2(4, 6));
+assert.deepStrictEqual(pixie.vec2Mul(a, b), pixie.vec2(3, 8));
 assert.deepStrictEqual(pixie.vec2Float32Mul(a, 2), pixie.vec2(2, 4));
 assert.deepStrictEqual(pixie.mat3Vec2Mul(mat, a), pixie.vec2(4, 6));
 assert.deepStrictEqual(pixie.snapToPixels(pixie.rect(1, 2, 3, 4)), pixie.rect(1, 2, 3, 4));

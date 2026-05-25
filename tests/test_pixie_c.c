@@ -70,7 +70,10 @@ int main() {
     Vec2 sum = pixie_vec2_add(a, b);
     assert(sum.x == 4);
     assert(sum.y == 6);
-    Vec2 scaled = pixie_vec2_float32_mul(a, 2);
+    Vec2 product = pixie_vec2_mul(a, b);
+    assert(product.x == 3);
+    assert(product.y == 8);
+    Vec2 scaled = pixie_vec2_float32_mul(a, 2.0f);
     assert(scaled.x == 2);
     assert(scaled.y == 4);
     Vec2 moved = pixie_mat3_vec2_mul(mat, a);

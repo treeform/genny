@@ -39,7 +39,8 @@ pub fn main() !void {
     const a = pixie.Vec2.init(1, 2);
     const b = pixie.Vec2.init(3, 4);
     try expect(a.add(b).eql(pixie.Vec2.init(4, 6)));
-    try expect(a.mulFloat32(2).eql(pixie.Vec2.init(2, 4)));
+    try expect(a.mul(b).eql(pixie.Vec2.init(3, 8)));
+    try expect(a.mulFloat32(2.0).eql(pixie.Vec2.init(2, 4)));
     try expect(mat.mulVec2(a).eql(pixie.Vec2.init(4, 6)));
     try expect(pixie.snapToPixels(pixie.Rect.init(1, 2, 3, 4)).eql(pixie.Rect.init(1, 2, 3, 4)));
     try expect(pixie.miterLimitToAngle(2) > 0);

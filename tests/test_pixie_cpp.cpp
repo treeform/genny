@@ -46,6 +46,9 @@ int main() {
     Vec2 sum = a + b;
     assert(sum.x == 4);
     assert(sum.y == 6);
+    Vec2 product = a * b;
+    assert(product.x == 3);
+    assert(product.y == 8);
     Vec2 scaled = a * 2.0f;
     assert(scaled.x == 2);
     assert(scaled.y == 4);

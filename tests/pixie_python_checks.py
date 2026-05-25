@@ -40,7 +40,8 @@ def run(pixie):
     a = pixie.Vec2(1, 2)
     b = pixie.Vec2(3, 4)
     assert a + b == pixie.Vec2(4, 6)
-    assert a * 2 == pixie.Vec2(2, 4)
+    assert a * b == pixie.Vec2(3, 8)
+    assert a * 2.0 == pixie.Vec2(2, 4)
     assert mat * a == pixie.Vec2(4, 6)
     assert pixie.snap_to_pixels(pixie.Rect(1, 2, 3, 4)) == pixie.Rect(1, 2, 3, 4)
     assert pixie.miter_limit_to_angle(2) > 0

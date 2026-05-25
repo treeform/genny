@@ -28,7 +28,8 @@ let
   a = vec2(1, 2)
   b = vec2(3, 4)
 doAssert a + b == vec2(4, 6)
-doAssert a * 2 == vec2(2, 4)
+doAssert a * b == vec2(3, 8)
+doAssert a * 2'f32 == vec2(2, 4)
 doAssert mat * a == vec2(4, 6)
 doAssert snapToPixels(rect(1, 2, 3, 4)) == rect(1, 2, 3, 4)
 doAssert miterLimitToAngle(2) > 0
