@@ -55,6 +55,13 @@ proc exportTypeC(sym: NimNode): string =
       else:
         typ.repr
 
+proc exportReturnTypeC(sym: NimNode): string =
+  let typ = sym.stripSink
+  if typ.repr == "string":
+    "GennyBuffer"
+  else:
+    exportTypeC(typ)
+
 proc exportTypeC(sym: NimNode, name: string): string =
   let typ = sym.stripSink
   if typ.kind == nnkBracketExpr:
@@ -142,7 +149,7 @@ proc exportProcC*(
   var dllParams: seq[(NimNode, NimNode)]
   for param in procParams:
     dllParams.add((param[0], param[1]))
-  dllProc(&"$lib_{apiProcName}", dllParams, exportTypeC(procReturn))
+  dllProc(&"$lib_{apiProcName}", dllParams, exportReturnTypeC(procReturn))
 
 proc exportObjectC*(sym: NimNode, constructor: NimNode) =
   let objName = sym.repr
@@ -175,7 +182,7 @@ proc genRefObject(objName: string) =
 proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   let objArg = objName & " " & toSnakeCase(objName)
   dllProc(&"{procPrefix}_len", [objArg], "intptr_t")
-  dllProc(&"{procPrefix}_get", [objArg, "intptr_t index"], exportTypeC(entryType))
+  dllProc(&"{procPrefix}_get", [objArg, "intptr_t index"], exportReturnTypeC(entryType))
   dllProc(&"{procPrefix}_set", [objArg, "intptr_t index", exportTypeC(entryType, "value")], "void")
   dllProc(&"{procPrefix}_delete", [objArg, "intptr_t index"], "void")
   dllProc(&"{procPrefix}_add", [objArg, exportTypeC(entryType, "value")], "void")
@@ -213,7 +220,7 @@ proc exportRefObjectC*(
 
       let setProcName = &"$lib_{objNameSnaked}_set_{fieldNameSnaked}"
 
-      dllProc(getProcName, [objName & " " & objNameSnaked], exportTypeC(fieldType))
+      dllProc(getProcName, [objName & " " & objNameSnaked], exportReturnTypeC(fieldType))
       dllProc(setProcName, [objName & " " & objNameSnaked, exportTypeC(fieldType, "value")], exportTypeC(nil))
     else:
       var helperName = fieldName
@@ -251,6 +258,14 @@ const header = """
 
 #include <stdint.h>
 
+typedef struct GennyBufferHandle* GennyBuffer;
+
+"""
+
+const bufferProcs = """
+const char* $lib_genny_buffer_data(GennyBuffer buffer);
+intptr_t $lib_genny_buffer_len(GennyBuffer buffer);
+void $lib_genny_buffer_unref(GennyBuffer buffer);
 """
 
 const externCStart = """
@@ -273,6 +288,6 @@ const footer = """
 
 proc writeC*(dir, lib: string) =
   createDir(dir)
-  writeFile(&"{dir}/{toSnakeCase(lib)}.h", (header & types & externCStart & procs & externCEnd & footer)
+  writeFile(&"{dir}/{toSnakeCase(lib)}.h", (header & types & externCStart & bufferProcs & procs & externCEnd & footer)
     .replace("$lib", toSnakeCase(lib)).replace("$LIB", lib.toUpperAscii())
   )

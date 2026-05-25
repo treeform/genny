@@ -1,7 +1,9 @@
 #ifndef INCLUDE_TEST_H
 #define INCLUDE_TEST_H
 
+#include <cstddef>
 #include <cstdint>
+#include <string>
 
 static constexpr auto SIMPLE_CONST = 123;
 
@@ -21,6 +23,20 @@ struct RefObjWithSeq;
 struct SimpleObjWithProc;
 
 struct SeqString;
+
+struct GennyBuffer {
+
+  private:
+
+  std::uintptr_t reference;
+
+  public:
+
+  const char* data();
+  std::intptr_t len();
+  void free();
+
+};
 
 struct SimpleObj {
   std::intptr_t simple_a;
@@ -117,8 +133,8 @@ struct SeqString {
   void free();
 
   std::intptr_t size();
-  const char* get(std::intptr_t index);
-  const char* operator[](std::intptr_t index);
+  std::string get(std::intptr_t index);
+  std::string operator[](std::intptr_t index);
   void set(std::intptr_t index, const char* value);
   void removeAt(std::intptr_t index);
   void add(const char* value);
@@ -127,6 +143,10 @@ struct SeqString {
 };
 
 extern "C" {
+
+const char* test_genny_buffer_data(GennyBuffer buffer);
+std::intptr_t test_genny_buffer_len(GennyBuffer buffer);
+void test_genny_buffer_unref(GennyBuffer buffer);
 
 std::intptr_t test_simple_call(std::intptr_t a);
 
@@ -192,7 +212,7 @@ SeqString test_new_seq_string();
 
 std::intptr_t test_seq_string_len(SeqString seq_string);
 
-const char* test_seq_string_get(SeqString seq_string, std::intptr_t index);
+GennyBuffer test_seq_string_get(SeqString seq_string, std::intptr_t index);
 
 void test_seq_string_set(SeqString seq_string, std::intptr_t index, const char* value);
 
@@ -204,6 +224,31 @@ void test_seq_string_clear(SeqString seq_string);
 
 SeqString test_get_datas();
 
+GennyBuffer test_get_message();
+
+}
+
+static inline std::string gennyBufferToString(GennyBuffer buffer) {
+  const char* data = test_genny_buffer_data(buffer);
+  std::intptr_t len = test_genny_buffer_len(buffer);
+  std::string result;
+  if (data != nullptr && len > 0) {
+    result.assign(data, static_cast<std::size_t>(len));
+  }
+  test_genny_buffer_unref(buffer);
+  return result;
+}
+
+const char* GennyBuffer::data() {
+  return test_genny_buffer_data(*this);
+}
+
+std::intptr_t GennyBuffer::len() {
+  return test_genny_buffer_len(*this);
+}
+
+void GennyBuffer::free() {
+  test_genny_buffer_unref(*this);
 }
 
 std::intptr_t simpleCall(std::intptr_t a) {
@@ -326,11 +371,11 @@ std::intptr_t SeqString::size(){
   return test_seq_string_len(*this);
 }
 
-const char* SeqString::get(std::intptr_t index){
-  return test_seq_string_get(*this, index);
+std::string SeqString::get(std::intptr_t index){
+  return gennyBufferToString(test_seq_string_get(*this, index));
 }
 
-const char* SeqString::operator[](std::intptr_t index){
+std::string SeqString::operator[](std::intptr_t index){
   return get(index);
 }
 
@@ -356,6 +401,10 @@ void SeqString::free(){
 
 SeqString getDatas() {
   return test_get_datas();
+};
+
+std::string getMessage() {
+  return gennyBufferToString(test_get_message());
 };
 
 #endif

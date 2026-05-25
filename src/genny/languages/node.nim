@@ -19,6 +19,9 @@ proc isSeqLike(sym: NimNode): bool =
   let typ = sym.stripSink
   typ.kind == nnkBracketExpr and typ[0].repr in ["seq", "openArray"]
 
+proc isStringType(sym: NimNode): bool =
+  sym.stripSink.repr == "string"
+
 proc typeBody(sym: NimNode): NimNode =
   let typ = sym.stripSink
   if typ.kind == nnkSym:
@@ -82,6 +85,12 @@ proc exportTypeNode(sym: NimNode): string =
         else:
           "'uint64'"  # Treat ref objects as opaque pointers
 
+proc exportReturnTypeNode(sym: NimNode): string =
+  if sym.isStringType:
+    "'uint64'"
+  else:
+    exportTypeNode(sym)
+
 proc jsArgValue(argType: NimNode, argName: string): string =
   let typ = argType.stripSink
   if typ.repr == "Rune":
@@ -95,6 +104,8 @@ proc jsReturnValue(returnType: NimNode, call: string): string =
   let typ = returnType.stripSink
   if typ.kind == nnkEmpty:
     call
+  elif typ.repr == "string":
+    &"gennyBufferToString({call})"
   elif typ.repr == "Rune":
     &"intToRune({call})"
   elif typ.isSeqLike:
@@ -174,7 +185,7 @@ proc exportProcNode*(
       defaults.add((entry.repr, default))
 
   # Declare the C function
-  declareFunc(apiProcName, procParams, exportTypeNode(procReturn))
+  declareFunc(apiProcName, procParams, exportReturnTypeNode(procReturn))
 
   # Create wrapper function
   # Only generate prototype methods for ref objects, not value objects
@@ -284,7 +295,7 @@ proc genSeqProcs(objName, className, procPrefix, selfAccessor: string, entryType
   types.add "};\n"
 
   # get
-  procs.add &"const {procPrefix}_get = lib.func('{procPrefix}_get', {exportTypeNode(entryType)}, ['uint64', 'int64']);\n"
+  procs.add &"const {procPrefix}_get = lib.func('{procPrefix}_get', {exportReturnTypeNode(entryType)}, ['uint64', 'int64']);\n"
   let getCall = &"{procPrefix}_get({selfAccessor}, index)"
   types.add &"{className}.prototype.get = function(index) {{\n"
   types.add &"  return {jsReturnValue(entryType, getCall)};\n"
@@ -360,7 +371,7 @@ proc exportRefObjectNode*(
       let setProcName = &"$lib_{objNameSnaked}_set_{fieldNameSnaked}"
 
       # Declare getter/setter C functions
-      procs.add &"const {getProcName} = lib.func('{getProcName}', {exportTypeNode(fieldType)}, ['uint64']);\n"
+      procs.add &"const {getProcName} = lib.func('{getProcName}', {exportReturnTypeNode(fieldType)}, ['uint64']);\n"
       procs.add &"const {setProcName} = lib.func('{setProcName}', 'void', ['uint64', {exportTypeNode(fieldType)}]);\n"
 
       types.add &"Object.defineProperty({objName}.prototype, '{fieldName}', {{\n"
@@ -436,6 +447,27 @@ if (process.platform === 'win32') {
 }
 
 const lib = koffi.load(path.join(__dirname, libName));
+
+const $lib_genny_buffer_data = lib.func('$lib_genny_buffer_data', 'void *', ['uint64']);
+const $lib_genny_buffer_len = lib.func('$lib_genny_buffer_len', 'int64', ['uint64']);
+const $lib_genny_buffer_unref = lib.func('$lib_genny_buffer_unref', 'void', ['uint64']);
+
+function gennyBufferToString(buffer) {
+  if (buffer === null || buffer === 0 || buffer === 0n) {
+    return '';
+  }
+  try {
+    const length = Number($lib_genny_buffer_len(buffer));
+    const data = $lib_genny_buffer_data(buffer);
+    if (data === null || data === 0 || data === 0n || length <= 0) {
+      return '';
+    }
+    const bytes = koffi.decode(data, 'uint8_t', length);
+    return Buffer.from(bytes).toString('utf8');
+  } finally {
+    $lib_genny_buffer_unref(buffer);
+  }
+}
 
 class $LibException extends Error {
   constructor(message) {

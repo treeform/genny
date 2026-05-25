@@ -3,6 +3,27 @@ when not defined(gcArc) and not defined(gcOrc):
 
 when (NimMajor, NimMinor, NimPatch) == (1, 6, 2):
   {.error: "Nim 1.6.2 not supported with Genny due to FFI issues.".}
+
+type GennyBuffer* = ref object
+  data: string
+
+proc newGennyBuffer*(data: string): GennyBuffer =
+  result = GennyBuffer(data: data)
+  GC_ref(result)
+
+proc test_genny_buffer_data*(buffer: GennyBuffer): cstring {.raises: [], cdecl, exportc, dynlib.} =
+  if buffer == nil:
+    return nil
+  buffer.data.cstring
+
+proc test_genny_buffer_len*(buffer: GennyBuffer): int {.raises: [], cdecl, exportc, dynlib.} =
+  if buffer == nil:
+    return 0
+  buffer.data.len
+
+proc test_genny_buffer_unref*(buffer: GennyBuffer) {.raises: [], cdecl, exportc, dynlib.} =
+  if buffer != nil:
+    GC_unref(buffer)
 proc test_simple_call*(a: int): int {.raises: [], cdecl, exportc, dynlib.} =
   simpleCall(a)
 
@@ -115,8 +136,8 @@ proc test_seq_string_len*(s: SeqString): int {.raises: [], cdecl, exportc, dynli
 proc test_seq_string_add*(s: SeqString, v: cstring) {.raises: [], cdecl, exportc, dynlib.} =
   s.s.add(v.`$`)
 
-proc test_seq_string_get*(s: SeqString, i: int): cstring {.raises: [], cdecl, exportc, dynlib.} =
-  s.s[i].cstring
+proc test_seq_string_get*(s: SeqString, i: int): GennyBuffer {.raises: [], cdecl, exportc, dynlib.} =
+  newGennyBuffer(s.s[i])
 
 proc test_seq_string_set*(s: SeqString, i: int, v: cstring) {.raises: [], cdecl, exportc, dynlib.} =
   s.s[i] = v.`$`
@@ -134,4 +155,7 @@ proc test_get_datas*(): SeqString {.raises: [], cdecl, exportc, dynlib.} =
   result = SeqString(s: getDatas())
   if result != nil:
     GC_ref(result)
+
+proc test_get_message*(): GennyBuffer {.raises: [], cdecl, exportc, dynlib.} =
+  newGennyBuffer(getMessage())
 

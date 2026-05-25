@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstring>
 #include <iostream>
+#include <string>
 #include "pixie.hpp"
 
 #ifndef PIXIE_ROOT
@@ -54,7 +55,7 @@ int main() {
     Image image(4, 3);
     assert(image.getWidth() == 4);
     assert(image.getHeight() == 3);
-    assert(std::strlen(image.encodeBase64()) > 20);
+    assert(image.encodeBase64().size() > 20);
     image.fill(red);
     assert(image.isOneColor());
     assert(image.isOpaque());
@@ -124,7 +125,7 @@ int main() {
     assert(rectPath.strokeOverlaps(vector2(0, 5), identity, 2, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, solidDashes));
 
     Typeface typeface = readTypeface(FONT_PATH);
-    assert(std::strstr(typeface.getFilePath(), "Inter-Regular.ttf") != nullptr);
+    assert(typeface.getFilePath().find("Inter-Regular.ttf") != std::string::npos);
     typeface.setFilePath(FONT_PATH);
     assert(typeface.hasGlyph(U'A'));
     assert(typeface.getAdvance(U'A') > 0);
@@ -150,7 +151,7 @@ int main() {
     SeqSpan spans;
     spans.add(span);
     Arrangement arrangement = spans.typeset(vector2(100, 100), CENTER_ALIGN, BOTTOM_ALIGN, true);
-    assert(std::strcmp(spans[0].getText(), "hello") == 0);
+    assert(spans[0].getText() == "hello");
     assert(arrangement.layoutBounds().x > 0);
     assert(spans.layoutBounds().y > 0);
     assert(arrangement.computeBounds(mat).x > 0);
@@ -222,7 +223,8 @@ int main() {
     ctx.saveLayer();
     ctx.restore();
 
-    Image decoded = decodeBase64(canvas.encodeBase64());
+    std::string encodedCanvas = canvas.encodeBase64();
+    Image decoded = decodeBase64(encodedCanvas.c_str());
     assert(decoded.getWidth() == canvas.getWidth());
     assert(decoded.getHeight() == canvas.getHeight());
     assert(decodeImage(ppm).getWidth() == 2);
@@ -233,7 +235,7 @@ int main() {
     assert(parsePath("M0 0 L10 0 L10 10 Z").computeBounds(identity).w == 10);
     parseColor("bad");
     assert(checkError());
-    assert(std::strstr(takeError(), "bad") != nullptr);
+    assert(takeError().find("bad") != std::string::npos);
 
     std::cout << "All Pixie C++ tests passed!" << std::endl;
     return 0;

@@ -10,6 +10,27 @@ else:
   libName = "libtest.so"
 dll = cdll.LoadLibrary(os.path.join(dir, libName))
 
+_GennyBuffer = c_void_p
+
+dll.test_genny_buffer_data.argtypes = [_GennyBuffer]
+dll.test_genny_buffer_data.restype = c_void_p
+dll.test_genny_buffer_len.argtypes = [_GennyBuffer]
+dll.test_genny_buffer_len.restype = c_longlong
+dll.test_genny_buffer_unref.argtypes = [_GennyBuffer]
+dll.test_genny_buffer_unref.restype = None
+
+def _genny_buffer_to_string(buffer):
+    if not buffer:
+        return ""
+    try:
+        length = dll.test_genny_buffer_len(buffer)
+        data = dll.test_genny_buffer_data(buffer)
+        if not data or length <= 0:
+            return ""
+        return string_at(data, length).decode("utf8")
+    finally:
+        dll.test_genny_buffer_unref(buffer)
+
 class testError(Exception):
     pass
 
@@ -223,7 +244,7 @@ class SeqString(Structure):
         return dll.test_seq_string_len(self)
 
     def __getitem__(self, index):
-        return dll.test_seq_string_get(self, index).decode("utf8")
+        return _genny_buffer_to_string(dll.test_seq_string_get(self, index))
 
     def __setitem__(self, index, value):
         dll.test_seq_string_set(self, index, value.encode("utf8"))
@@ -242,6 +263,10 @@ class SeqString(Structure):
 
 def get_datas():
     result = dll.test_get_datas()
+    return result
+
+def get_message():
+    result = _genny_buffer_to_string(dll.test_get_message())
     return result
 
 dll.test_simple_call.argtypes = [c_longlong]
@@ -329,7 +354,7 @@ dll.test_seq_string_len.argtypes = [SeqString]
 dll.test_seq_string_len.restype = c_longlong
 
 dll.test_seq_string_get.argtypes = [SeqString, c_longlong]
-dll.test_seq_string_get.restype = c_char_p
+dll.test_seq_string_get.restype = _GennyBuffer
 
 dll.test_seq_string_set.argtypes = [SeqString, c_longlong, c_char_p]
 dll.test_seq_string_set.restype = None
@@ -345,4 +370,7 @@ dll.test_seq_string_clear.restype = None
 
 dll.test_get_datas.argtypes = []
 dll.test_get_datas.restype = SeqString
+
+dll.test_get_message.argtypes = []
+dll.test_get_message.restype = _GennyBuffer
 

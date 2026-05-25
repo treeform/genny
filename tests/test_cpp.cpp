@@ -1,6 +1,7 @@
 // Test C++ bindings.
 #include <iostream>
 #include <cassert>
+#include <string>
 #include "test.hpp"
 
 int main() {
@@ -53,10 +54,17 @@ int main() {
     assert(refObjWithSeq.dataSize() == 0);
     refObjWithSeq.free();
 
+    std::cout << "Testing getMessage" << std::endl;
+    std::string message = getMessage();
+    assert(message.size() == 11);
+    assert(message == std::string("alpha\0omega", 11));
+
     std::cout << "Testing SeqString via getDatas" << std::endl;
     SeqString datas = getDatas();
     assert(datas.size() == 3);
-    assert(datas[0][0] == 'a');
+    assert(datas[0] == "a");
+    assert(datas[1] == "b");
+    assert(datas[2] == "c");
     datas.free();
 
     std::cout << "All C++ tests passed!" << std::endl;

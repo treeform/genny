@@ -47,7 +47,7 @@ proc exportProcInternal*(
   internal.removeSuffix ", "
   internal.add ")"
   if procReturn.kind != nnkEmpty:
-    internal.add &": {exportTypeNim(procReturn)}"
+    internal.add &": {exportReturnTypeNim(procReturn)}"
   internal.add &" {exportProcPragmas} =\n"
   if procRaises:
     internal.add "  try:\n  "
@@ -68,7 +68,7 @@ proc exportProcInternal*(
   if procReturnsSeq:
     internal.add &"{procReturn.getSeqName()}(s: {callExpr})"
   elif procReturn.kind != nnkEmpty:
-    internal.add convertExportExprNim(callExpr, procReturn)
+    internal.add convertExportReturnExprNim(callExpr, procReturn)
   else:
     internal.add callExpr
   if procRaises:
@@ -155,10 +155,10 @@ proc exportRefObjectInternal*(
     if fieldType.kind != nnkBracketExpr:
       internal.add "proc "
       internal.add &"$lib_{objNameSnaked}_get_{fieldNameSnaked}*"
-      internal.add &"({objNameSnaked}: {objName}): {exportTypeNim(fieldType)}"
+      internal.add &"({objNameSnaked}: {objName}): {exportReturnTypeNim(fieldType)}"
       internal.add &" {exportProcPragmas} =\n"
       internal.add "  "
-      internal.add convertExportExprNim(&"{objNameSnaked}.{fieldName}", fieldType)
+      internal.add convertExportReturnExprNim(&"{objNameSnaked}.{fieldName}", fieldType)
       internal.add "\n"
       internal.add "\n"
 
@@ -186,10 +186,10 @@ proc exportRefObjectInternal*(
       internal.add ")\n"
       internal.add "\n"
 
-      internal.add &"proc {prefix}_get*({objNameSnaked}: {objName}, i: int): {exportTypeNim(fieldType[1])}"
+      internal.add &"proc {prefix}_get*({objNameSnaked}: {objName}, i: int): {exportReturnTypeNim(fieldType[1])}"
       internal.add &" {exportProcPragmas} =\n"
       internal.add "  "
-      internal.add convertExportExprNim(&"{objNameSnaked}.{fieldName}[i]", fieldType[1])
+      internal.add convertExportReturnExprNim(&"{objNameSnaked}.{fieldName}[i]", fieldType[1])
       internal.add "\n"
       internal.add "\n"
 
@@ -240,11 +240,11 @@ proc generateSeqs(sym: NimNode) =
   internal.add ")\n"
   internal.add "\n"
 
-  internal.add &"proc $lib_{seqNameSnaked}_get*(s: {seqName}, i: int): {exportTypeNim(sym[1])}"
+  internal.add &"proc $lib_{seqNameSnaked}_get*(s: {seqName}, i: int): {exportReturnTypeNim(sym[1])}"
   internal.add &" {exportProcPragmas}"
   internal.add " =\n"
   internal.add "  "
-  internal.add convertExportExprNim("s.s[i]", sym[1])
+  internal.add convertExportReturnExprNim("s.s[i]", sym[1])
   internal.add "\n"
   internal.add "\n"
 
@@ -283,11 +283,32 @@ when not defined(gcArc) and not defined(gcOrc):
 
 when (NimMajor, NimMinor, NimPatch) == (1, 6, 2):
   {.error: "Nim 1.6.2 not supported with Genny due to FFI issues.".}
+
+type GennyBuffer* = ref object
+  data: string
+
+proc newGennyBuffer*(data: string): GennyBuffer =
+  result = GennyBuffer(data: data)
+  GC_ref(result)
+
+proc $lib_genny_buffer_data*(buffer: GennyBuffer): cstring {.raises: [], cdecl, exportc, dynlib.} =
+  if buffer == nil:
+    return nil
+  buffer.data.cstring
+
+proc $lib_genny_buffer_len*(buffer: GennyBuffer): int {.raises: [], cdecl, exportc, dynlib.} =
+  if buffer == nil:
+    return 0
+  buffer.data.len
+
+proc $lib_genny_buffer_unref*(buffer: GennyBuffer) {.raises: [], cdecl, exportc, dynlib.} =
+  if buffer != nil:
+    GC_unref(buffer)
 """
 
 proc writeInternal*(dir, lib: string) =
   createDir(dir)
   writeFile(
     &"{dir}/internal.nim",
-    header & internal.replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
+    (header & internal).replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
   )

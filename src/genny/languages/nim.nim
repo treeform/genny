@@ -59,6 +59,15 @@ proc exportTypeNim*(sym: NimNode): string =
     else:
       return typ.normalizeValueTypeName()
 
+proc exportReturnTypeNim*(sym: NimNode): string =
+  ## Returns type for internal ABI return values. Returned strings cross the
+  ## ABI as owned GennyBuffer handles instead of borrowed cstring pointers.
+  let typ = sym.stripSink
+  if typ.repr == "string":
+    return "GennyBuffer"
+  else:
+    return exportTypeNim(typ)
+
 proc exportArgTypeNim(sym: NimNode): string =
   ## Returns the friendly type for Nim wrapper parameters. Unlike return values,
   ## string parameters stay as Nim strings and are converted at the C boundary.
@@ -87,6 +96,14 @@ proc exportTypeCImport*(sym: NimNode): string =
     else:
       return typ.normalizeValueTypeName()
 
+proc exportReturnTypeCImport*(sym: NimNode): string =
+  ## Returns type for C import return declarations in the generated Nim wrapper.
+  let typ = sym.stripSink
+  if typ.repr == "string":
+    return "pointer"
+  else:
+    return exportTypeCImport(typ)
+
 proc convertExportFromNim*(sym: NimNode): string =
   ## Converts Nim value to C value (used by DLL side).
   let typ = sym.stripSink
@@ -113,6 +130,15 @@ proc convertExportExprNim*(expr: string, sym: NimNode): string =
     return &"cast[Matrix3]({expr})"
   else:
     return expr & convertExportFromNim(typ)
+
+proc convertExportReturnExprNim*(expr: string, sym: NimNode): string =
+  ## Converts a Nim expression to the ABI-facing return value used by generated
+  ## internal exports.
+  let typ = sym.stripSink
+  if typ.repr == "string":
+    return &"newGennyBuffer({expr})"
+  else:
+    return convertExportExprNim(expr, typ)
 
 proc convertToPointer*(sym: NimNode): string =
   ## Converts client-side wrapper to pointer for C call.
@@ -156,6 +182,19 @@ proc convertImportExprNim*(expr: string, sym: NimNode): string =
     return &"cast[Mat3]({expr})"
   else:
     return expr & convertImportToNim(typ)
+
+proc convertImportReturnExprNim*(expr: string, sym: NimNode): string =
+  ## Converts an ABI-facing return expression to the friendly Nim wrapper type.
+  let typ = sym.stripSink
+  case typ.repr
+  of "string":
+    return &"gennyBufferToString({expr})"
+  of "Vec2":
+    return &"cast[Vector2]({expr})"
+  of "Mat3":
+    return &"cast[Matrix3]({expr})"
+  else:
+    return convertImportExprNim(expr, typ)
 
 proc exportDefaultValueNim(default, sym: NimNode): string =
   ## Keeps wrapper defaults in the same ABI-facing type family as the generated
@@ -211,6 +250,8 @@ proc exportProcNim*(
   # Check if return type is a ref object
   let returnsRefObject = procReturn.kind != nnkEmpty and
     (procReturn.isRefObjectLike or procReturn.isSeqLike)
+  let returnsString = procReturn.kind != nnkEmpty and
+    procReturn.stripSink.repr == "string"
 
   # C import declaration
   procs.add &"proc {apiProcName}("
@@ -223,7 +264,7 @@ proc exportProcNim*(
   procs.removeSuffix ", "
   procs.add ")"
   if procReturn.kind != nnkEmpty:
-    procs.add &": {exportTypeCImport(procReturn)}"
+    procs.add &": {exportReturnTypeCImport(procReturn)}"
   procs.add " {.importc: \""
   procs.add &"{apiProcName}"
   procs.add "\", cdecl.}"
@@ -248,27 +289,30 @@ proc exportProcNim*(
   if procReturn.kind != nnkEmpty:
     procs.add &": {exportArgTypeNim(procReturn)}"
   procs.add " {.inline.} =\n"
-  if returnsRefObject:
-    # Wrap returned pointer in ref object
-    procs.add &"  result = {exportArgTypeNim(procReturn)}(reference: "
-  elif procReturn.kind != nnkEmpty:
-    procs.add "  result = "
-  else:
-    procs.add "  "
-  procs.add &"{apiProcName}("
+  var callExpr = &"{apiProcName}("
   for param in procParams:
     for i in 0 .. param.len - 3:
-      procs.add &"{param[i].repr}{convertToPointer(param[^2])}, "
-  procs.removeSuffix ", "
-  procs.add ")"
+      callExpr.add &"{param[i].repr}{convertToPointer(param[^2])}, "
+  callExpr.removeSuffix ", "
+  callExpr.add ")"
+
   if returnsRefObject:
-    procs.add ")"  # Close the TypeName(reference: ...)
+    procs.add &"  result = {exportArgTypeNim(procReturn)}(reference: {callExpr})\n"
+  elif returnsString:
+    procs.add &"  let gennyBuffer = {callExpr}\n"
   elif procReturn.kind != nnkEmpty:
-    procs.add convertImportToNim(procReturn)
-  procs.add "\n"
+    procs.add &"  result = {convertImportReturnExprNim(callExpr, procReturn)}\n"
+  else:
+    procs.add &"  {callExpr}\n"
+
   if procRaises:
     procs.add "  if checkError():\n"
+    if returnsString:
+      procs.add "    if gennyBuffer != nil:\n"
+      procs.add "      $lib_genny_buffer_unref(gennyBuffer)\n"
     procs.add "    raise newException($LibError, $takeError())\n"
+  if returnsString:
+    procs.add "  result = gennyBufferToString(gennyBuffer)\n"
   procs.add "\n"
 
 proc exportObjectNim*(sym: NimNode, constructor: NimNode) =
@@ -351,7 +395,7 @@ proc genSeqProcs(
 
   procs.add &"proc {procPrefix}_get"
   procs.add &"(s: pointer, i: int)"
-  procs.add &": {exportTypeCImport(entryType)}"
+  procs.add &": {exportReturnTypeCImport(entryType)}"
   procs.add " {.importc: \""
   procs.add &"{procPrefix}_get"
   procs.add "\", cdecl.}\n"
@@ -362,9 +406,8 @@ proc genSeqProcs(
     procs.add &"  {exportTypeNim(entryType)}(reference: "
     procs.add &"{procPrefix}_get(s{refSuffix}, i))\n"
   else:
-    procs.add &"  {procPrefix}_get(s{refSuffix}, i)"
-    procs.add convertImportToNim(entryType)
-    procs.add "\n"
+    let getCall = &"{procPrefix}_get(s{refSuffix}, i)"
+    procs.add &"  {convertImportReturnExprNim(getCall, entryType)}\n"
   procs.add "\n"
 
   procs.add &"proc {procPrefix}_set(s: pointer, "
@@ -422,7 +465,7 @@ proc exportRefObjectNim*(
       # C import takes pointer
       procs.add &"proc {getProcName}("
       procs.add &"{toVarCase(objName)}: pointer): "
-      procs.add exportTypeCImport(fieldType)
+      procs.add exportReturnTypeCImport(fieldType)
       procs.add " {.importc: \""
       procs.add &"{getProcName}"
       procs.add "\", cdecl.}"
@@ -438,8 +481,8 @@ proc exportRefObjectNim*(
         procs.add &"  {exportTypeNim(fieldType)}(reference: "
         procs.add &"{getProcName}({toVarCase(objName)}.reference))"
       else:
-        procs.add &"  {getProcName}({toVarCase(objName)}.reference)"
-        procs.add convertImportToNim(fieldType)
+        let getCall = &"{getProcName}({toVarCase(objName)}.reference)"
+        procs.add &"  {convertImportReturnExprNim(getCall, fieldType)}"
       procs.add "\n"
       procs.add "\n"
 
@@ -527,6 +570,23 @@ else:
   const libName = "lib$lib.so"
 
 {.push dynlib: libName.}
+
+proc $lib_genny_buffer_data(buffer: pointer): cstring {.importc: "$lib_genny_buffer_data", cdecl.}
+proc $lib_genny_buffer_len(buffer: pointer): int {.importc: "$lib_genny_buffer_len", cdecl.}
+proc $lib_genny_buffer_unref(buffer: pointer) {.importc: "$lib_genny_buffer_unref", cdecl.}
+
+proc gennyBufferToString(buffer: pointer): string =
+  if buffer == nil:
+    return ""
+  try:
+    let len = $lib_genny_buffer_len(buffer)
+    if len > 0:
+      let data = $lib_genny_buffer_data(buffer)
+      if data != nil:
+        result = newString(len)
+        copyMem(result[0].addr, data, len)
+  finally:
+    $lib_genny_buffer_unref(buffer)
 
 type $LibError = object of ValueError
 

@@ -16,6 +16,7 @@ fn approxEps(value: f32, expected: f32, eps: f32) !void {
 pub fn main() !void {
     @setEvalBranchQuota(10000);
 
+    const allocator = std.heap.page_allocator;
     const font_path = "../../pixie/tests/fonts/Inter-Regular.ttf";
     const image_path = "../../pixie/tests/images/turtle.png";
     const ppm = "P3\n2 1\n255\n255 0 0 0 255 0\n";
@@ -51,7 +52,9 @@ pub fn main() !void {
     defer image.deinit();
     try expect(image.getWidth() == 4);
     try expect(image.getHeight() == 3);
-    try expect((try image.encodeBase64()).len > 20);
+    const image_base64 = try image.encodeBase64(allocator);
+    defer allocator.free(image_base64);
+    try expect(image_base64.len > 20);
     image.fill(red);
     try expect(image.isOneColor());
     try expect(image.isOpaque());
@@ -138,7 +141,9 @@ pub fn main() !void {
 
     const typeface = try pixie.readTypeface(font_path);
     defer typeface.deinit();
-    try expect(std.mem.endsWith(u8, typeface.getFilePath(), "Inter-Regular.ttf"));
+    const typeface_file_path = try typeface.getFilePath(allocator);
+    defer allocator.free(typeface_file_path);
+    try expect(std.mem.endsWith(u8, typeface_file_path, "Inter-Regular.ttf"));
     typeface.setFilePath(font_path);
     try expect(typeface.hasGlyph('A'));
     try expect(typeface.getAdvance('A') > 0);
@@ -172,7 +177,9 @@ pub fn main() !void {
     spans.append(span);
     const arrangement = spans.typeset(pixie.Vector2.init(100, 100), .center_align, .bottom_align, true);
     defer arrangement.deinit();
-    try expect(std.mem.eql(u8, spans.get(0).getText(), "hello"));
+    const span_text = try spans.get(0).getText(allocator);
+    defer allocator.free(span_text);
+    try expect(std.mem.eql(u8, span_text, "hello"));
     try expect(arrangement.layoutBounds().x > 0);
     try expect(spans.layoutBounds().y > 0);
     try expect((try arrangement.computeBounds(mat)).x > 0);
@@ -247,7 +254,9 @@ pub fn main() !void {
     try ctx.saveLayer();
     try ctx.restore();
 
-    const decoded = try pixie.decodeBase64(try canvas.encodeBase64());
+    const canvas_base64 = try canvas.encodeBase64(allocator);
+    defer allocator.free(canvas_base64);
+    const decoded = try pixie.decodeBase64(canvas_base64);
     defer decoded.deinit();
     try expect(decoded.getWidth() == canvas.getWidth());
     try expect(decoded.getHeight() == canvas.getHeight());
@@ -271,7 +280,9 @@ pub fn main() !void {
         try expect(err == error.PixieError);
     }
     try expect(pixie.checkError());
-    try expect(std.mem.indexOf(u8, pixie.takeError(), "bad") != null);
+    const message = try pixie.takeError(allocator);
+    defer allocator.free(message);
+    try expect(std.mem.indexOf(u8, message, "bad") != null);
 
     std.debug.print("All Pixie Zig tests passed!\n", .{});
 }

@@ -15,6 +15,9 @@ proc isSeqLike(sym: NimNode): bool =
   let typ = sym.stripSink
   typ.kind == nnkBracketExpr and typ[0].repr in ["seq", "openArray"]
 
+proc isStringType(sym: NimNode): bool =
+  sym.stripSink.repr == "string"
+
 proc exportTypeZig(sym: NimNode): string =
   let typ = sym.stripSink
   if typ.kind == nnkBracketExpr:
@@ -56,6 +59,12 @@ proc exportTypeZig(sym: NimNode): string =
           else:
             typ.repr
 
+proc exportReturnTypeZig(sym: NimNode): string =
+  if sym.isStringType:
+    "[:0]u8"
+  else:
+    exportTypeZig(sym)
+
 proc convertExportFromZig*(inner: string, sym: string): string =
   if sym == "[:0]const u8":
     inner & ".ptr"
@@ -73,7 +82,9 @@ proc convertImportToZig*(inner: string, sym: string): string =
     inner
 
 proc exportTypeZigAbi(sym: string): string =
-  if sym == "[:0]const u8":
+  if sym == "[:0]u8":
+    "?*GennyBuffer"
+  elif sym == "[:0]const u8":
     "[*:0]const u8"
   elif sym == "u21":
     "i32"
@@ -108,6 +119,7 @@ proc exportProc(
 ) =
   let
     onClass = owner notin ["void", ""]
+    returnsString = procReturn == "[:0]u8"
     baseIndent =
       if onClass or indent:
         "    "
@@ -146,11 +158,20 @@ proc exportProc(
     code.add ": "
     code.add param[1]
     code.add &", "
+  if returnsString:
+    code.add "allocator: std.mem.Allocator, "
   code.removeSuffix ", "
   code.add ") "
-  if procRaises:
+  if returnsString:
+    if procRaises:
+      code.add "(Error || std.mem.Allocator.Error)![:0]u8"
+    else:
+      code.add "std.mem.Allocator.Error![:0]u8"
+  elif procRaises:
     code.add "Error!"
-  if procReturn != "":
+  if returnsString:
+    discard
+  elif procReturn != "":
     code.add procReturn;
   else:
     code.add "void"
@@ -172,7 +193,17 @@ proc exportProc(
   call.removeSuffix ", "
   call.add &")"
 
-  if procRaises:
+  if returnsString:
+    code.add &"{baseIndent}    const result = {call};\n"
+    if procRaises:
+      code.add &"{baseIndent}    if (checkError()) " & "{\n"
+      code.add &"{baseIndent}        if (result) |buffer| buffer.deinit();\n"
+      code.add &"{baseIndent}        return error.$LibError;\n"
+      code.add &"{baseIndent}    " & "}\n"
+    code.add &"{baseIndent}    const buffer = result.?;\n"
+    code.add &"{baseIndent}    defer buffer.deinit();\n"
+    code.add &"{baseIndent}    return buffer.toOwnedSlice(allocator);\n"
+  elif procRaises:
     let hasReturn = procReturn notin ["", "void"]
     if hasReturn:
       code.add &"{baseIndent}    const result = {call};\n"
@@ -201,7 +232,7 @@ proc exportProcZig*(
     procNameSnaked = toSnakeCase(procName)
     procType = sym.getTypeInst()
     procParams = procType[0][1 .. ^1].toArgSeq()
-    procReturn = procType[0][0].exportTypeZig()
+    procReturn = procType[0][0].exportReturnTypeZig()
     procRaises = sym.raises()
     comments =
       if sym.getImpl()[6][0].kind == nnkCommentStmt:
@@ -306,7 +337,7 @@ proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
     &"get{selfSuffix}",
     &"{procPrefix}_get",
     @[("self", objName), ("index", "isize")],
-    entryType.exportTypeZig(),
+    entryType.exportReturnTypeZig(),
     indent = true
   )
   exportProc(
@@ -360,7 +391,7 @@ proc exportRefObjectZig*(
         "get" & fieldNameCapped,
         &"$lib_{objNameSnaked}_get_{fieldNameSnaked}",
         @[("self", &"*{objName}")],
-        fieldType.exportTypeZig(),
+        fieldType.exportReturnTypeZig(),
         indent = true
       )
       exportProc(
@@ -404,6 +435,26 @@ const std = @import("std");
 
 pub const Error = error{
     $LibError,
+};
+
+pub const GennyBuffer = opaque {
+    extern fn $lib_genny_buffer_unref(self: *GennyBuffer) void;
+    extern fn $lib_genny_buffer_data(self: *GennyBuffer) [*:0]const u8;
+    extern fn $lib_genny_buffer_len(self: *GennyBuffer) isize;
+
+    pub inline fn deinit(self: *GennyBuffer) void {
+        return $lib_genny_buffer_unref(self);
+    }
+
+    pub inline fn toOwnedSlice(self: *GennyBuffer, allocator: std.mem.Allocator) std.mem.Allocator.Error![:0]u8 {
+        const len: usize = @intCast($lib_genny_buffer_len(self));
+        const output = try allocator.allocSentinel(u8, len, 0);
+        if (len > 0) {
+            const data = $lib_genny_buffer_data(self);
+            std.mem.copyForwards(u8, output, data[0..len]);
+        }
+        return output;
+    }
 };
 
 """

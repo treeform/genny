@@ -81,6 +81,7 @@ proc isArrayType(sym: NimNode): bool =
 
 proc isRefLikeObjectType(sym: NimNode): bool
 proc cBaseType(sym: NimNode): string
+proc cType(sym: NimNode): string
 
 proc cArraySuffix(sym: NimNode): string =
   let typ = sym.stripSink
@@ -116,6 +117,13 @@ proc cBaseType(sym: NimNode): string =
   of "float64", "float": "double"
   of "", "nil", "None": "void"
   else: name
+
+proc cReturnType(sym: NimNode): string =
+  let typ = sym.stripSink
+  if typ.nativeName() == "string":
+    "void *"
+  else:
+    cType(typ)
 
 proc cType(sym: NimNode): string =
   if sym.isArrayType:
@@ -217,7 +225,9 @@ proc pyFromC(expr: string, typ: NimNode): string =
     return &"GennyPy_{cIdent(seqName)}_FromRef((void *)({expr}))"
 
   case baseTyp.nativeName()
-  of "string", "cstring":
+  of "string":
+    &"genny_buffer_to_py((void *)({expr}))"
+  of "cstring":
     &"PyUnicode_FromString(({expr}) ? ({expr}) : \"\")"
   of "bool":
     &"PyBool_FromLong((long)({expr}))"
@@ -268,7 +278,7 @@ proc convertPyToCInt(pyExpr, outExpr: string, typ: NimNode, label: string): stri
   convertPyToC(pyExpr, outExpr, typ, label).replace("return NULL", "return -1")
 
 proc addProto(procName: string, params: seq[(string, NimNode)], ret: NimNode) =
-  cProtos.add "extern " & cType(ret) & " " & procName & "("
+  cProtos.add "extern " & cReturnType(ret) & " " & procName & "("
   for (name, typ) in params:
     cProtos.add cDecl(typ, name) & ", "
   cProtos.removeSuffix(", ")
@@ -281,8 +291,7 @@ proc addErrorCheck(procRaises: bool): string =
   if procRaises:
     needsErrorBridge = true
     result.add "  if (pixie_native_check_error != NULL && pixie_native_check_error()) {\n"
-    result.add "    char *genny_error = pixie_native_take_error();\n"
-    result.add "    PyErr_SetString(GennyPy_ModuleError, genny_error ? genny_error : \"Nim exception\");\n"
+    result.add "    genny_set_error_from_buffer(pixie_native_take_error());\n"
     result.add "    return NULL;\n"
     result.add "  }\n"
 
@@ -290,8 +299,7 @@ proc addErrorCheckInt(procRaises: bool): string =
   if procRaises:
     needsErrorBridge = true
     result.add "  if (pixie_native_check_error != NULL && pixie_native_check_error()) {\n"
-    result.add "    char *genny_error = pixie_native_take_error();\n"
-    result.add "    PyErr_SetString(GennyPy_ModuleError, genny_error ? genny_error : \"Nim exception\");\n"
+    result.add "    genny_set_error_from_buffer(pixie_native_take_error());\n"
     result.add "    return -1;\n"
     result.add "  }\n"
 
@@ -454,7 +462,7 @@ proc exportProcPyNative*(
     cWrappers.add addErrorCheck(procRaises)
     cWrappers.add "  Py_RETURN_NONE;\n"
   else:
-    cWrappers.add &"  {cType(procReturn)} genny_result = {apiName}({callArgs});\n"
+    cWrappers.add &"  {cReturnType(procReturn)} genny_result = {apiName}({callArgs});\n"
     cWrappers.add addErrorCheck(procRaises)
     cWrappers.add &"  return {pyFromC(\"genny_result\", procReturn)};\n"
   cWrappers.add "}\n\n"
@@ -763,7 +771,7 @@ proc emitSeqMethods(objName, procPrefix, refExpr, typePrefix: string, entryType:
   cTypeBlocks.add &"  Py_ssize_t len = {typePrefix}_len(self);\n"
   cTypeBlocks.add "  if (index < 0) index += len;\n"
   cTypeBlocks.add "  if (index < 0 || index >= len) { PyErr_SetString(PyExc_IndexError, \"index out of range\"); return NULL; }\n"
-  cTypeBlocks.add &"  {cType(entryType)} value = {procPrefix}_get({refExpr}, (long long)index);\n"
+  cTypeBlocks.add &"  {cReturnType(entryType)} value = {procPrefix}_get({refExpr}, (long long)index);\n"
   cTypeBlocks.add &"  return {pyFromC(\"value\", entryType)};\n"
   cTypeBlocks.add "}\n\n"
   cTypeBlocks.add &"static int {typePrefix}_ass_item(PyObject *self, Py_ssize_t index, PyObject *value) {{\n"
@@ -859,7 +867,7 @@ proc exportRefObjectPyNative*(
       getsetForwardDecls.add &"static PyObject *{getterName}({pyStruct} *self, void *closure);\n"
       getsetForwardDecls.add &"static int {setterName}({pyStruct} *self, PyObject *value, void *closure);\n"
       cTypeBlocks.add &"static PyObject *{getterName}({pyStruct} *self, void *closure) {{\n"
-      cTypeBlocks.add &"  {cType(fieldType)} value = {getterApi}(self->ref);\n"
+      cTypeBlocks.add &"  {cReturnType(fieldType)} value = {getterApi}(self->ref);\n"
       cTypeBlocks.add &"  return {pyFromC(\"value\", fieldType)};\n"
       cTypeBlocks.add "}\n\n"
       cTypeBlocks.add &"static int {setterName}({pyStruct} *self, PyObject *value, void *closure) {{\n"
@@ -997,11 +1005,33 @@ proc writePyNative*(dir, lib: string): NimNode =
   code.add "  }\n"
   code.add "  return 1;\n"
   code.add "}\n\n"
+  code.add "extern char *$lib_genny_buffer_data(void *buffer);\n"
+  code.add "extern long long $lib_genny_buffer_len(void *buffer);\n"
+  code.add "extern void $lib_genny_buffer_unref(void *buffer);\n\n"
+  code.add "static PyObject *genny_buffer_to_py(void *buffer) {\n"
+  code.add "  if (buffer == NULL) return PyUnicode_FromString(\"\");\n"
+  code.add "  PyObject *result = NULL;\n"
+  code.add "  long long len = $lib_genny_buffer_len(buffer);\n"
+  code.add "  char *data = $lib_genny_buffer_data(buffer);\n"
+  code.add "  if (data == NULL || len <= 0) result = PyUnicode_FromString(\"\");\n"
+  code.add "  else result = PyUnicode_FromStringAndSize(data, (Py_ssize_t)len);\n"
+  code.add "  $lib_genny_buffer_unref(buffer);\n"
+  code.add "  return result;\n"
+  code.add "}\n\n"
+  code.add "static void genny_set_error_from_buffer(void *buffer) {\n"
+  code.add "  PyObject *message = genny_buffer_to_py(buffer);\n"
+  code.add "  if (message != NULL) {\n"
+  code.add "    PyErr_SetObject(GennyPy_ModuleError, message);\n"
+  code.add "    Py_DECREF(message);\n"
+  code.add "  } else {\n"
+  code.add "    PyErr_SetString(GennyPy_ModuleError, \"Nim exception\");\n"
+  code.add "  }\n"
+  code.add "}\n\n"
   if needsErrorBridge:
     code.add "extern char $lib_check_error(void);\n"
-    code.add "extern char *$lib_take_error(void);\n"
+    code.add "extern void *$lib_take_error(void);\n"
     code.add "static char (*pixie_native_check_error)(void) = $lib_check_error;\n"
-    code.add "static char *(*pixie_native_take_error)(void) = $lib_take_error;\n\n"
+    code.add "static void *(*pixie_native_take_error)(void) = $lib_take_error;\n\n"
   code.add cTypes
   code.add "\n"
   code.add cForwardDecls

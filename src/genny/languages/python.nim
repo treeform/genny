@@ -24,6 +24,9 @@ proc isSeqLike(sym: NimNode): bool =
   let typ = sym.stripSink
   typ.kind == nnkBracketExpr and typ[0].repr in ["seq", "openArray"]
 
+proc isStringType(sym: NimNode): bool =
+  sym.stripSink.repr == "string"
+
 proc exportTypePy(sym: NimNode): string =
   let typ = sym.stripSink
   if typ.kind == nnkBracketExpr:
@@ -64,6 +67,12 @@ proc exportTypePy(sym: NimNode): string =
       else:
         typ.repr
 
+proc exportReturnTypePy(sym: NimNode): string =
+  if sym.isStringType:
+    "_GennyBuffer"
+  else:
+    exportTypePy(sym)
+
 proc convertExportFromPy*(sym: NimNode): string =
   let typ = sym.stripSink
   if typ.repr == "string":
@@ -88,7 +97,7 @@ proc importExprPy(expr: string, sym: NimNode): string =
   let typ = sym.stripSink
   case typ.repr
   of "string":
-    expr & ".decode(\"utf8\")"
+    &"_genny_buffer_to_string({expr})"
   of "Rune":
     &"_int_to_rune({expr})"
   else:
@@ -246,7 +255,7 @@ proc exportProcPy*(
   var dllParams: seq[NimNode]
   for param in procParams:
     dllParams.add(param[1])
-  dllProc(&"dll.$lib_{apiProcName}", toArgTypes(dllParams), exportTypePy(procReturn))
+  dllProc(&"dll.$lib_{apiProcName}", toArgTypes(dllParams), exportReturnTypePy(procReturn))
 
 proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
   let objName = sym.repr
@@ -372,7 +381,7 @@ proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   types.add "\n"
 
   dllProc(&"dll.{procPrefix}_len", [objName], "c_longlong")
-  dllProc(&"dll.{procPrefix}_get", [objName, "c_longlong"], exportTypePy(entryType))
+  dllProc(&"dll.{procPrefix}_get", [objName, "c_longlong"], exportReturnTypePy(entryType))
   dllProc(&"dll.{procPrefix}_set", [objName, "c_longlong", exportTypePy(entryType)], "None")
   dllProc(&"dll.{procPrefix}_delete", [objName, "c_longlong"], "None")
   dllProc(&"dll.{procPrefix}_add", [objName, exportTypePy(entryType)], "None")
@@ -446,7 +455,7 @@ proc exportRefObjectPy*(
       types.add ")\n"
       types.add "\n"
 
-      dllProc(getProcName, toArgTypes([sym]), exportTypePy(fieldType))
+      dllProc(getProcName, toArgTypes([sym]), exportReturnTypePy(fieldType))
       dllProc(setProcName, toArgTypes([sym, fieldType]), exportTypePy(nil))
     else:
       var helperName = fieldName
@@ -505,6 +514,27 @@ elif sys.platform == "darwin":
 else:
   libName = "lib$lib.so"
 dll = cdll.LoadLibrary(os.path.join(dir, libName))
+
+_GennyBuffer = c_void_p
+
+dll.$lib_genny_buffer_data.argtypes = [_GennyBuffer]
+dll.$lib_genny_buffer_data.restype = c_void_p
+dll.$lib_genny_buffer_len.argtypes = [_GennyBuffer]
+dll.$lib_genny_buffer_len.restype = c_longlong
+dll.$lib_genny_buffer_unref.argtypes = [_GennyBuffer]
+dll.$lib_genny_buffer_unref.restype = None
+
+def _genny_buffer_to_string(buffer):
+    if not buffer:
+        return ""
+    try:
+        length = dll.$lib_genny_buffer_len(buffer)
+        data = dll.$lib_genny_buffer_data(buffer)
+        if not data or length <= 0:
+            return ""
+        return string_at(data, length).decode("utf8")
+    finally:
+        dll.$lib_genny_buffer_unref(buffer)
 
 class $LibError(Exception):
     pass
