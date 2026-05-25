@@ -56,6 +56,15 @@
     <ul class="simple simple-toc" id="toc-list">
   <li>
   <details open>
+    <summary><a class="reference reference-toplevel" href="#7" id="57">Types</a></summary>
+    <ul class="simple simple-toc-section">
+      <li><a class="reference" href="#ObjectField" title="ObjectField = tuple[name: string, typ: NimNode]">ObjectField</a></li>
+
+    </ul>
+  </details>
+</li>
+<li>
+  <details open>
     <summary><a class="reference reference-toplevel" href="#10" id="60">Consts</a></summary>
     <ul class="simple simple-toc-section">
       <li><a class="reference" href="#basicTypes" title="basicTypes = [&quot;bool&quot;, &quot;int8&quot;, &quot;uint8&quot;, &quot;int16&quot;, &quot;uint16&quot;, &quot;int32&quot;, &quot;uint32&quot;,
@@ -68,16 +77,72 @@
   <details open>
     <summary><a class="reference reference-toplevel" href="#12" id="62">Procs</a></summary>
     <ul class="simple simple-toc-section">
-      <ul class="simple nested-toc-section">getName
+      <ul class="simple nested-toc-section">arrayCount
+  <li><a class="reference" href="#arrayCount%2CNimNode" title="arrayCount(sym: NimNode): int">arrayCount(sym: NimNode): int</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">cppOperatorName
+  <li><a class="reference" href="#cppOperatorName%2Cstring" title="cppOperatorName(name: string): string">cppOperatorName(name: string): string</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">exportedValueTypeName
+  <li><a class="reference" href="#exportedValueTypeName%2CNimNode" title="exportedValueTypeName(sym: NimNode): string">exportedValueTypeName(sym: NimNode): string</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">getName
   <li><a class="reference" href="#getName%2CNimNode" title="getName(sym: NimNode): string">getName(sym: NimNode): string</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">getParamName
+  <li><a class="reference" href="#getParamName%2CNimNode" title="getParamName(sym: NimNode): string">getParamName(sym: NimNode): string</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">getSeqName
   <li><a class="reference" href="#getSeqName%2CNimNode" title="getSeqName(sym: NimNode): string">getSeqName(sym: NimNode): string</a></li>
 
 </ul>
+<ul class="simple nested-toc-section">isOperatorName
+  <li><a class="reference" href="#isOperatorName%2Cstring" title="isOperatorName(name: string): bool">isOperatorName(name: string): bool</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">nimCallableName
+  <li><a class="reference" href="#nimCallableName%2Cstring" title="nimCallableName(name: string): string">nimCallableName(name: string): string</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">normalizedOperatorName
+  <li><a class="reference" href="#normalizedOperatorName%2Cstring" title="normalizedOperatorName(name: string): string">normalizedOperatorName(name: string): string</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">objectFieldName
+  <li><a class="reference" href="#objectFieldName%2CNimNode" title="objectFieldName(property: NimNode): string">objectFieldName(property: NimNode): string</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">objectFields
+  <li><a class="reference" href="#objectFields%2CNimNode%2Cseq%5BObjectField%5D" title="objectFields(sym: NimNode; explicitFields: seq[ObjectField]): seq[ObjectField]">objectFields(sym: NimNode; explicitFields: seq[ObjectField]): seq[ObjectField]</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">operatorProcName
+  <li><a class="reference" href="#operatorProcName%2Cstring" title="operatorProcName(name: string): string">operatorProcName(name: string): string</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">pythonOperatorName
+  <li><a class="reference" href="#pythonOperatorName%2Cstring" title="pythonOperatorName(name: string): string">pythonOperatorName(name: string): string</a></li>
+
+</ul>
 <ul class="simple nested-toc-section">raises
   <li><a class="reference" href="#raises%2CNimNode" title="raises(procSym: NimNode): bool">raises(procSym: NimNode): bool</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">registerValueObjectType
+  <li><a class="reference" href="#registerValueObjectType%2CNimNode" title="registerValueObjectType(sym: NimNode)">registerValueObjectType(sym: NimNode)</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">registerValueObjectTypeAlias
+  <li><a class="reference" href="#registerValueObjectTypeAlias%2Cstring%2CNimNode" title="registerValueObjectTypeAlias(name: string; typ: NimNode)">registerValueObjectTypeAlias(name: string; typ: NimNode)</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">registerValueObjectTypeAliasRepr
+  <li><a class="reference" href="#registerValueObjectTypeAliasRepr%2Cstring%2Cstring" title="registerValueObjectTypeAliasRepr(name, alias: string)">registerValueObjectTypeAliasRepr(name, alias: string)</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">toCamelCase
@@ -96,6 +161,10 @@
   <li><a class="reference" href="#toVarCase%2Cstring" title="toVarCase(s: string): string">toVarCase(s: string): string</a></li>
 
 </ul>
+<ul class="simple nested-toc-section">usePrefixName
+  <li><a class="reference" href="#usePrefixName%2CNimNode" title="usePrefixName(sym: NimNode): bool">usePrefixName(sym: NimNode): bool</a></li>
+
+</ul>
 
     </ul>
   </details>
@@ -111,12 +180,11 @@
     <div id="tocRoot"></div>
     
     <p class="module-desc"></p>
-    <div class="section" id="10">
-  <h1><a class="toc-backref" href="#10">Consts</a></h1>
+    <div class="section" id="7">
+  <h1><a class="toc-backref" href="#7">Types</a></h1>
   <dl class="item">
-    <div id="basicTypes">
-  <dt><pre><a href="#basicTypes"><span class="Identifier">basicTypes</span></a> <span class="Other">=</span> <span class="Other">[</span><span class="StringLit">&quot;bool&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;int8&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;uint8&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;int16&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;uint16&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;int32&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;uint32&quot;</span><span class="Other">,</span>
-              <span class="StringLit">&quot;int64&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;uint64&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;int&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;uint&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;float32&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;float64&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;float&quot;</span><span class="Other">]</span></pre></dt>
+    <div id="ObjectField">
+  <dt><pre><a href="#ObjectField"><span class="Identifier">ObjectField</span></a> <span class="Other">=</span> <span class="Keyword">tuple</span><span class="Other">[</span><span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">,</span> <span class="Identifier">typ</span><span class="Other">:</span> <span class="Identifier">NimNode</span><span class="Other">]</span></pre></dt>
   <dd>
     
     
@@ -128,17 +196,87 @@
 
   </dl>
 </div>
+<div class="section" id="10">
+  <h1><a class="toc-backref" href="#10">Consts</a></h1>
+  <dl class="item">
+    <div id="basicTypes">
+  <dt><pre><a href="#basicTypes"><span class="Identifier">basicTypes</span></a> <span class="Other">=</span> <span class="Other">[</span><span class="StringLit">&quot;bool&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;int8&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;uint8&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;int16&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;uint16&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;int32&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;uint32&quot;</span><span class="Other">,</span>
+              <span class="StringLit">&quot;int64&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;uint64&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;int&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;uint&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;float32&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;float64&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;float&quot;</span><span class="Other">]</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L9" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L9" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+  </dl>
+</div>
 <div class="section" id="12">
   <h1><a class="toc-backref" href="#12">Procs</a></h1>
   <dl class="item">
-    <div id="getName-procs-all">
+    <div id="arrayCount-procs-all">
+  <div id="arrayCount,NimNode">
+  <dt><pre><span class="Keyword">proc</span> <a href="#arrayCount%2CNimNode"><span class="Identifier">arrayCount</span></a><span class="Other">(</span><span class="Identifier">sym</span><span class="Other">:</span> <span class="Identifier">NimNode</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L144" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L144" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="cppOperatorName-procs-all">
+  <div id="cppOperatorName,string">
+  <dt><pre><span class="Keyword">proc</span> <a href="#cppOperatorName%2Cstring"><span class="Identifier">cppOperatorName</span></a><span class="Other">(</span><span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L175" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L175" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="exportedValueTypeName-procs-all">
+  <div id="exportedValueTypeName,NimNode">
+  <dt><pre><span class="Keyword">proc</span> <a href="#exportedValueTypeName%2CNimNode"><span class="Identifier">exportedValueTypeName</span></a><span class="Other">(</span><span class="Identifier">sym</span><span class="Other">:</span> <span class="Identifier">NimNode</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L109" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L109" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="getName-procs-all">
   <div id="getName,NimNode">
   <dt><pre><span class="Keyword">proc</span> <a href="#getName%2CNimNode"><span class="Identifier">getName</span></a><span class="Other">(</span><span class="Identifier">sym</span><span class="Other">:</span> <span class="Identifier">NimNode</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L78" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L78" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L126" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L126" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="getParamName-procs-all">
+  <div id="getParamName,NimNode">
+  <dt><pre><span class="Keyword">proc</span> <a href="#getParamName%2CNimNode"><span class="Identifier">getParamName</span></a><span class="Other">(</span><span class="Identifier">sym</span><span class="Other">:</span> <span class="Identifier">NimNode</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L135" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L135" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -150,8 +288,103 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L71" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L71" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L119" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L119" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="isOperatorName-procs-all">
+  <div id="isOperatorName,string">
+  <dt><pre><span class="Keyword">proc</span> <a href="#isOperatorName%2Cstring"><span class="Identifier">isOperatorName</span></a><span class="Other">(</span><span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L157" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L157" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="nimCallableName-procs-all">
+  <div id="nimCallableName,string">
+  <dt><pre><span class="Keyword">proc</span> <a href="#nimCallableName%2Cstring"><span class="Identifier">nimCallableName</span></a><span class="Other">(</span><span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L168" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L168" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="normalizedOperatorName-procs-all">
+  <div id="normalizedOperatorName,string">
+  <dt><pre><span class="Keyword">proc</span> <a href="#normalizedOperatorName%2Cstring"><span class="Identifier">normalizedOperatorName</span></a><span class="Other">(</span><span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L152" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L152" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="objectFieldName-procs-all">
+  <div id="objectFieldName,NimNode">
+  <dt><pre><span class="Keyword">proc</span> <a href="#objectFieldName%2CNimNode"><span class="Identifier">objectFieldName</span></a><span class="Other">(</span><span class="Identifier">property</span><span class="Other">:</span> <span class="Identifier">NimNode</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L186" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L186" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="objectFields-procs-all">
+  <div id="objectFields,NimNode,seq[ObjectField]">
+  <dt><pre><span class="Keyword">proc</span> <a href="#objectFields%2CNimNode%2Cseq%5BObjectField%5D"><span class="Identifier">objectFields</span></a><span class="Other">(</span><span class="Identifier">sym</span><span class="Other">:</span> <span class="Identifier">NimNode</span><span class="Other">;</span> <span class="Identifier">explicitFields</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="#ObjectField"><span class="Identifier">ObjectField</span></a><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span>
+    <a href="#ObjectField"><span class="Identifier">ObjectField</span></a><span class="Other">]</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L192" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L192" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="operatorProcName-procs-all">
+  <div id="operatorProcName,string">
+  <dt><pre><span class="Keyword">proc</span> <a href="#operatorProcName%2Cstring"><span class="Identifier">operatorProcName</span></a><span class="Other">(</span><span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L160" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L160" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="pythonOperatorName-procs-all">
+  <div id="pythonOperatorName,string">
+  <dt><pre><span class="Keyword">proc</span> <a href="#pythonOperatorName%2Cstring"><span class="Identifier">pythonOperatorName</span></a><span class="Other">(</span><span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L178" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L178" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -163,8 +396,49 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L84" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L84" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L208" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L208" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="registerValueObjectType-procs-all">
+  <div id="registerValueObjectType,NimNode">
+  <dt><pre><span class="Keyword">proc</span> <a href="#registerValueObjectType%2CNimNode"><span class="Identifier">registerValueObjectType</span></a><span class="Other">(</span><span class="Identifier">sym</span><span class="Other">:</span> <span class="Identifier">NimNode</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L96" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L96" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="registerValueObjectTypeAlias-procs-all">
+  <div id="registerValueObjectTypeAlias,string,NimNode">
+  <dt><pre><span class="Keyword">proc</span> <a href="#registerValueObjectTypeAlias%2Cstring%2CNimNode"><span class="Identifier">registerValueObjectTypeAlias</span></a><span class="Other">(</span><span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">typ</span><span class="Other">:</span> <span class="Identifier">NimNode</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L93" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L93" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="registerValueObjectTypeAliasRepr-procs-all">
+  <div id="registerValueObjectTypeAliasRepr,string,string">
+  <dt><pre><span class="Keyword">proc</span> <a href="#registerValueObjectTypeAliasRepr%2Cstring%2Cstring"><span class="Identifier">registerValueObjectTypeAliasRepr</span></a><span class="Other">(</span><span class="Identifier">name</span><span class="Other">,</span> <span class="Identifier">alias</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L86" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L86" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -176,8 +450,8 @@
   <dd>
     
     Converts nim_type to NimType.
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L45" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L45" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L51" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L51" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -189,8 +463,8 @@
   <dd>
     
     Converts NimType to NIM_TYPE.
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L33" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L33" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L39" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L39" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -202,8 +476,8 @@
   <dd>
     
     Converts NimType to nim_type.
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L20" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L20" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L26" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L26" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -215,8 +489,21 @@
   <dd>
     
     Converts NimType to nimType.
-    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L58" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L58" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L64" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L64" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="usePrefixName-procs-all">
+  <div id="usePrefixName,NimNode">
+  <dt><pre><span class="Keyword">proc</span> <a href="#usePrefixName%2CNimNode"><span class="Identifier">usePrefixName</span></a><span class="Other">(</span><span class="Identifier">sym</span><span class="Other">:</span> <span class="Identifier">NimNode</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/genny/tree/master/src/genny/common.nim#L138" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/genny/edit/devel/src/genny/common.nim#L138" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -232,7 +519,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-05-25 19:50:15 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-05-25 23:40:37 UTC</small>
       </div>
     </div>
   </div>
