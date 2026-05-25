@@ -44,12 +44,12 @@ int main() {
     assert(miterLimitToAngle(2) > 0);
     assert(angleToMiterLimit(1) > 0);
 
-    SeqFloat32 dashes = pixie_new_seq_float32();
-    pixie_seq_float32_add(dashes, 1.5f);
-    pixie_seq_float32_add(dashes, 2.5f);
-    pixie_seq_float32_set(dashes, 1, 3.5f);
-    assert(pixie_seq_float32_len(dashes) == 2);
-    approx(pixie_seq_float32_get(dashes, 1), 3.5f);
+    SeqFloat32 dashes;
+    dashes.add(1.5f);
+    dashes.add(2.5f);
+    dashes.set(1, 3.5f);
+    assert(dashes.size() == 2);
+    approx(dashes[1], 3.5f);
 
     Image image(4, 3);
     assert(image.getWidth() == 4);
@@ -91,15 +91,15 @@ int main() {
     paint.setImageMat(scale(2, 3));
     assert(paint.getKind() == LINEAR_GRADIENT_PAINT);
     approx(paint.getOpacity(), 0.5f);
-    pixie_paint_gradient_handle_positions_add(paint, vector2(0.25f, 0));
-    pixie_paint_gradient_handle_positions_add(paint, vector2(0.75f, 1));
-    pixie_paint_gradient_handle_positions_set(paint, 1, vector2(0.8f, 1));
-    assert(pixie_paint_gradient_handle_positions_len(paint) == 2);
-    approx(pixie_paint_gradient_handle_positions_get(paint, 1).x, 0.8f);
-    pixie_paint_gradient_stops_add(paint, colorStop(red, 0));
-    pixie_paint_gradient_stops_add(paint, colorStop(green, 1));
-    assert(pixie_paint_gradient_stops_len(paint) == 2);
-    assertColor(pixie_paint_gradient_stops_get(paint, 1).color, green);
+    paint.addGradientHandlePositions(vector2(0.25f, 0));
+    paint.addGradientHandlePositions(vector2(0.75f, 1));
+    paint.setGradientHandlePositions(1, vector2(0.8f, 1));
+    assert(paint.gradientHandlePositionsSize() == 2);
+    approx(paint.getGradientHandlePositions(1).x, 0.8f);
+    paint.addGradientStops(colorStop(red, 0));
+    paint.addGradientStops(colorStop(green, 1));
+    assert(paint.gradientStopsSize() == 2);
+    assertColor(paint.getGradientStops(1).color, green);
 
     Path path;
     path.moveTo(1, 1);
@@ -119,7 +119,7 @@ int main() {
 
     Path rectPath;
     rectPath.rect(0, 0, 10, 10, true);
-    SeqFloat32 solidDashes = pixie_new_seq_float32();
+    SeqFloat32 solidDashes;
     assert(rectPath.fillOverlaps(vector2(5, 5), identity, NON_ZERO));
     assert(rectPath.strokeOverlaps(vector2(0, 5), identity, 2, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, solidDashes));
 
@@ -138,8 +138,8 @@ int main() {
     font.setUnderline(true);
     font.setStrikethrough(true);
     font.setNoKerningAdjustments(true);
-    pixie_font_paints_add(font, solid);
-    assert(pixie_font_paints_len(font) >= 1);
+    font.addPaints(solid);
+    assert(font.paintsSize() >= 1);
     assert(font.scale() > 0);
     assert(font.defaultLineHeight() > 0);
     assert(font.layoutBounds("abcd").x > 0);
@@ -147,10 +147,10 @@ int main() {
 
     Span span("hi", font);
     span.setText("hello");
-    SeqSpan spans = pixie_new_seq_span();
-    pixie_seq_span_add(spans, span);
+    SeqSpan spans;
+    spans.add(span);
     Arrangement arrangement = spans.typeset(vector2(100, 100), CENTER_ALIGN, BOTTOM_ALIGN, true);
-    assert(std::strcmp(pixie_seq_span_get(spans, 0).getText(), "hello") == 0);
+    assert(std::strcmp(spans[0].getText(), "hello") == 0);
     assert(arrangement.layoutBounds().x > 0);
     assert(spans.layoutBounds().y > 0);
     assert(arrangement.computeBounds(mat).x > 0);
@@ -188,7 +188,7 @@ int main() {
     assert(ctx.isPointInStroke(rectPath, 0, 5));
     ctx.setLineDash(dashes);
     SeqFloat32 ctxDashes = ctx.getLineDash();
-    assert(pixie_seq_float32_len(ctxDashes) == 2);
+    assert(ctxDashes.size() == 2);
     ctx.moveTo(1, 1);
     ctx.lineTo(2, 2);
     ctx.bezierCurveTo(1, 2, 3, 4, 5, 6);
