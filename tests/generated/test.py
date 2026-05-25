@@ -225,6 +225,19 @@ class SimpleObjWithProc(Structure):
     def extra_proc(self):
         dll.test_simple_obj_with_proc_extra_proc(self)
 
+class ExternalObj(Structure):
+    _fields_ = [
+        ("external_a", c_int),
+        ("external_b", c_bool)
+    ]
+
+    def __init__(self, external_a, external_b):
+        self.external_a = external_a
+        self.external_b = external_b
+
+    def __eq__(self, obj):
+        return self.external_a == obj.external_a and self.external_b == obj.external_b
+
 class SeqString(Structure):
     _fields_ = [("ref", c_ulonglong)]
 

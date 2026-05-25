@@ -61,6 +61,11 @@ let objWithProc = simpleObjWithProc(1, 2, false)
 doAssert objWithProc.simpleA == 1, "simpleA should be 1"
 objWithProc.extraProc()
 
+echo "Testing external value object import"
+let external = externalObj(7, true)
+doAssert external.externalA == 7, "externalA should be 7"
+doAssert external.externalB == true, "externalB should be true"
+
 echo "Testing getMessage"
 doAssert getMessage() == "alpha\0omega", "getMessage should preserve embedded NUL"
 

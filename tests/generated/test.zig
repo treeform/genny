@@ -205,6 +205,23 @@ pub const SimpleObjWithProc = extern struct {
     }
 };
 
+pub const ExternalObj = extern struct {
+    external_a: i32,
+    external_b: bool,
+
+    pub fn init(external_a: i32, external_b: bool) ExternalObj {
+        return ExternalObj{
+            .external_a = external_a,
+            .external_b = external_b,
+        };
+    }
+
+    extern fn test_external_obj_eq(self: ExternalObj, other: ExternalObj) bool;
+    pub inline fn eql(self: ExternalObj, other: ExternalObj) bool {
+        return test_external_obj_eq(self, other);
+    }
+};
+
 pub const SeqString = opaque {
     extern fn test_seq_string_unref(self: *SeqString) void;
     pub inline fn deinit(self: *SeqString) void {

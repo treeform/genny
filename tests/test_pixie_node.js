@@ -1,4 +1,5 @@
 const assert = require('assert');
+const fs = require('fs');
 const Module = require('module');
 const path = require('path');
 
@@ -10,6 +11,7 @@ Module._initPaths();
 const pixieRoot = path.resolve(process.env.PIXIE_ROOT || path.join(__dirname, '..', '..', 'pixie'));
 const bindingsDir = path.resolve(process.env.PIXIE_BINDINGS_DIR || path.join(pixieRoot, 'bindings', 'generated'));
 const pixie = require(path.join(bindingsDir, 'pixie.js'));
+const renderOutputDir = path.join(__dirname, 'generated', 'pixie_images');
 
 function asset(...parts) {
   return path.join(pixieRoot, ...parts);
@@ -24,6 +26,47 @@ function assertColor(actual, expected) {
   approx(actual.g, expected.g);
   approx(actual.b, expected.b);
   approx(actual.a, expected.a);
+}
+
+function writeRenderStep(image, label, step) {
+  fs.mkdirSync(renderOutputDir, { recursive: true });
+  const actualPath = path.join(renderOutputDir, `${label}_${step}.png`);
+  image.writeFile(actualPath);
+}
+
+function writeRenderImages(label) {
+  const render = pixie.newImage(32, 32);
+  render.fill(pixie.parseColor('#112233'));
+
+  const orange = pixie.parseColor('#f29e4c');
+  for (let y = 2; y < 10; y++) {
+    for (let x = 2; x < 10; x++) {
+      render.setColor(x, y, orange);
+    }
+  }
+  writeRenderStep(render, label, 'step1');
+
+  const rectPaint = pixie.newPaint(pixie.SOLID_PAINT);
+  rectPaint.color = pixie.parseColor('#209cee');
+  const rectPath = pixie.newPath();
+  rectPath.rect(12, 3, 14, 16, true);
+  render.fillPath(rectPath, rectPaint, pixie.translate(1, 2), pixie.NON_ZERO);
+  writeRenderStep(render, label, 'step2');
+
+  const circlePaint = pixie.newPaint(pixie.SOLID_PAINT);
+  circlePaint.color = pixie.parseColor('#8ac926');
+  const circlePath = pixie.newPath();
+  circlePath.circle(12, 22, 7);
+  render.fillPath(circlePath, circlePaint, pixie.translate(0, 0), pixie.NON_ZERO);
+
+  const strokePaint = pixie.newPaint(pixie.SOLID_PAINT);
+  strokePaint.color = pixie.parseColor('#ffffff');
+  const borderPath = pixie.newPath();
+  borderPath.rect(0.75, 0.75, 30.5, 30.5, true);
+  const dashes = pixie.newSeqFloat32();
+  render.strokePath(borderPath, strokePaint, pixie.translate(0, 0), 1.5, pixie.BUTT_CAP, pixie.MITER_JOIN, pixie.DEFAULT_MITER_LIMIT, dashes);
+  render.setColor(31, 31, pixie.parseColor('#ff00ff'));
+  writeRenderStep(render, label, 'step3');
 }
 
 const fontPath = asset('tests', 'fonts', 'Inter-Regular.ttf');
@@ -45,6 +88,12 @@ const mat = pixie.translate(3, 4);
 const identity = pixie.translate(0, 0);
 assert.strictEqual(mat.values[6], 3);
 assert.strictEqual(pixie.inverse(mat).values[6], -3);
+const a = pixie.vec2(1, 2);
+const b = pixie.vec2(3, 4);
+assert.deepStrictEqual(pixie.vec2Add(a, b), pixie.vec2(4, 6));
+assert.deepStrictEqual(pixie.vec2Mul(a, b), pixie.vec2(3, 8));
+assert.deepStrictEqual(pixie.vec2Float32Mul(a, 2), pixie.vec2(2, 4));
+assert.deepStrictEqual(pixie.mat3Vec2Mul(mat, a), pixie.vec2(4, 6));
 assert.deepStrictEqual(pixie.snapToPixels(pixie.rect(1, 2, 3, 4)), pixie.rect(1, 2, 3, 4));
 assert(pixie.miterLimitToAngle(2) > 0);
 assert(pixie.angleToMiterLimit(1) > 0);
@@ -84,7 +133,7 @@ assert.strictEqual(resized.width, 5);
 assert.strictEqual(resized.height, 6);
 assert.strictEqual(resized.subImage(0, 0, 2, 2).width, 2);
 assert.strictEqual(resized.rectSubImage(pixie.rect(0, 0, 1, 1)).height, 1);
-assert.strictEqual(resized.shadow(pixie.vector2(1, 2), 3, 4, red).width, resized.width);
+assert.strictEqual(resized.shadow(pixie.vec2(1, 2), 3, 4, red).width, resized.width);
 assert.strictEqual(resized.superImage(-1, -1, resized.width + 2, resized.height + 2).width, resized.width + 2);
 assert(resized.opaqueBounds().w > 0);
 
@@ -96,9 +145,9 @@ paint.color = green;
 paint.imageMat = pixie.scale(2, 3);
 assert.strictEqual(paint.kind, pixie.LINEAR_GRADIENT_PAINT);
 approx(paint.opacity, 0.5);
-paint.gradientHandlePositions.add(pixie.vector2(0.25, 0));
-paint.gradientHandlePositions.add(pixie.vector2(0.75, 1));
-paint.gradientHandlePositions.set(1, pixie.vector2(0.8, 1));
+paint.gradientHandlePositions.add(pixie.vec2(0.25, 0));
+paint.gradientHandlePositions.add(pixie.vec2(0.75, 1));
+paint.gradientHandlePositions.set(1, pixie.vec2(0.8, 1));
 assert.strictEqual(paint.gradientHandlePositions.length(), 2);
 approx(paint.gradientHandlePositions.get(1).x, 0.8);
 paint.gradientStops.add(pixie.colorStop(red, 0));
@@ -125,8 +174,8 @@ assert(pathShape.computeBounds(identity).w > 0);
 const rectPath = pixie.newPath();
 rectPath.rect(0, 0, 10, 10, true);
 const solidDashes = pixie.newSeqFloat32();
-assert(rectPath.fillOverlaps(pixie.vector2(5, 5), identity, pixie.NON_ZERO));
-assert(rectPath.strokeOverlaps(pixie.vector2(0, 5), identity, 2, pixie.BUTT_CAP, pixie.MITER_JOIN, pixie.DEFAULT_MITER_LIMIT, solidDashes));
+assert(rectPath.fillOverlaps(pixie.vec2(5, 5), identity, pixie.NON_ZERO));
+assert(rectPath.strokeOverlaps(pixie.vec2(0, 5), identity, 2, pixie.BUTT_CAP, pixie.MITER_JOIN, pixie.DEFAULT_MITER_LIMIT, solidDashes));
 
 const typeface = pixie.readTypeface(fontPath);
 assert(typeface.filePath.endsWith('Inter-Regular.ttf'));
@@ -150,13 +199,13 @@ assert(font.paints.length() >= 1);
 assert(font.scale() > 0);
 assert(font.defaultLineHeight() > 0);
 assert(font.layoutBounds('abcd').x > 0);
-assert(font.typeset('abcd', pixie.vector2(100, 100), pixie.LEFT_ALIGN, pixie.TOP_ALIGN, true).layoutBounds().x > 0);
+assert(font.typeset('abcd', pixie.vec2(100, 100), pixie.LEFT_ALIGN, pixie.TOP_ALIGN, true).layoutBounds().x > 0);
 
 const span = pixie.newSpan('hi', font);
 span.text = 'hello';
 const spans = pixie.newSeqSpan();
 spans.add(span);
-const arrangement = spans.typeset(pixie.vector2(100, 100), pixie.CENTER_ALIGN, pixie.BOTTOM_ALIGN, true);
+const arrangement = spans.typeset(pixie.vec2(100, 100), pixie.CENTER_ALIGN, pixie.BOTTOM_ALIGN, true);
 assert.strictEqual(spans.get(0).text, 'hello');
 assert(arrangement.layoutBounds().x > 0);
 assert(spans.layoutBounds().y > 0);
@@ -164,9 +213,9 @@ assert(arrangement.computeBounds(mat).x > 0);
 
 const canvas = pixie.newImage(64, 64);
 canvas.fill(pixie.parseColor('#ffffff'));
-canvas.fillText(font, 'abc', mat, pixie.vector2(60, 60), pixie.LEFT_ALIGN, pixie.TOP_ALIGN);
+canvas.fillText(font, 'abc', mat, pixie.vec2(60, 60), pixie.LEFT_ALIGN, pixie.TOP_ALIGN);
 canvas.arrangementFillText(arrangement, mat);
-canvas.strokeText(font, 'abc', mat, 2, pixie.vector2(60, 60), pixie.LEFT_ALIGN, pixie.TOP_ALIGN, pixie.BUTT_CAP, pixie.MITER_JOIN, pixie.DEFAULT_MITER_LIMIT, dashes);
+canvas.strokeText(font, 'abc', mat, 2, pixie.vec2(60, 60), pixie.LEFT_ALIGN, pixie.TOP_ALIGN, pixie.BUTT_CAP, pixie.MITER_JOIN, pixie.DEFAULT_MITER_LIMIT, dashes);
 canvas.arrangementStrokeText(arrangement, mat, 2, pixie.BUTT_CAP, pixie.MITER_JOIN, pixie.DEFAULT_MITER_LIMIT, dashes);
 canvas.fillPath(rectPath, solid, mat, pixie.NON_ZERO);
 canvas.strokePath(rectPath, solid, mat, 2, pixie.BUTT_CAP, pixie.MITER_JOIN, pixie.DEFAULT_MITER_LIMIT, dashes);
@@ -237,6 +286,7 @@ assert.strictEqual(pixie.readImage(imagePath).width, 40);
 assert.strictEqual(pixie.readImageDimensions(imagePath).height, 40);
 assert.strictEqual(pixie.readFont(fontPath).size, 12);
 assert.strictEqual(pixie.parsePath('M0 0 L10 0 L10 10 Z').computeBounds(identity).w, 10);
+writeRenderImages('node');
 pixie.parseColor('bad');
 assert(pixie.checkError());
 assert(pixie.takeError().includes('bad'));

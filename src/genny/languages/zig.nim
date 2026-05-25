@@ -20,10 +20,13 @@ proc isStringType(sym: NimNode): bool =
 
 proc exportTypeZig(sym: NimNode): string =
   let typ = sym.stripSink
+  let valueName = typ.exportedValueTypeName()
+  if valueName.len > 0:
+    return valueName
   if typ.kind == nnkBracketExpr:
     if typ[0].repr == "array":
       let
-        entryCount = typ[1].repr
+        entryCount = $typ.arrayCount()
         entryType = exportTypeZig(typ[2])
       result = &"[{entryCount}]{entryType}"
     elif typ.isSeqLike:
@@ -53,8 +56,6 @@ proc exportTypeZig(sym: NimNode): string =
           of "float64": "f64"
           of "float": "f64"
           of "Rune": "u21"
-          of "Vec2": "Vector2"
-          of "Mat3": "Matrix3"
           of "", "nil": "void"
           else:
             typ.repr
@@ -93,7 +94,7 @@ proc exportTypeZigAbi(sym: string): string =
 
 proc toArgSeq(args: seq[NimNode]): seq[(string, string)] =
   for i, arg in args[0 .. ^1]:
-    result.add (arg[0].repr, arg[1].exportTypeZig())
+    result.add (arg[0].getParamName(), arg[1].exportTypeZig())
 
 proc dllProc*(procName: string, args: openarray[string], resType: string) =
   discard
@@ -227,9 +228,9 @@ proc exportProcZig*(
   rename = "",
 ) =
   var
-    procName = sym.repr
+    procName = sym.repr.operatorProcName()
   let
-    procNameSnaked = toSnakeCase(procName)
+    procNameSnaked = toSnakeCase(sym.repr.operatorProcName())
     procType = sym.getTypeInst()
     procParams = procType[0][1 .. ^1].toArgSeq()
     procReturn = procType[0][0].exportReturnTypeZig()
@@ -250,7 +251,7 @@ proc exportProcZig*(
     apiProcName.add &"{toSnakeCase(owner.getName())}_"
   for prefix in prefixes:
     apiProcName.add &"{toSnakeCase(prefix.getName())}_"
-    procName.add prefix.getName()
+    procName.add capitalizeAscii(prefix.getName())
   apiProcName.add &"{procNameSnaked}"
 
   if rename != "":
@@ -271,40 +272,43 @@ proc exportCloseObjectZig*() =
   code.removeSuffix "\n"
   code.add "};\n\n"
 
-proc exportObjectZig*(sym: NimNode, constructor: NimNode) =
-  let objName = sym.repr
+proc exportObjectZig*(
+  sym: NimNode,
+  fields: seq[ObjectField],
+  constructor: NimNode
+) =
+  let
+    objName = sym.repr
+    objFields = sym.objectFields(fields)
 
   code.add &"pub const {objName} = extern struct " & "{\n"
 
-  for identDefs in sym.getImpl()[2][2]:
-    for property in identDefs[0 .. ^3]:
-      code.add &"    {toSnakeCase(property[1].repr)}"
-      code.add ": "
-      code.add exportTypeZig(identDefs[^2])
-      code.add ",\n"
+  for field in objFields:
+    code.add &"    {toSnakeCase(field.name)}"
+    code.add ": "
+    code.add exportTypeZig(field.typ)
+    code.add ",\n"
   code.add "\n"
 
   if constructor != nil:
     exportProcZig(constructor, indent = true, rename = "init")
   else:
     code.add "    pub fn init("
-    for identDefs in sym.getImpl()[2][2]:
-      for property in identDefs[0 .. ^3]:
-        code.add toSnakeCase(property[1].repr)
-        code.add ": "
-        code.add exportTypeZig(identDefs[^2])
-        code.add ", "
+    for field in objFields:
+      code.add toSnakeCase(field.name)
+      code.add ": "
+      code.add exportTypeZig(field.typ)
+      code.add ", "
     code.removeSuffix ", "
     code.add ") "
     code.add objName
     code.add " {\n"
     code.add &"        return {objName}" & "{\n"
-    for identDefs in sym.getImpl()[2][2]:
-      for property in identDefs[0 .. ^3]:
-        code.add &"            .{toSnakeCase(property[1].repr)}"
-        code.add " = "
-        code.add &"{toSnakeCase(property[1].repr)}"
-        code.add ",\n"
+    for field in objFields:
+      code.add &"            .{toSnakeCase(field.name)}"
+      code.add " = "
+      code.add &"{toSnakeCase(field.name)}"
+      code.add ",\n"
     code.add "        };\n"
     code.add "    }\n\n"
 

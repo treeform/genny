@@ -123,6 +123,13 @@ proc test_simple_obj_with_proc_eq*(a, b: SimpleObjWithProc): bool {.raises: [], 
 proc test_simple_obj_with_proc_extra_proc*(s: SimpleObjWithProc) {.raises: [], cdecl, exportc, dynlib.} =
   extraProc(s)
 
+proc test_external_obj*(external_a: int32, external_b: bool): ExternalObj {.raises: [], cdecl, exportc, dynlib.} =
+  result.external_a = external_a
+  result.external_b = external_b
+
+proc test_external_obj_eq*(a, b: ExternalObj): bool {.raises: [], cdecl, exportc, dynlib.}=
+  a == b
+
 type SeqString* = ref object
   s: seq[string]
 

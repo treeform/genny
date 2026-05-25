@@ -28,5 +28,5 @@ def load_ctypes_pixie():
 
 if __name__ == "__main__":
     add_dll_dirs()
-    run(load_ctypes_pixie())
+    run(load_ctypes_pixie(), "python")
     print("All Pixie Python tests passed!")

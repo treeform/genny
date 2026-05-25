@@ -6,6 +6,11 @@ const exportProcPragmas = "{.raises: [], cdecl, exportc, dynlib.}"
 
 var internal {.compiletime.}: string
 
+proc isSeqLike(sym: NimNode): bool =
+  sym.exportedValueTypeName().len == 0 and
+    sym.kind == nnkBracketExpr and
+    sym[0].repr in ["seq", "openArray"]
+
 proc exportConstInternal*(sym: NimNode) =
   discard
 
@@ -20,12 +25,12 @@ proc exportProcInternal*(
 ) =
   let
     procName = sym.repr
-    procNameSnaked = toSnakeCase(procName)
+    procNameSnaked = toSnakeCase(procName.operatorProcName())
     procType = sym.getTypeInst()
     procParams = procType[0][1 .. ^1]
     procReturn = procType[0][0]
     procRaises = sym.raises()
-    procReturnsSeq = procReturn.kind == nnkBracketExpr
+    procReturnsSeq = procReturn.isSeqLike()
     shouldGcRefResult = gcRefResult or procReturnsSeq or (
       procReturn.kind != nnkEmpty and procReturn.isRefObjectLike
     )
@@ -43,7 +48,7 @@ proc exportProcInternal*(
       var paramType = param[^2]
       if paramType.repr.endsWith(":type"):
         paramType = prefixes[0]
-      internal.add &"{toSnakeCase(param[i].repr)}: {exportTypeNim(paramType)}, "
+      internal.add &"{toSnakeCase(param[i].getParamName())}: {exportTypeNim(paramType)}, "
   internal.removeSuffix ", "
   internal.add ")"
   if procReturn.kind != nnkEmpty:
@@ -57,10 +62,10 @@ proc exportProcInternal*(
     internal.add "  result = "
   else:
     internal.add "  "
-  var callExpr = &"{procName}("
+  var callExpr = &"{procName.nimCallableName()}("
   for param in procParams:
     for i in 0 .. param.len - 3:
-      callExpr.add convertImportExprNim(toSnakeCase(param[i].repr), param[^2])
+      callExpr.add convertImportExprNim(toSnakeCase(param[i].getParamName()), param[^2])
       callExpr.add ", "
   callExpr.removeSuffix ", "
   callExpr.add ")"
@@ -81,10 +86,16 @@ proc exportProcInternal*(
   internal.add "\n"
   internal.add "\n"
 
-proc exportObjectInternal*(sym: NimNode, constructor: NimNode) =
+proc exportObjectInternal*(
+  sym: NimNode,
+  fields: seq[ObjectField],
+  constructor: NimNode,
+  external = false
+) =
   let
     objName = sym.repr
     objNameSnaked = toSnakeCase(objName)
+    objFields = sym.objectFields(fields)
 
   if constructor != nil:
     let constructorType = constructor.getTypeInst()
@@ -104,31 +115,30 @@ proc exportObjectInternal*(sym: NimNode, constructor: NimNode) =
     internal.add "\n"
   else:
     internal.add &"proc $lib_{objNameSnaked}*("
-    let objType = sym.getType()
-    for fieldSym in objType[2]:
+    for field in objFields:
       let
-        fieldName = fieldSym.repr
-        fieldType = fieldSym.getTypeInst()
+        fieldName = field.name
+        fieldType = field.typ
       internal.add &"{toSnakeCase(fieldName)}: {exportTypeNim(fieldType)}, "
     internal.removeSuffix ", "
     internal.add &"): {objName} {exportProcPragmas} =\n"
-    for fieldSym in objType[2]:
+    for field in objFields:
       let
-        fieldName = fieldSym.repr
-        fieldType = fieldSym.getTypeInst()
+        fieldName = field.name
+        fieldType = field.typ
       internal.add &"  result.{toSnakeCase(fieldName)} = "
       internal.add convertImportExprNim(toSnakeCase(fieldName), fieldType)
       internal.add "\n"
     internal.add "\n"
 
   internal.add &"proc $lib_{objNameSnaked}_eq*(a, b: {objName}): bool {exportProcPragmas}=\n"
-  let objType = sym.getType()
-  internal.add "  "
-  for fieldSym in objType[2]:
-    let
-      fieldName = fieldSym.repr
-    internal.add &"a.{toSnakeCase(fieldName)} == b.{toSnakeCase(fieldName)} and "
-  internal.removeSuffix " and "
+  if external:
+    internal.add "  a == b"
+  else:
+    internal.add "  "
+    for field in objFields:
+      internal.add &"a.{toSnakeCase(field.name)} == b.{toSnakeCase(field.name)} and "
+    internal.removeSuffix " and "
   internal.add "\n\n"
 
 proc exportRefObjectInternal*(

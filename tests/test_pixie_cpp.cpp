@@ -3,6 +3,11 @@
 #include <cstring>
 #include <iostream>
 #include <string>
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <sys/stat.h>
+#endif
 #include "pixie.hpp"
 
 #ifndef PIXIE_ROOT
@@ -11,6 +16,8 @@
 
 #define FONT_PATH PIXIE_ROOT "/tests/fonts/Inter-Regular.ttf"
 #define IMAGE_PATH PIXIE_ROOT "/tests/images/turtle.png"
+
+static const std::string renderOutputDir = "tests/generated/pixie_images";
 
 static void approx(float value, float expected, float eps = 0.0001f) {
     assert(std::fabs(value - expected) <= eps);
@@ -21,6 +28,57 @@ static void assertColor(Color actual, Color expected) {
     approx(actual.g, expected.g);
     approx(actual.b, expected.b);
     approx(actual.a, expected.a);
+}
+
+static void ensureRenderOutputDir() {
+#ifdef _WIN32
+    _mkdir("tests/generated");
+    _mkdir(renderOutputDir.c_str());
+#else
+    mkdir("tests/generated", 0777);
+    mkdir(renderOutputDir.c_str(), 0777);
+#endif
+}
+
+static void writeRenderStep(Image &image, const std::string &label, const std::string &step) {
+    std::string actualPath = renderOutputDir + "/" + label + "_" + step + ".png";
+    image.writeFile(actualPath.c_str());
+}
+
+static void writeRenderImages(const std::string &label) {
+    ensureRenderOutputDir();
+
+    Image image(32, 32);
+    image.fill(parseColor("#112233"));
+    Color orange = parseColor("#f29e4c");
+    for (int y = 2; y < 10; y++) {
+        for (int x = 2; x < 10; x++) {
+            image.setColor(x, y, orange);
+        }
+    }
+    writeRenderStep(image, label, "step1");
+
+    Paint rectPaint(SOLID_PAINT);
+    rectPaint.setColor(parseColor("#209cee"));
+    Path rectPath;
+    rectPath.rect(12, 3, 14, 16, true);
+    image.fillPath(rectPath, rectPaint, translate(1, 2), NON_ZERO);
+    writeRenderStep(image, label, "step2");
+
+    Paint circlePaint(SOLID_PAINT);
+    circlePaint.setColor(parseColor("#8ac926"));
+    Path circlePath;
+    circlePath.circle(12, 22, 7);
+    image.fillPath(circlePath, circlePaint, translate(0, 0), NON_ZERO);
+
+    Paint strokePaint(SOLID_PAINT);
+    strokePaint.setColor(parseColor("#ffffff"));
+    Path borderPath;
+    borderPath.rect(0.75f, 0.75f, 30.5f, 30.5f, true);
+    SeqFloat32 dashes;
+    image.strokePath(borderPath, strokePaint, translate(0, 0), 1.5f, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, dashes);
+    image.setColor(31, 31, parseColor("#ff00ff"));
+    writeRenderStep(image, label, "step3");
 }
 
 int main() {
@@ -37,10 +95,24 @@ int main() {
     approx(mixed.r, 0.75f);
     approx(mixed.g, 0.25f);
 
-    Matrix3 mat = translate(3, 4);
-    Matrix3 identity = translate(0, 0);
+    Mat3 mat = translate(3, 4);
+    Mat3 identity = translate(0, 0);
     assert(mat.values[6] == 3);
     assert(inverse(mat).values[6] == -3);
+    Vec2 a = vec2(1, 2);
+    Vec2 b = vec2(3, 4);
+    Vec2 sum = a + b;
+    assert(sum.x == 4);
+    assert(sum.y == 6);
+    Vec2 product = a * b;
+    assert(product.x == 3);
+    assert(product.y == 8);
+    Vec2 scaled = a * 2.0f;
+    assert(scaled.x == 2);
+    assert(scaled.y == 4);
+    Vec2 moved = mat * a;
+    assert(moved.x == 4);
+    assert(moved.y == 6);
     assert(pixie_rect_eq(snapToPixels(rect(1, 2, 3, 4)), rect(1, 2, 3, 4)));
     assert(miterLimitToAngle(2) > 0);
     assert(angleToMiterLimit(1) > 0);
@@ -80,7 +152,7 @@ int main() {
     assert(resized.getHeight() == 6);
     assert(resized.subImage(0, 0, 2, 2).getWidth() == 2);
     assert(resized.subImage(rect(0, 0, 1, 1)).getHeight() == 1);
-    assert(resized.shadow(vector2(1, 2), 3, 4, red).getWidth() == resized.getWidth());
+    assert(resized.shadow(vec2(1, 2), 3, 4, red).getWidth() == resized.getWidth());
     assert(resized.superImage(-1, -1, resized.getWidth() + 2, resized.getHeight() + 2).getWidth() == resized.getWidth() + 2);
     assert(resized.opaqueBounds().w > 0);
 
@@ -92,9 +164,9 @@ int main() {
     paint.setImageMat(scale(2, 3));
     assert(paint.getKind() == LINEAR_GRADIENT_PAINT);
     approx(paint.getOpacity(), 0.5f);
-    paint.addGradientHandlePositions(vector2(0.25f, 0));
-    paint.addGradientHandlePositions(vector2(0.75f, 1));
-    paint.setGradientHandlePositions(1, vector2(0.8f, 1));
+    paint.addGradientHandlePositions(vec2(0.25f, 0));
+    paint.addGradientHandlePositions(vec2(0.75f, 1));
+    paint.setGradientHandlePositions(1, vec2(0.8f, 1));
     assert(paint.gradientHandlePositionsSize() == 2);
     approx(paint.getGradientHandlePositions(1).x, 0.8f);
     paint.addGradientStops(colorStop(red, 0));
@@ -121,8 +193,8 @@ int main() {
     Path rectPath;
     rectPath.rect(0, 0, 10, 10, true);
     SeqFloat32 solidDashes;
-    assert(rectPath.fillOverlaps(vector2(5, 5), identity, NON_ZERO));
-    assert(rectPath.strokeOverlaps(vector2(0, 5), identity, 2, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, solidDashes));
+    assert(rectPath.fillOverlaps(vec2(5, 5), identity, NON_ZERO));
+    assert(rectPath.strokeOverlaps(vec2(0, 5), identity, 2, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, solidDashes));
 
     Typeface typeface = readTypeface(FONT_PATH);
     assert(typeface.getFilePath().find("Inter-Regular.ttf") != std::string::npos);
@@ -144,13 +216,13 @@ int main() {
     assert(font.scale() > 0);
     assert(font.defaultLineHeight() > 0);
     assert(font.layoutBounds("abcd").x > 0);
-    assert(font.typeset("abcd", vector2(100, 100), LEFT_ALIGN, TOP_ALIGN, true).layoutBounds().x > 0);
+    assert(font.typeset("abcd", vec2(100, 100), LEFT_ALIGN, TOP_ALIGN, true).layoutBounds().x > 0);
 
     Span span("hi", font);
     span.setText("hello");
     SeqSpan spans;
     spans.add(span);
-    Arrangement arrangement = spans.typeset(vector2(100, 100), CENTER_ALIGN, BOTTOM_ALIGN, true);
+    Arrangement arrangement = spans.typeset(vec2(100, 100), CENTER_ALIGN, BOTTOM_ALIGN, true);
     assert(spans[0].getText() == "hello");
     assert(arrangement.layoutBounds().x > 0);
     assert(spans.layoutBounds().y > 0);
@@ -158,9 +230,9 @@ int main() {
 
     Image canvas(64, 64);
     canvas.fill(parseColor("#ffffff"));
-    canvas.fillText(font, "abc", mat, vector2(60, 60), LEFT_ALIGN, TOP_ALIGN);
+    canvas.fillText(font, "abc", mat, vec2(60, 60), LEFT_ALIGN, TOP_ALIGN);
     canvas.fillText(arrangement, mat);
-    canvas.strokeText(font, "abc", mat, 2, vector2(60, 60), LEFT_ALIGN, TOP_ALIGN, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, dashes);
+    canvas.strokeText(font, "abc", mat, 2, vec2(60, 60), LEFT_ALIGN, TOP_ALIGN, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, dashes);
     canvas.strokeText(arrangement, mat, 2, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, dashes);
     canvas.fillPath(rectPath, solid, mat, NON_ZERO);
     canvas.strokePath(rectPath, solid, mat, 2, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, dashes);
@@ -233,6 +305,7 @@ int main() {
     assert(readImageDimensions(IMAGE_PATH).height == 40);
     approx(readFont(FONT_PATH).getSize(), 12);
     assert(parsePath("M0 0 L10 0 L10 10 Z").computeBounds(identity).w == 10);
+    writeRenderImages("cpp");
     parseColor("bad");
     assert(checkError());
     assert(takeError().find("bad") != std::string::npos);

@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+RENDER_OUTPUT_DIR = Path(__file__).resolve().parent / "generated" / "pixie_images"
+
 
 def pixie_root():
     return Path(os.environ.get("PIXIE_ROOT", Path(__file__).resolve().parents[2] / "pixie"))
@@ -18,7 +20,55 @@ def matrix_values(matrix):
     return list(matrix.values)
 
 
-def run(pixie):
+def write_render_step(image, label, step):
+    RENDER_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    actual_path = RENDER_OUTPUT_DIR / f"{label}_{step}.png"
+    image.write_file(str(actual_path))
+
+
+def write_render_images(pixie, label):
+    image = pixie.Image(32, 32)
+    image.fill(pixie.parse_color("#112233"))
+
+    orange = pixie.parse_color("#f29e4c")
+    for y in range(2, 10):
+        for x in range(2, 10):
+            image.set_color(x, y, orange)
+    write_render_step(image, label, "step1")
+
+    rect_paint = pixie.Paint(pixie.SOLID_PAINT)
+    rect_paint.color = pixie.parse_color("#209cee")
+    rect_path = pixie.Path()
+    rect_path.rect(12, 3, 14, 16)
+    image.fill_path(rect_path, rect_paint, pixie.translate(1, 2), pixie.NON_ZERO)
+    write_render_step(image, label, "step2")
+
+    circle_paint = pixie.Paint(pixie.SOLID_PAINT)
+    circle_paint.color = pixie.parse_color("#8ac926")
+    circle_path = pixie.Path()
+    circle_path.circle(12, 22, 7)
+    image.fill_path(circle_path, circle_paint, pixie.translate(0, 0), pixie.NON_ZERO)
+
+    stroke_paint = pixie.Paint(pixie.SOLID_PAINT)
+    stroke_paint.color = pixie.parse_color("#ffffff")
+    border_path = pixie.Path()
+    border_path.rect(0.75, 0.75, 30.5, 30.5)
+    dashes = pixie.SeqFloat32()
+    image.stroke_path(
+        border_path,
+        stroke_paint,
+        pixie.translate(0, 0),
+        1.5,
+        pixie.BUTT_CAP,
+        pixie.MITER_JOIN,
+        pixie.DEFAULT_MITER_LIMIT,
+        dashes,
+    )
+    image.set_color(31, 31, pixie.parse_color("#ff00ff"))
+    write_render_step(image, label, "step3")
+
+
+def run(pixie, label="python"):
     font_path = asset("tests", "fonts", "Inter-Regular.ttf")
     image_path = asset("tests", "images", "turtle.png")
     ppm = "P3\n2 1\n255\n255 0 0 0 255 0\n"
@@ -37,6 +87,12 @@ def run(pixie):
     mat = pixie.translate(3, 4)
     assert matrix_values(mat)[6] == 3
     assert matrix_values(pixie.inverse(mat))[6] == -3
+    a = pixie.Vec2(1, 2)
+    b = pixie.Vec2(3, 4)
+    assert a + b == pixie.Vec2(4, 6)
+    assert a * b == pixie.Vec2(3, 8)
+    assert a * 2.0 == pixie.Vec2(2, 4)
+    assert mat * a == pixie.Vec2(4, 6)
     assert pixie.snap_to_pixels(pixie.Rect(1, 2, 3, 4)) == pixie.Rect(1, 2, 3, 4)
     assert pixie.miter_limit_to_angle(2) > 0
     assert pixie.angle_to_miter_limit(1) > 0
@@ -76,7 +132,7 @@ def run(pixie):
     assert resized.height == 6
     assert resized.sub_image(0, 0, 2, 2).width == 2
     assert resized.rect_sub_image(pixie.Rect(0, 0, 1, 1)).height == 1
-    assert resized.shadow(pixie.Vector2(1, 2), 3, 4, red).width == resized.width
+    assert resized.shadow(pixie.Vec2(1, 2), 3, 4, red).width == resized.width
     assert resized.super_image(-1, -1, resized.width + 2, resized.height + 2).width == resized.width + 2
     assert resized.opaque_bounds().w > 0
 
@@ -89,9 +145,9 @@ def run(pixie):
     assert paint.kind == pixie.LINEAR_GRADIENT_PAINT
     approx(paint.opacity, 0.5)
 
-    paint.gradient_handle_positions.append(pixie.Vector2(0.25, 0.0))
-    paint.gradient_handle_positions.append(pixie.Vector2(0.75, 1.0))
-    paint.gradient_handle_positions[1] = pixie.Vector2(0.8, 1.0)
+    paint.gradient_handle_positions.append(pixie.Vec2(0.25, 0.0))
+    paint.gradient_handle_positions.append(pixie.Vec2(0.75, 1.0))
+    paint.gradient_handle_positions[1] = pixie.Vec2(0.8, 1.0)
     assert len(paint.gradient_handle_positions) == 2
     approx(paint.gradient_handle_positions[1].x, 0.8)
 
@@ -119,9 +175,9 @@ def run(pixie):
     rect_path = pixie.Path()
     rect_path.rect(0, 0, 10, 10)
     solid_dashes = pixie.SeqFloat32()
-    assert rect_path.fill_overlaps(pixie.Vector2(5, 5), None, pixie.NON_ZERO)
+    assert rect_path.fill_overlaps(pixie.Vec2(5, 5), None, pixie.NON_ZERO)
     assert rect_path.stroke_overlaps(
-        pixie.Vector2(0, 5), None, 2, pixie.BUTT_CAP, pixie.MITER_JOIN, pixie.DEFAULT_MITER_LIMIT, solid_dashes
+        pixie.Vec2(0, 5), None, 2, pixie.BUTT_CAP, pixie.MITER_JOIN, pixie.DEFAULT_MITER_LIMIT, solid_dashes
     )
 
     typeface = pixie.read_typeface(font_path)
@@ -150,13 +206,13 @@ def run(pixie):
     assert font.scale() > 0
     assert font.default_line_height() > 0
     assert font.layout_bounds("abcd").x > 0
-    assert font.typeset("abcd", pixie.Vector2(100, 100), pixie.LEFT_ALIGN, pixie.TOP_ALIGN, True).layout_bounds().x > 0
+    assert font.typeset("abcd", pixie.Vec2(100, 100), pixie.LEFT_ALIGN, pixie.TOP_ALIGN, True).layout_bounds().x > 0
 
     span = pixie.Span("hi", font)
     span.text = "hello"
     spans = pixie.SeqSpan()
     spans.append(span)
-    arrangement = spans.typeset(pixie.Vector2(100, 100), pixie.CENTER_ALIGN, pixie.BOTTOM_ALIGN, True)
+    arrangement = spans.typeset(pixie.Vec2(100, 100), pixie.CENTER_ALIGN, pixie.BOTTOM_ALIGN, True)
     assert spans[0].text == "hello"
     assert arrangement.layout_bounds().x > 0
     assert spans.layout_bounds().y > 0
@@ -164,10 +220,10 @@ def run(pixie):
 
     canvas = pixie.Image(64, 64)
     canvas.fill(pixie.parse_color("#ffffff"))
-    canvas.fill_text(font, "abc", mat, pixie.Vector2(60, 60), pixie.LEFT_ALIGN, pixie.TOP_ALIGN)
+    canvas.fill_text(font, "abc", mat, pixie.Vec2(60, 60), pixie.LEFT_ALIGN, pixie.TOP_ALIGN)
     canvas.arrangement_fill_text(arrangement, mat)
     canvas.stroke_text(
-        font, "abc", mat, 2, pixie.Vector2(60, 60), pixie.LEFT_ALIGN, pixie.TOP_ALIGN,
+        font, "abc", mat, 2, pixie.Vec2(60, 60), pixie.LEFT_ALIGN, pixie.TOP_ALIGN,
         pixie.BUTT_CAP, pixie.MITER_JOIN, pixie.DEFAULT_MITER_LIMIT, dashes
     )
     canvas.arrangement_stroke_text(arrangement, mat, 2, pixie.BUTT_CAP, pixie.MITER_JOIN, pixie.DEFAULT_MITER_LIMIT, dashes)
@@ -240,6 +296,7 @@ def run(pixie):
     assert pixie.read_image_dimensions(image_path).height == 40
     assert pixie.read_font(font_path).size == 12
     assert pixie.parse_path("M0 0 L10 0 L10 10 Z").compute_bounds().w == 10
+    write_render_images(pixie, label)
 
     try:
         pixie.parse_color("bad")

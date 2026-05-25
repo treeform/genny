@@ -32,3 +32,5 @@ jobs:
       run: gcc -o tests/test_pixie_c tests/test_pixie_c.c -I ../pixie/bindings/generated -L ../pixie/bindings/generated -l:libpixie.so -lm -Wl,-rpath,'$ORIGIN/../../pixie/bindings/generated'
     - name: Run Pixie C test
       run: ./tests/test_pixie_c
+    - name: Compare Pixie render goldens
+      run: nim r --mm:arc --path:../pixie/src tests/test_no_gold_diff.nim

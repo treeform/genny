@@ -1,6 +1,6 @@
-import bumpy, chroma, unicode, vmath
+import external_types
 
-export bumpy, chroma, unicode, vmath
+export external_types
 
 when defined(windows):
   const libName = "test.dll"

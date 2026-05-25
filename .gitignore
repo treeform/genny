@@ -12,6 +12,7 @@
 nimcache
 __pycache__/
 tests/generated/*_native.c
+tests/generated/pixie_images/*.png
 *.pdb
 *.ilk
 .*

@@ -19,5 +19,5 @@ import pixie  # noqa: E402
 
 
 if __name__ == "__main__":
-    run(pixie)
+    run(pixie, "python_native")
     print("All Pixie native Python tests passed!")

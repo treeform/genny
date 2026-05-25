@@ -1,0 +1,1 @@
+Generated Pixie render outputs are written here during tests.

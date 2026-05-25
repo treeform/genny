@@ -43,10 +43,13 @@ proc isEnumLike(sym: NimNode): bool =
 
 proc exportTypeNode(sym: NimNode): string =
   let typ = sym.stripSink
+  let valueName = typ.exportedValueTypeName()
+  if valueName.len > 0:
+    return valueName
   if typ.kind == nnkBracketExpr:
     if typ[0].repr == "array":
       let
-        entryCount = typ[1].repr
+        entryCount = $typ.arrayCount()
         entryType = exportTypeNode(typ[2])
       result = &"koffi.array({entryType}, {entryCount})"
     elif typ.isSeqLike:
@@ -74,8 +77,6 @@ proc exportTypeNode(sym: NimNode): string =
       of "float": "'double'"
       of "proc () {.cdecl.}": "'pointer'"
       of "Rune": "'int32'"
-      of "Vec2": "Vector2"
-      of "Mat3": "Matrix3"
       of "": "'void'"
       else:
         if typ.isEnumLike:
@@ -147,7 +148,7 @@ proc exportProcNode*(
 ) =
   let
     procName = sym.repr
-    procNameSnaked = toSnakeCase(procName)
+    procNameSnaked = toSnakeCase(procName.operatorProcName())
     procType = sym.getTypeInst()
     procParams = procType[0][1 .. ^1]
     procReturn = procType[0][0]
@@ -194,30 +195,27 @@ proc exportProcNode*(
     types.add &"{owner.getName()}.prototype."
     var name = ""
     if prefixes.len > 0:
-      if prefixes[0].getImpl().kind != nnkNilLIt:
-        if prefixes[0].getImpl()[2].kind != nnkEnumTy:
-          name.add &"{prefixes[0].repr}_"
-    name.add sym.repr
+      if prefixes[0].usePrefixName():
+        name.add &"{prefixes[0].getName()}_"
+    name.add sym.repr.operatorProcName()
     types.add &"{toVarCase(toCamelCase(name))} = function("
   elif onClass:
     # Value object with method - generate as standalone function
     var name = owner.getName() & "_"
     if prefixes.len > 0:
-      if prefixes[0].getImpl().kind != nnkNilLIt:
-        if prefixes[0].getImpl()[2].kind != nnkEnumTy:
-          name.add &"{prefixes[0].repr}_"
-    name.add sym.repr
+      name.add &"{prefixes[0].getName()}_"
+    name.add sym.repr.operatorProcName()
     types.add &"function {toVarCase(toCamelCase(name))}("
     exports.add &"exports.{toVarCase(toCamelCase(name))} = {toVarCase(toCamelCase(name))};\n"
   else:
-    types.add &"function {sym.repr}("
-    exports.add &"exports.{sym.repr} = {sym.repr};\n"
+    types.add &"function {sym.repr.operatorProcName()}("
+    exports.add &"exports.{sym.repr.operatorProcName()} = {sym.repr.operatorProcName()};\n"
 
   for i, param in procParams[0 .. ^1]:
     if isRefObject and i == 0:
       discard
     else:
-      types.add toSnakeCase(param[0].repr)
+      types.add toSnakeCase(param[0].getParamName())
       types.add &", "
   types.removeSuffix ", "
   types.add ") {\n"
@@ -229,7 +227,7 @@ proc exportProcNode*(
     if isRefObject and i == 0:
       call.add "this.ref"
     else:
-      let argName = toSnakeCase(param[0].repr)
+      let argName = toSnakeCase(param[0].getParamName())
       call.add jsArgValue(param[^2], argName)
     call.add &", "
   call.removeSuffix ", "
@@ -238,15 +236,20 @@ proc exportProcNode*(
   types.add ";\n"
   types.add "}\n\n"
 
-proc exportObjectNode*(sym: NimNode, constructor: NimNode) =
-  let objName = sym.repr
+proc exportObjectNode*(
+  sym: NimNode,
+  fields: seq[ObjectField],
+  constructor: NimNode
+) =
+  let
+    objName = sym.repr
+    objFields = sym.objectFields(fields)
   objects.incl(objName)
 
   # Define struct type with koffi
   types.add &"const {objName} = koffi.struct('{objName}', {{\n"
-  for identDefs in sym.getImpl()[2][2]:
-    for property in identDefs[0 .. ^3]:
-      types.add &"  {property[1].repr}: {exportTypeNode(identDefs[^2])},\n"
+  for field in objFields:
+    types.add &"  {field.name}: {exportTypeNode(field.typ)},\n"
   types.removeSuffix ",\n"
   types.add "\n});\n\n"
   exports.add &"exports.{objName} = {objName};\n"
@@ -254,15 +257,13 @@ proc exportObjectNode*(sym: NimNode, constructor: NimNode) =
   # Constructor function
   exports.add &"exports.{toVarCase(objName)} = {toVarCase(objName)};\n"
   types.add &"function {toVarCase(objName)}("
-  for identDefs in sym.getImpl()[2][2]:
-    for property in identDefs[0 .. ^3]:
-      types.add &"{toSnakeCase(property[1].repr)}, "
+  for field in objFields:
+    types.add &"{toSnakeCase(field.name)}, "
   types.removeSuffix ", "
   types.add ") {\n"
   types.add "  return {\n"
-  for identDefs in sym.getImpl()[2][2]:
-    for property in identDefs[0 .. ^3]:
-      types.add &"    {property[1].repr}: {toSnakeCase(property[1].repr)},\n"
+  for field in objFields:
+    types.add &"    {field.name}: {toSnakeCase(field.name)},\n"
   types.removeSuffix ",\n"
   types.add "\n  };\n"
   types.add "}\n\n"
@@ -349,13 +350,13 @@ proc exportRefObjectNode*(
     exports.add &"exports.new{objName} = new{objName};\n"
     types.add &"function new{objName}("
     for i, param in constructorParams[0 .. ^1]:
-      types.add &"{toSnakeCase(param[0].repr)}"
+      types.add &"{toSnakeCase(param[0].getParamName())}"
       types.add ", "
     types.removeSuffix ", "
     types.add ") {\n"
     types.add &"  const ref = {constructorLibProc}("
     for i, param in constructorParams[0 .. ^1]:
-      let argName = toSnakeCase(param[0].repr)
+      let argName = toSnakeCase(param[0].getParamName())
       types.add jsArgValue(param[^2], argName)
       types.add ", "
     types.removeSuffix ", "

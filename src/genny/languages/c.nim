@@ -18,10 +18,13 @@ proc isSeqLike(sym: NimNode): bool =
 
 proc exportTypeC(sym: NimNode): string =
   let typ = sym.stripSink
+  let valueName = typ.exportedValueTypeName()
+  if valueName.len > 0:
+    return valueName
   if typ.kind == nnkBracketExpr:
     if typ[0].repr == "array":
       let
-        entryCount = typ[1].repr
+        entryCount = $typ.arrayCount()
         entryType = exportTypeC(typ[2])
       result = &"{entryType}[{entryCount}]"
     elif typ.isSeqLike:
@@ -48,8 +51,6 @@ proc exportTypeC(sym: NimNode): string =
       of "float64": "double"
       of "float": "double"
       of "Rune": "int32_t"
-      of "Vec2": "Vector2"
-      of "Mat3": "Matrix3"
       of "", "nil": "void"
       of "None": "void"
       else:
@@ -64,10 +65,13 @@ proc exportReturnTypeC(sym: NimNode): string =
 
 proc exportTypeC(sym: NimNode, name: string): string =
   let typ = sym.stripSink
+  let valueName = typ.exportedValueTypeName()
+  if valueName.len > 0:
+    return valueName & " " & name
   if typ.kind == nnkBracketExpr:
     if typ[0].repr == "array":
       let
-        entryCount = typ[1].repr
+        entryCount = $typ.arrayCount()
         entryType = exportTypeC(typ[2], &"{name}[{entryCount}]")
       result = &"{entryType}"
     elif typ.isSeqLike:
@@ -88,7 +92,7 @@ proc dllProc*(procName: string, args: openarray[string], restype: string) =
 proc dllProc*(procName: string, args: openarray[(NimNode, NimNode)], restype: string) =
   var argsConverted: seq[string]
   for (argName, argType) in args:
-    argsConverted.add exportTypeC(argType, toSnakeCase(argName.getName()))
+    argsConverted.add exportTypeC(argType, toSnakeCase(argName.getParamName()))
   dllProc(procName, argsConverted, restype)
 
 proc dllProc*(procName: string, restype: string) =
@@ -112,7 +116,7 @@ proc exportProcC*(
 ) =
   let
     procName = sym.repr
-    procNameSnaked = toSnakeCase(procName)
+    procNameSnaked = toSnakeCase(procName.operatorProcName())
     procType = sym.getTypeInst()
     procParams = procType[0][1 .. ^1]
     procReturn = procType[0][0]
@@ -151,22 +155,26 @@ proc exportProcC*(
     dllParams.add((param[0], param[1]))
   dllProc(&"$lib_{apiProcName}", dllParams, exportReturnTypeC(procReturn))
 
-proc exportObjectC*(sym: NimNode, constructor: NimNode) =
-  let objName = sym.repr
+proc exportObjectC*(
+  sym: NimNode,
+  fields: seq[ObjectField],
+  constructor: NimNode
+) =
+  let
+    objName = sym.repr
+    objFields = sym.objectFields(fields)
 
   types.add &"typedef struct {objName} " & "{\n"
-  for identDefs in sym.getImpl()[2][2]:
-    for property in identDefs[0 .. ^3]:
-      types.add &"  {exportTypeC(identDefs[^2], toSnakeCase(property[1].repr))};\n"
+  for field in objFields:
+    types.add &"  {exportTypeC(field.typ, toSnakeCase(field.name))};\n"
   types.add "} " & &"{objName};\n\n"
 
   if constructor != nil:
     exportProcC(constructor)
   else:
     procs.add &"{objName} $lib_{toSnakeCase(objName)}("
-    for identDefs in sym.getImpl()[2][2]:
-      for property in identDefs[0 .. ^3]:
-        procs.add &"{exportTypeC(identDefs[^2], toSnakeCase(property[1].repr))}, "
+    for field in objFields:
+      procs.add &"{exportTypeC(field.typ, toSnakeCase(field.name))}, "
     procs.removeSuffix ", "
     procs.add ");\n\n"
 

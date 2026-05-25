@@ -39,3 +39,5 @@ jobs:
     - name: Run non-gating benchmark
       continue-on-error: true
       run: python tests/bench_python_native.py
+    - name: Compare Pixie render goldens
+      run: nim r --mm:arc --path:../pixie/src tests/test_no_gold_diff.nim

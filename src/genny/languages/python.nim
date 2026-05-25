@@ -1,12 +1,18 @@
 import
-  std/[os, strformat, strutils, macros],
+  std/[algorithm, os, strformat, strutils, macros, tables],
   ../common
+
+type OperatorCase = tuple[
+  rhsType: NimNode,
+  returnType: NimNode,
+  apiProcName: string,
+  procRaises: bool
+]
 
 var
   types {.compiletime.}: string
   procs {.compiletime.}: string
-
-const operators = ["add", "sub", "mul", "div"]
+  operatorMethods {.compiletime.}: Table[string, Table[string, seq[OperatorCase]]]
 
 proc stripSink(sym: NimNode): NimNode =
   ## Removes Nim's `sink[T]` ownership wrapper before mapping a type to ctypes.
@@ -29,10 +35,13 @@ proc isStringType(sym: NimNode): bool =
 
 proc exportTypePy(sym: NimNode): string =
   let typ = sym.stripSink
+  let valueName = typ.exportedValueTypeName()
+  if valueName.len > 0:
+    return valueName
   if typ.kind == nnkBracketExpr:
     if typ[0].repr == "array":
       let
-        entryCount = typ[1].repr
+        entryCount = $typ.arrayCount()
         entryType = exportTypePy(typ[2])
       result = &"{entryType} * {entryCount}"
     elif typ.isSeqLike:
@@ -61,8 +70,6 @@ proc exportTypePy(sym: NimNode): string =
       of "float64": "c_double"
       of "float": "c_double"
       of "Rune": "c_int"
-      of "Vec2": "Vector2"
-      of "Mat3": "Matrix3"
       of "", "nil": "None"
       else:
         typ.repr
@@ -103,6 +110,20 @@ proc importExprPy(expr: string, sym: NimNode): string =
   else:
     expr
 
+proc pyTypeCheck(expr: string, sym: NimNode): string =
+  let typ = sym.stripSink
+  case typ.repr:
+  of "bool":
+    &"isinstance({expr}, bool)"
+  of "int8", "byte", "int16", "int32", "int64", "int", "uint8", "uint16", "uint32", "uint64", "uint":
+    &"isinstance({expr}, int)"
+  of "float32", "float64", "float":
+    &"isinstance({expr}, (int, float))"
+  of "string", "cstring", "Rune":
+    &"isinstance({expr}, str)"
+  else:
+    &"isinstance({expr}, {exportTypePy(typ)})"
+
 proc toArgTypes(args: openarray[NimNode]): seq[string] =
   for arg in args:
     result.add exportTypePy(arg)
@@ -131,7 +152,7 @@ proc exportProcPy*(
 ) =
   let
     procName = sym.repr
-    procNameSnaked = toSnakeCase(procName)
+    procNameSnaked = toSnakeCase(procName.operatorProcName())
     procType = sym.getTypeInst()
     procParams = procType[0][1 .. ^1]
     procReturn = procType[0][0]
@@ -151,25 +172,41 @@ proc exportProcPy*(
     for entry in identDefs[0 .. ^3]:
       defaults.add((entry.repr, default))
 
+  if onClass and procName.isOperatorName and procReturn.kind != nnkEmpty:
+    if procParams.len < 2:
+      error("Python operator overloads need a right-hand operand", sym)
+
+    let methodName = procName.pythonOperatorName()
+    var ownerOps = operatorMethods.getOrDefault(owner.getName())
+    var cases = ownerOps.getOrDefault(methodName)
+    cases.add((
+      rhsType: procParams[1][^2],
+      returnType: procReturn,
+      apiProcName: &"dll.$lib_{apiProcName}",
+      procRaises: procRaises
+    ))
+    ownerOps[methodName] = cases
+    operatorMethods[owner.getName()] = ownerOps
+
+    var dllParams: seq[NimNode]
+    for param in procParams:
+      dllParams.add(param[1])
+    dllProc(&"dll.$lib_{apiProcName}", toArgTypes(dllParams), exportReturnTypePy(procReturn))
+    return
+
   if onClass:
     types.add "    def "
-    if sym.repr in operators and
-      procReturn.kind != nnkEmpty and
-      prefixes.len == 0:
-      types.add &"__{sym.repr}__("
-    else:
-      if prefixes.len > 0:
-        if prefixes[0].getImpl().kind != nnkNilLIt:
-          if prefixes[0].getImpl()[2].kind != nnkEnumTy:
-            types.add &"{toSnakeCase(prefixes[0].repr)}_"
-      types.add &"{toSnakeCase(sym.repr)}("
+    if prefixes.len > 0:
+      if prefixes[0].usePrefixName():
+        types.add &"{toSnakeCase(prefixes[0].getName())}_"
+    types.add &"{toSnakeCase(sym.repr.operatorProcName())}("
   else:
     types.add &"def {apiProcName}("
   for i, param in procParams[0 .. ^1]:
     if onClass and i == 0:
       types.add "self"
     else:
-      types.add toSnakeCase(param[0].repr)
+      types.add toSnakeCase(param[0].getParamName())
       case defaults[i][1].kind:
       of nnkIntLit, nnkFloatLit:
         types.add &" = {defaults[i][1].repr}"
@@ -210,10 +247,10 @@ proc exportProcPy*(
     if defaults[i][1].kind notin {nnkEmpty, nnkIntLit, nnkFloatLit, nnkIdent}:
       if onClass:
           types.add "    "
-      types.add &"    if {toSnakeCase(param[0].repr)} is None:\n"
+      types.add &"    if {toSnakeCase(param[0].getParamName())} is None:\n"
       if onClass:
           types.add "    "
-      types.add &"        {toSnakeCase(param[0].repr)} = "
+      types.add &"        {toSnakeCase(param[0].getParamName())} = "
       types.add &"{exportTypePy(param[1])}("
       if defaults[i][1].kind == nnkCall:
         for d in defaults[i][1][1 .. ^1]:
@@ -231,7 +268,7 @@ proc exportProcPy*(
     if onClass and i == 0:
       call.add "self"
     else:
-      call.add exportExprPy(toSnakeCase(param[0].repr), param[1])
+      call.add exportExprPy(toSnakeCase(param[0].getParamName()), param[1])
     call.add &", "
   call.removeSuffix ", "
   call.add ")"
@@ -257,16 +294,21 @@ proc exportProcPy*(
     dllParams.add(param[1])
   dllProc(&"dll.$lib_{apiProcName}", toArgTypes(dllParams), exportReturnTypePy(procReturn))
 
-proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
-  let objName = sym.repr
+proc exportObjectPy*(
+  sym: NimNode,
+  fields: seq[ObjectField],
+  constructor: NimNode
+) =
+  let
+    objName = sym.repr
+    objFields = sym.objectFields(fields)
 
   types.add &"class {objName}(Structure):\n"
   types.add "    _fields_ = [\n"
-  for identDefs in sym.getImpl()[2][2]:
-    for property in identDefs[0 .. ^3]:
-      types.add &"        (\"{toSnakeCase(property[1].repr)}\""
-      types.add ", "
-      types.add &"{exportTypePy(identDefs[^2])}),\n"
+  for field in objFields:
+    types.add &"        (\"{toSnakeCase(field.name)}\""
+    types.add ", "
+    types.add &"{exportTypePy(field.typ)}),\n"
   types.removeSuffix ",\n"
   types.add "\n"
   types.add "    ]\n"
@@ -278,20 +320,19 @@ proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
       constructorParams = constructorType[0][1 .. ^1]
     types.add "    def __init__(self, "
     for param in constructorParams:
-      types.add &"{toSnakeCase(param[0].repr)}"
+      types.add &"{toSnakeCase(param[0].getParamName())}"
       types.add ", "
     types.removeSuffix ", "
     types.add "):\n"
     types.add &"        tmp = dll.$lib_{toSnakeCase(objName)}("
     for param in constructorParams:
-      types.add exportExprPy(toSnakeCase(param[0].repr), param[1])
+      types.add exportExprPy(toSnakeCase(param[0].getParamName()), param[1])
       types.add ", "
     types.removeSuffix ", "
     types.add ")\n"
-    for identDefs in sym.getImpl()[2][2]:
-      for property in identDefs[0 .. ^3]:
-        types.add &"        self.{toSnakeCase(property[1].repr)} = "
-        types.add &"tmp.{toSnakeCase(property[1].repr)}\n"
+    for field in objFields:
+      types.add &"        self.{toSnakeCase(field.name)} = "
+      types.add &"tmp.{toSnakeCase(field.name)}\n"
     types.add "\n"
     var dllParams: seq[NimNode]
     for param in constructorParams:
@@ -299,30 +340,50 @@ proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
     dllProc(&"dll.$lib_{toSnakeCase(objName)}", toArgTypes(dllParams), objName)
   else:
     types.add "    def __init__(self, "
-    for identDefs in sym.getImpl()[2][2]:
-      for property in identDefs[0 .. ^3]:
-        types.add &"{toSnakeCase(property[1].repr)}, "
+    for field in objFields:
+      types.add &"{toSnakeCase(field.name)}, "
     types.removeSuffix ", "
     types.add "):\n"
-    for identDefs in sym.getImpl()[2][2]:
-      for property in identDefs[0 .. ^3]:
-        types.add "        "
-        types.add &"self.{toSnakeCase(property[1].repr)} = "
-        types.add &"{toSnakeCase(property[1].repr)}\n"
+    for field in objFields:
+      types.add "        "
+      types.add &"self.{toSnakeCase(field.name)} = "
+      types.add &"{toSnakeCase(field.name)}\n"
     types.add "\n"
 
   types.add "    def __eq__(self, obj):\n"
   types.add "        return "
-  for identDefs in sym.getImpl()[2][2]:
-    for property in identDefs[0 .. ^3]:
-      if identDefs[^2].len > 0 and identDefs[^2][0].repr == "array":
-        for i in 0 ..< identDefs[^2][1].intVal:
-          types.add &"self.{toSnakeCase(property[1].repr)}[{i}] == obj.{toSnakeCase(property[1].repr)}[{i}] and "
-      else:
-        types.add &"self.{toSnakeCase(property[1].repr)} == obj.{toSnakeCase(property[1].repr)} and "
+  for field in objFields:
+    if field.typ.len > 0 and field.typ[0].repr == "array":
+      for i in 0 ..< field.typ.arrayCount():
+        types.add &"self.{toSnakeCase(field.name)}[{i}] == obj.{toSnakeCase(field.name)}[{i}] and "
+    else:
+      types.add &"self.{toSnakeCase(field.name)} == obj.{toSnakeCase(field.name)} and "
   types.removeSuffix " and "
   types.add "\n"
   types.add "\n"
+
+proc exportCloseObjectPy*(sym: NimNode) =
+  let objName = sym.getName()
+  if objName notin operatorMethods:
+    return
+
+  var methodNames: seq[string]
+  for methodName in operatorMethods[objName].keys:
+    methodNames.add(methodName)
+  methodNames.sort()
+
+  for methodName in methodNames:
+    let cases = operatorMethods[objName][methodName]
+    types.add &"    def {methodName}(self, other):\n"
+    for opCase in cases:
+      types.add &"        if {pyTypeCheck(\"other\", opCase.rhsType)}:\n"
+      types.add &"            result = {opCase.apiProcName}(self, {exportExprPy(\"other\", opCase.rhsType)})\n"
+      if opCase.procRaises:
+        types.add &"            if check_error():\n"
+        types.add "                raise $LibError(take_error())\n"
+      types.add &"            return {importExprPy(\"result\", opCase.returnType)}\n"
+    types.add "        return NotImplemented\n"
+    types.add "\n"
 
 proc genRefObject(objName: string) =
   types.add &"class {objName}(Structure):\n"
@@ -408,14 +469,14 @@ proc exportRefObjectPy*(
 
     types.add "    def __init__(self, "
     for i, param in constructorParams[0 .. ^1]:
-      types.add &"{toSnakeCase(param[0].repr)}"
+      types.add &"{toSnakeCase(param[0].getParamName())}"
       types.add ", "
     types.removeSuffix ", "
     types.add "):\n"
     types.add &"        result = "
     types.add &"{constructorLibProc}("
     for param in constructorParams:
-      types.add exportExprPy(toSnakeCase(param[0].repr), param[1])
+      types.add exportExprPy(toSnakeCase(param[0].getParamName()), param[1])
       types.add ", "
     types.removeSuffix ", "
     types.add ")\n"

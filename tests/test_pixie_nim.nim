@@ -1,8 +1,49 @@
 import os, strutils
 import ../../pixie/bindings/generated/pixie
 
+const
+  renderOutputDir = "tests" / "generated" / "pixie_images"
+
 proc approx(value, expected: float32; eps: float32 = 0.0001) =
   doAssert abs(value - expected) <= eps
+
+proc writeRenderStep(image: Image; label, step: string) =
+  createDir(renderOutputDir)
+  let
+    actualPath = renderOutputDir / (label & "_" & step & ".png")
+  image.writeFile(actualPath)
+
+proc writeRenderImages(label: string) =
+  let image = newImage(32, 32)
+  image.fill(parseColor("#112233"))
+
+  let orange = parseColor("#f29e4c")
+  for y in 2 ..< 10:
+    for x in 2 ..< 10:
+      image.setColor(x, y, orange)
+  writeRenderStep(image, label, "step1")
+
+  let rectPaint = newPaint(SolidPaint)
+  rectPaint.color = parseColor("#209cee")
+  let rectPath = newPath()
+  rectPath.rect(12, 3, 14, 16, true)
+  image.fillPath(rectPath, rectPaint, translate(1, 2), NonZero)
+  writeRenderStep(image, label, "step2")
+
+  let circlePaint = newPaint(SolidPaint)
+  circlePaint.color = parseColor("#8ac926")
+  let circlePath = newPath()
+  circlePath.circle(12, 22, 7)
+  image.fillPath(circlePath, circlePaint, translate(0, 0), NonZero)
+
+  let strokePaint = newPaint(SolidPaint)
+  strokePaint.color = parseColor("#ffffff")
+  let borderPath = newPath()
+  borderPath.rect(0.75, 0.75, 30.5, 30.5, true)
+  let dashes = newSeqFloat32()
+  image.strokePath(borderPath, strokePaint, translate(0, 0), 1.5, ButtCap, MiterJoin, defaultMiterLimit, dashes)
+  image.setColor(31, 31, parseColor("#ff00ff"))
+  writeRenderStep(image, label, "step3")
 
 let
   pixieRoot = getEnv("PIXIE_ROOT", "../pixie")
@@ -22,8 +63,15 @@ let
 let
   mat = translate(3, 4)
   identity = translate(0, 0)
-doAssert mat.values[6] == 3
-doAssert inverse(mat).values[6] == -3
+doAssert mat[2, 0] == 3
+doAssert inverse(mat)[2, 0] == -3
+let
+  a = vec2(1, 2)
+  b = vec2(3, 4)
+doAssert a + b == vec2(4, 6)
+doAssert a * b == vec2(3, 8)
+doAssert a * 2'f32 == vec2(2, 4)
+doAssert mat * a == vec2(4, 6)
 doAssert snapToPixels(rect(1, 2, 3, 4)) == rect(1, 2, 3, 4)
 doAssert miterLimitToAngle(2) > 0
 doAssert angleToMiterLimit(1) > 0
@@ -63,7 +111,7 @@ doAssert resized.width == 5
 doAssert resized.height == 6
 doAssert resized.subImage(0, 0, 2, 2).width == 2
 doAssert resized.subImage(rect(0, 0, 1, 1)).height == 1
-doAssert resized.shadow(vector2(1, 2), 3, 4, red).width == resized.width
+doAssert resized.shadow(vec2(1, 2), 3, 4, red).width == resized.width
 doAssert resized.superImage(-1, -1, resized.width + 2, resized.height + 2).width == resized.width + 2
 doAssert resized.opaqueBounds().w > 0
 
@@ -75,9 +123,9 @@ paint.color = green
 paint.imageMat = scale(2, 3)
 doAssert paint.kind == LinearGradientPaint
 approx(paint.opacity, 0.5)
-paint.gradientHandlePositions.add(vector2(0.25, 0))
-paint.gradientHandlePositions.add(vector2(0.75, 1))
-paint.gradientHandlePositions[1] = vector2(0.8, 1)
+paint.gradientHandlePositions.add(vec2(0.25, 0))
+paint.gradientHandlePositions.add(vec2(0.75, 1))
+paint.gradientHandlePositions[1] = vec2(0.8, 1)
 doAssert paint.gradientHandlePositions.len == 2
 approx(paint.gradientHandlePositions[1].x, 0.8)
 paint.gradientStops.add(colorStop(red, 0))
@@ -104,8 +152,8 @@ doAssert pathShape.computeBounds(identity).w > 0
 let rectPath = newPath()
 rectPath.rect(0, 0, 10, 10, true)
 let solidDashes = newSeqFloat32()
-doAssert rectPath.fillOverlaps(vector2(5, 5), identity, NonZero)
-doAssert rectPath.strokeOverlaps(vector2(0, 5), identity, 2, ButtCap, MiterJoin, defaultMiterLimit, solidDashes)
+doAssert rectPath.fillOverlaps(vec2(5, 5), identity, NonZero)
+doAssert rectPath.strokeOverlaps(vec2(0, 5), identity, 2, ButtCap, MiterJoin, defaultMiterLimit, solidDashes)
 
 let typeface = readTypeface(fontPath)
 doAssert ($typeface.filePath).endsWith("Inter-Regular.ttf")
@@ -127,13 +175,13 @@ doAssert font.paints.len >= 1
 doAssert font.scale() > 0
 doAssert font.defaultLineHeight() > 0
 doAssert font.layoutBounds("abcd").x > 0
-doAssert font.typeset("abcd", vector2(100, 100), LeftAlign, TopAlign, true).layoutBounds().x > 0
+doAssert font.typeset("abcd", vec2(100, 100), LeftAlign, TopAlign, true).layoutBounds().x > 0
 
 let span = newSpan("hi", font)
 span.text = "hello"
 let spans = newSeqSpan()
 spans.add(span)
-let arrangement = spans.typeset(vector2(100, 100), CenterAlign, BottomAlign, true)
+let arrangement = spans.typeset(vec2(100, 100), CenterAlign, BottomAlign, true)
 doAssert $spans[0].text == "hello"
 doAssert arrangement.layoutBounds().x > 0
 doAssert spans.layoutBounds().y > 0
@@ -141,9 +189,9 @@ doAssert arrangement.computeBounds(mat).x > 0
 
 let canvas = newImage(64, 64)
 canvas.fill(parseColor("#ffffff"))
-canvas.fillText(font, "abc", mat, vector2(60, 60), LeftAlign, TopAlign)
+canvas.fillText(font, "abc", mat, vec2(60, 60), LeftAlign, TopAlign)
 canvas.fillText(arrangement, mat)
-canvas.strokeText(font, "abc", mat, 2, vector2(60, 60), LeftAlign, TopAlign, ButtCap, MiterJoin, defaultMiterLimit, dashes)
+canvas.strokeText(font, "abc", mat, 2, vec2(60, 60), LeftAlign, TopAlign, ButtCap, MiterJoin, defaultMiterLimit, dashes)
 canvas.strokeText(arrangement, mat, 2, ButtCap, MiterJoin, defaultMiterLimit, dashes)
 canvas.fillPath(rectPath, solid, mat, NonZero)
 canvas.strokePath(rectPath, solid, mat, 2, ButtCap, MiterJoin, defaultMiterLimit, dashes)
@@ -160,7 +208,7 @@ ctx.textAlign = RightAlign
 doAssert ctx.textAlign == RightAlign
 doAssert ctx.measureText("abcd").width > 0
 ctx.setTransform(mat)
-doAssert ctx.getTransform().values[6] == 3
+doAssert ctx.getTransform()[2, 0] == 3
 ctx.transform(scale(2, 2))
 ctx.resetTransform()
 ctx.setLineDash(solidDashes)
@@ -214,6 +262,7 @@ doAssert readImage(imagePath).width == 40
 doAssert readImageDimensions(imagePath).height == 40
 approx(readFont(fontPath).size, 12)
 doAssert parsePath("M0 0 L10 0 L10 10 Z").computeBounds(identity).w == 10
+writeRenderImages("nim")
 try:
   discard parseColor("bad")
   doAssert false

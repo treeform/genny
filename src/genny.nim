@@ -1,4 +1,4 @@
-import genny/internal, macros, strformat
+import genny/[common, internal], macros, strformat, strutils
 
 when defined(gennyC): import genny/languages/c
 when defined(gennyCpp): import genny/languages/cpp
@@ -86,6 +86,22 @@ proc fieldUntyped(clause, owner: NimNode): NimNode =
       obj: `owner`
       f = obj.`clause`
 
+proc objectFieldUntyped(clause: NimNode): NimNode =
+  result = emptyBlockStmt()
+  if clause.kind notin {nnkExprColonExpr, nnkCall}:
+    error("Object fields need explicit types, for example `x: float32`", clause)
+  let fieldName = clause[0]
+  let fieldType =
+    if clause.kind == nnkExprColonExpr:
+      clause[1]
+    elif clause.len == 2 and clause[1].kind == nnkStmtList and clause[1].len == 1:
+      clause[1][0]
+    else:
+      error("Object fields need explicit types, for example `x: float32`", clause)
+  let fieldVar = ident("gennyField_" & fieldName.repr)
+  result[1].add quote do:
+    var `fieldVar`: `fieldType`
+
 proc procUntyped(clause: NimNode): NimNode =
   result = emptyBlockStmt()
 
@@ -118,6 +134,25 @@ proc procTypedSym(entry: NimNode): NimNode =
         entry[1][^1][0]
       else:
         entry[1][^1][0][0]
+
+proc objectFieldsTyped(fieldsBlock: NimNode): seq[ObjectField] =
+  if fieldsBlock[1].len == 0:
+    return
+
+  for entry in fieldsBlock[1].asStmtList:
+    var fieldEntry = entry
+    if fieldEntry.kind == nnkBlockStmt:
+      fieldEntry = fieldEntry[1]
+    if fieldEntry.kind == nnkStmtList and fieldEntry.len == 1:
+      fieldEntry = fieldEntry[0]
+    if fieldEntry.kind != nnkVarSection:
+      error("Invalid generated object field entry", fieldEntry)
+    let identDefs = fieldEntry[0]
+    for i in 0 .. identDefs.len - 3:
+      let fieldSym = identDefs[i]
+      var fieldName = fieldSym.repr.split("`")[0]
+      fieldName.removePrefix("gennyField_")
+      result.add((fieldName, fieldSym.getTypeInst()))
 
 proc procTyped(
   entry: NimNode,
@@ -156,6 +191,7 @@ macro exportObjectUntyped(sym, body: untyped) =
   result.add varSection
 
   var
+    fieldsBlock = emptyBlockStmt()
     constructorBlock = emptyBlockStmt()
     procsBlock = emptyBlockStmt()
 
@@ -164,6 +200,9 @@ macro exportObjectUntyped(sym, body: untyped) =
       continue
 
     case section[0].repr:
+    of "fields":
+      for field in section[1]:
+        fieldsBlock[1].add objectFieldUntyped(field)
     of "constructor":
       constructorBlock[1].add procUntyped(section[1][0])
     of "procs":
@@ -172,14 +211,23 @@ macro exportObjectUntyped(sym, body: untyped) =
     else:
       error("Invalid section", section)
 
+  result.add fieldsBlock
   result.add constructorBlock
   result.add procsBlock
 
 macro exportObjectTyped(body: typed) =
   let
-    sym = body[0][0][1]
-    constructorBlock = body[1]
-    procsBlock = body[2]
+    sym = body[0][0][0].getTypeInst()
+    typeExpr = body[0][0][1]
+    fieldsBlock = body[1]
+    constructorBlock = body[2]
+    procsBlock = body[3]
+    fields = objectFieldsTyped(fieldsBlock)
+    nimModule =
+      if typeExpr.kind == nnkDotExpr:
+        typeExpr[0].repr
+      else:
+        ""
 
   let constructor =
     if constructorBlock[1].len > 0:
@@ -187,14 +235,20 @@ macro exportObjectTyped(body: typed) =
     else:
       nil
 
-  exportObjectInternal(sym, constructor)
-  when defined(gennyNim): exportObjectNim(sym, constructor)
-  when defined(gennyPython): exportObjectPy(sym, constructor)
-  when defined(gennyPythonNative): exportObjectPyNative(sym, constructor)
-  when defined(gennyNode): exportObjectNode(sym, constructor)
-  when defined(gennyC): exportObjectC(sym, constructor)
-  when defined(gennyCpp): exportObjectCpp(sym, constructor)
-  when defined(gennyZig): exportObjectZig(sym, constructor)
+  registerValueObjectType(sym)
+  if constructor != nil:
+    let constructorType = constructor.getTypeInst()
+    if constructorType[0][0].kind != nnkEmpty:
+      registerValueObjectTypeAlias(sym.repr, constructorType[0][0])
+  exportObjectInternal(sym, fields, constructor, nimModule.len > 0)
+  when defined(gennyNim):
+    exportObjectNim(sym, fields, constructor, nimModule)
+  when defined(gennyPython): exportObjectPy(sym, fields, constructor)
+  when defined(gennyPythonNative): exportObjectPyNative(sym, fields, constructor)
+  when defined(gennyNode): exportObjectNode(sym, fields, constructor)
+  when defined(gennyC): exportObjectC(sym, fields, constructor)
+  when defined(gennyCpp): exportObjectCpp(sym, fields, constructor)
+  when defined(gennyZig): exportObjectZig(sym, fields, constructor)
 
   if procsBlock[1].len > 0:
     var procsSeen: seq[string]
@@ -202,10 +256,12 @@ macro exportObjectTyped(body: typed) =
       var
         procSym = procTypedSym(entry)
         prefixes: seq[NimNode]
+      let procType = procSym.getTypeInst()
+      if procType[0].len > 1:
+        registerValueObjectTypeAlias(sym.repr, procType[0][1][^2])
       if procSym.repr notin procsSeen:
         procsSeen.add procSym.repr
       else:
-        let procType = procSym.getTypeInst()
         if procType[0].len > 2:
           prefixes.add(procType[0][2][1])
       exportProcInternal(procSym, sym, prefixes)
@@ -217,6 +273,7 @@ macro exportObjectTyped(body: typed) =
       when defined(gennyCpp): exportProcCpp(procSym, sym, prefixes)
       when defined(gennyZig): exportProcZig(procSym, sym, prefixes)
 
+  when defined(gennyPython): exportCloseObjectPy(sym)
   when defined(gennyZig): exportCloseObjectZig()
   when defined(gennyCpp): exportCloseObjectCpp()
 

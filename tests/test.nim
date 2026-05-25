@@ -1,4 +1,4 @@
-import genny
+import genny, generated/external_types
 
 const simpleConst = 123
 
@@ -77,6 +77,9 @@ proc extraProc(s: SimpleObjWithProc) =
 exportObject SimpleObjWithProc:
   procs:
     extraProc
+
+exportObject external_types.ExternalObj:
+  discard
 
 # type ArrayObj = object
 #   arr1*: array[3, int]
