@@ -39,24 +39,24 @@ proc exportTypeCpp(sym: NimNode, abi = false): string =
   else:
     result =
       case typ.repr:
-      of "string": "const char*"
+      of "string", "cstring": "const char*"
       of "bool": "bool"
-      of "byte": "char"
-      of "int8": "int8_t"
-      of "int16": "int16_t"
-      of "int32": "int32_t"
-      of "int64": "int64_t"
-      of "int": "int64_t"
-      of "uint8": "uint8_t"
-      of "uint16": "uint16_t"
-      of "uint32": "uint32_t"
-      of "uint64": "uint64_t"
-      of "uint": "uint64_t"
+      of "byte": "std::uint8_t"
+      of "int8": "std::int8_t"
+      of "int16": "std::int16_t"
+      of "int32": "std::int32_t"
+      of "int64": "std::int64_t"
+      of "int": "std::intptr_t"
+      of "uint8": "std::uint8_t"
+      of "uint16": "std::uint16_t"
+      of "uint32": "std::uint32_t"
+      of "uint64": "std::uint64_t"
+      of "uint": "std::uintptr_t"
       of "float32": "float"
       of "float64": "double"
       of "float": "double"
       of "Rune":
-        if abi: "int32_t" else: "char32_t"
+        if abi: "std::int32_t" else: "char32_t"
       of "Vec2": "Vector2"
       of "Mat3": "Matrix3"
       of "", "nil": "void"
@@ -90,7 +90,7 @@ proc exportTypeCppAbi(sym: NimNode, name: string): string =
 
 proc cppArgValue(argType: NimNode, argName: string): string =
   if argType.isRuneType:
-    &"static_cast<int32_t>({argName})"
+    &"static_cast<std::int32_t>({argName})"
   else:
     argName
 
@@ -119,13 +119,13 @@ proc dllProc*(procName: string, restype: string) =
   dllProc(procName, a, restype)
 
 proc exportConstCpp*(sym: NimNode) =
-  types.add &"#define {toCapSnakeCase(sym.repr)} {sym.getImpl()[2].repr}\n"
+  types.add &"static constexpr auto {toCapSnakeCase(sym.repr)} = {sym.getImpl()[2].repr};\n"
   types.add "\n"
 
 proc exportEnumCpp*(sym: NimNode) =
-  types.add &"typedef char {sym.repr};\n"
+  types.add &"using {sym.repr} = std::uint8_t;\n"
   for i, entry in sym.getImpl()[2][1 .. ^1]:
-    types.add &"#define {toCapSnakeCase(entry.repr)} {i}\n"
+    types.add &"static constexpr {sym.repr} {toCapSnakeCase(entry.repr)} = {i};\n"
   types.add "\n"
 
 proc exportProcCpp*(
@@ -265,7 +265,7 @@ proc exportObjectCpp*(sym: NimNode, constructor: NimNode) =
     members.add ");\n"
     members.add "};\n\n"
 
-  dllProc(&"$lib_{toSnakeCase(objName)}_eq", [&"{objName} a", &"{objName} b"], "char")
+  dllProc(&"$lib_{toSnakeCase(objName)}_eq", [&"{objName} a", &"{objName} b"], "bool")
 
 proc genRefObject(objName: string) =
 
@@ -277,12 +277,94 @@ proc genRefObject(objName: string) =
 
 proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   let objArg = objName & " " & toSnakeCase(objName)
-  dllProc(&"{procPrefix}_len", [objArg], "int64_t")
-  dllProc(&"{procPrefix}_get", [objArg, "int64_t index"], exportTypeCppAbi(entryType))
-  dllProc(&"{procPrefix}_set", [objArg, "int64_t index", exportTypeCppAbi(entryType, "value")], "void")
-  dllProc(&"{procPrefix}_delete", [objArg, "int64_t index"], "void")
+  dllProc(&"{procPrefix}_len", [objArg], "std::intptr_t")
+  dllProc(&"{procPrefix}_get", [objArg, "std::intptr_t index"], exportTypeCppAbi(entryType))
+  dllProc(&"{procPrefix}_set", [objArg, "std::intptr_t index", exportTypeCppAbi(entryType, "value")], "void")
+  dllProc(&"{procPrefix}_delete", [objArg, "std::intptr_t index"], "void")
   dllProc(&"{procPrefix}_add", [objArg, exportTypeCppAbi(entryType, "value")], "void")
   dllProc(&"{procPrefix}_clear", [objArg], "void")
+
+proc genSeqClassMethods(seqName, procPrefix: string, entryType: NimNode) =
+  let
+    entryTypeCpp = exportTypeCpp(entryType)
+    entryValue = cppArgValue(entryType, "value")
+    getCall = &"{procPrefix}_get(*this, index)"
+
+  classes.add &"  std::intptr_t size();\n"
+  classes.add &"  {entryTypeCpp} get(std::intptr_t index);\n"
+  classes.add &"  {entryTypeCpp} operator[](std::intptr_t index);\n"
+  classes.add &"  void set(std::intptr_t index, {entryTypeCpp} value);\n"
+  classes.add &"  void removeAt(std::intptr_t index);\n"
+  classes.add &"  void add({entryTypeCpp} value);\n"
+  classes.add &"  void clear();\n\n"
+
+  members.add &"std::intptr_t {seqName}::size()" & "{\n"
+  members.add &"  return {procPrefix}_len(*this);\n"
+  members.add "}\n\n"
+
+  members.add &"{entryTypeCpp} {seqName}::get(std::intptr_t index)" & "{\n"
+  members.add &"  return {cppReturnValue(entryType, getCall)};\n"
+  members.add "}\n\n"
+
+  members.add &"{entryTypeCpp} {seqName}::operator[](std::intptr_t index)" & "{\n"
+  members.add &"  return get(index);\n"
+  members.add "}\n\n"
+
+  members.add &"void {seqName}::set(std::intptr_t index, {entryTypeCpp} value)" & "{\n"
+  members.add &"  {procPrefix}_set(*this, index, {entryValue});\n"
+  members.add "}\n\n"
+
+  members.add &"void {seqName}::removeAt(std::intptr_t index)" & "{\n"
+  members.add &"  {procPrefix}_delete(*this, index);\n"
+  members.add "}\n\n"
+
+  members.add &"void {seqName}::add({entryTypeCpp} value)" & "{\n"
+  members.add &"  {procPrefix}_add(*this, {entryValue});\n"
+  members.add "}\n\n"
+
+  members.add &"void {seqName}::clear()" & "{\n"
+  members.add &"  {procPrefix}_clear(*this);\n"
+  members.add "}\n\n"
+
+proc genSeqFieldMethods(objName, procPrefix, fieldName: string, entryType: NimNode) =
+  var fieldCap = fieldName
+  fieldCap[0] = toUpperAscii(fieldCap[0])
+
+  let
+    entryTypeCpp = exportTypeCpp(entryType)
+    entryValue = cppArgValue(entryType, "value")
+    getCall = &"{procPrefix}_get(*this, index)"
+
+  classes.add &"  std::intptr_t {fieldName}Size();\n"
+  classes.add &"  {entryTypeCpp} get{fieldCap}(std::intptr_t index);\n"
+  classes.add &"  void set{fieldCap}(std::intptr_t index, {entryTypeCpp} value);\n"
+  classes.add &"  void remove{fieldCap}(std::intptr_t index);\n"
+  classes.add &"  void add{fieldCap}({entryTypeCpp} value);\n"
+  classes.add &"  void clear{fieldCap}();\n\n"
+
+  members.add &"std::intptr_t {objName}::{fieldName}Size()" & "{\n"
+  members.add &"  return {procPrefix}_len(*this);\n"
+  members.add "}\n\n"
+
+  members.add &"{entryTypeCpp} {objName}::get{fieldCap}(std::intptr_t index)" & "{\n"
+  members.add &"  return {cppReturnValue(entryType, getCall)};\n"
+  members.add "}\n\n"
+
+  members.add &"void {objName}::set{fieldCap}(std::intptr_t index, {entryTypeCpp} value)" & "{\n"
+  members.add &"  {procPrefix}_set(*this, index, {entryValue});\n"
+  members.add "}\n\n"
+
+  members.add &"void {objName}::remove{fieldCap}(std::intptr_t index)" & "{\n"
+  members.add &"  {procPrefix}_delete(*this, index);\n"
+  members.add "}\n\n"
+
+  members.add &"void {objName}::add{fieldCap}({entryTypeCpp} value)" & "{\n"
+  members.add &"  {procPrefix}_add(*this, {entryValue});\n"
+  members.add "}\n\n"
+
+  members.add &"void {objName}::clear{fieldCap}()" & "{\n"
+  members.add &"  {procPrefix}_clear(*this);\n"
+  members.add "}\n\n"
 
 proc exportRefObjectCpp*(
   sym: NimNode,
@@ -298,7 +380,7 @@ proc exportRefObjectCpp*(
 
   classes.add &"struct {objName} " & "{\n\n"
   classes.add &"  private:\n\n"
-  classes.add &"  uint64_t reference;\n\n"
+  classes.add &"  std::uintptr_t reference;\n\n"
   classes.add &"  public:\n\n"
 
   if constructor != nil:
@@ -377,6 +459,12 @@ proc exportRefObjectCpp*(
         &".{toSnakeCase(objName)}",
         fieldType[1]
       )
+      genSeqFieldMethods(
+        objName,
+        &"$lib_{objNameSnaked}_{fieldNameSnaked}",
+        fieldName,
+        fieldType[1]
+      )
 
   # TODO: ref/unref
   # classes.add &"  ~{objName}();\n\n"
@@ -415,10 +503,22 @@ proc exportSeqCpp*(sym: NimNode) =
 
   classes.add &"struct {seqName} " & "{\n\n"
   classes.add &"  private:\n\n"
-  classes.add &"  uint64_t reference;\n\n"
+  classes.add &"  std::uintptr_t reference;\n\n"
   classes.add &"  public:\n\n"
 
+  classes.add &"  {seqName}();\n\n"
+
   classes.add &"  void free();\n\n"
+
+  members.add &"{seqName}::{seqName}()" & "{\n"
+  members.add &"  this->reference = {newSeqProc}().reference;\n"
+  members.add "}\n\n"
+
+  genSeqClassMethods(
+    seqName,
+    &"$lib_{seqNameSnaked}",
+    sym[1]
+  )
 
   members.add &"void {seqName}::free()" & "{\n"
   members.add &"  $lib_{toSnakeCase(seqName)}_unref(*this);\n"
@@ -429,7 +529,7 @@ const header = """
 #ifndef INCLUDE_$LIB_H
 #define INCLUDE_$LIB_H
 
-#include <stdint.h>
+#include <cstdint>
 
 """
 
