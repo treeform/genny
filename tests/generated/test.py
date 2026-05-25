@@ -13,6 +13,16 @@ dll = cdll.LoadLibrary(os.path.join(dir, libName))
 class testError(Exception):
     pass
 
+def _rune_to_int(value):
+    assert isinstance(value, str), "expected rune string"
+    assert len(value) == 1, "expected exactly one Unicode scalar value"
+    code = ord(value)
+    assert code < 0xD800 or code > 0xDFFF, "expected Unicode scalar value"
+    return code
+
+def _int_to_rune(value):
+    return chr(value)
+
 class SeqIterator(object):
     def __init__(self, seq):
         self.idx = 0
@@ -222,7 +232,7 @@ class SeqString(Structure):
         dll.test_seq_string_delete(self, index)
 
     def append(self, value):
-        dll.test_seq_string_add(self, value)
+        dll.test_seq_string_add(self, value.encode("utf8"))
 
     def clear(self):
         dll.test_seq_string_clear(self)

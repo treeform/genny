@@ -5,23 +5,34 @@ import
 var
   code {.compiletime.}: string
 
-proc exportTypeZig(sym: NimNode): string =
-  if sym.kind == nnkBracketExpr:
-    if sym[0].repr == "array":
-      let
-        entryCount = sym[1].repr
-        entryType = exportTypeZig(sym[2])
-      result = &"[{entryCount}]{entryType}"
-    elif sym[0].repr == "seq":
-      result = &"*{sym.getSeqName()}"
-    else:
-      error(&"Unexpected bracket expression {sym[0].repr}[")
+proc stripSink(sym: NimNode): NimNode =
+  if sym.kind == nnkBracketExpr and sym[0].repr == "sink":
+    sym[1]
   else:
-      if sym.typeKind == ntyRef and sym.repr != "nil":
-        result = &"*{sym.repr}"
+    sym
+
+proc isSeqLike(sym: NimNode): bool =
+  let typ = sym.stripSink
+  typ.kind == nnkBracketExpr and typ[0].repr in ["seq", "openArray"]
+
+proc exportTypeZig(sym: NimNode): string =
+  let typ = sym.stripSink
+  if typ.kind == nnkBracketExpr:
+    if typ[0].repr == "array":
+      let
+        entryCount = typ[1].repr
+        entryType = exportTypeZig(typ[2])
+      result = &"[{entryCount}]{entryType}"
+    elif typ.isSeqLike:
+      result = &"*{typ.getSeqName()}"
+    else:
+      error(&"Unexpected bracket expression {typ[0].repr}[")
+  else:
+      if typ.typeKind == ntyRef and typ.repr != "nil":
+        result = &"*{typ.repr}"
       else:
         result =
-          case sym.repr:
+          case typ.repr:
           of "string": "[:0]const u8"
           of "bool": "bool"
           of "int8": "i8"
@@ -43,19 +54,31 @@ proc exportTypeZig(sym: NimNode): string =
           of "Mat3": "Matrix3"
           of "", "nil": "void"
           else:
-            sym.repr
+            typ.repr
 
 proc convertExportFromZig*(inner: string, sym: string): string =
   if sym == "[:0]const u8":
     inner & ".ptr"
+  elif sym == "u21":
+    &"@intCast({inner})"
   else:
     inner
 
 proc convertImportToZig*(inner: string, sym: string): string =
   if sym == "[:0]const u8":
     "std.mem.span(" & inner & ")"
+  elif sym == "u21":
+    &"@intCast({inner})"
   else:
     inner
+
+proc exportTypeZigAbi(sym: string): string =
+  if sym == "[:0]const u8":
+    "[*:0]const u8"
+  elif sym == "u21":
+    "i32"
+  else:
+    sym.replace("[:0]", "[*:0]")
 
 proc toArgSeq(args: seq[NimNode]): seq[(string, string)] =
   for i, arg in args[0 .. ^1]:
@@ -100,12 +123,12 @@ proc exportProc(
     else:
       code.add toSnakeCase(param[0])
     code.add ": "
-    code.add param[1].replace("[:0]", "[*:0]")
+    code.add exportTypeZigAbi(param[1])
     code.add &", "
   code.removeSuffix ", "
   code.add ") callconv(.C) "
   if procReturn != "":
-    code.add procReturn.replace("[:0]", "[*:0]");
+    code.add exportTypeZigAbi(procReturn);
   else:
     code.add "void"
   code.add ";\n"

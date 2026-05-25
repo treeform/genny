@@ -223,7 +223,9 @@ proc pyFromC(expr: string, typ: NimNode): string =
     &"PyBool_FromLong((long)({expr}))"
   of "byte", "uint8", "uint16", "uint32", "uint64", "uint":
     &"PyLong_FromUnsignedLongLong((unsigned long long)({expr}))"
-  of "int8", "int16", "int32", "int64", "int", "Rune":
+  of "Rune":
+    &"PyUnicode_FromOrdinal((int)({expr}))"
+  of "int8", "int16", "int32", "int64", "int":
     &"PyLong_FromLongLong((long long)({expr}))"
   of "float32", "float64", "float":
     &"PyFloat_FromDouble((double)({expr}))"
@@ -251,7 +253,11 @@ proc convertPyToC(pyExpr, outExpr: string, typ: NimNode, label: string): string 
     &"  {{ unsigned long genny_value = PyLong_AsUnsignedLong({pyExpr}); if (PyErr_Occurred()) return NULL; if (genny_value > 255UL) {{ PyErr_Format(PyExc_OverflowError, \"%s out of range\", {cString(label)}); return NULL; }} {outExpr} = (unsigned char)genny_value; }}\n"
   of "uint16", "uint32", "uint64", "uint":
     &"  {{ unsigned long long genny_value = PyLong_AsUnsignedLongLong({pyExpr}); if (PyErr_Occurred()) return NULL; {outExpr} = ({cType(baseTyp)})genny_value; }}\n"
-  of "int8", "int16", "int32", "int64", "int", "Rune":
+  of "Rune":
+    &"  if (!PyUnicode_Check({pyExpr})) {{ PyErr_Format(PyExc_AssertionError, \"%s must be a single-character string\", {cString(label)}); return NULL; }}\n" &
+    &"  {{ Py_ssize_t genny_len = PyUnicode_GetLength({pyExpr}); if (genny_len < 0) return NULL; if (genny_len != 1) {{ PyErr_Format(PyExc_AssertionError, \"%s must be exactly one Unicode scalar value\", {cString(label)}); return NULL; }} }}\n" &
+    &"  {{ Py_UCS4 genny_rune = PyUnicode_ReadChar({pyExpr}, 0); if (genny_rune == (Py_UCS4)-1 && PyErr_Occurred()) return NULL; if (genny_rune >= 0xD800 && genny_rune <= 0xDFFF) {{ PyErr_Format(PyExc_AssertionError, \"%s must be a Unicode scalar value\", {cString(label)}); return NULL; }} {outExpr} = ({cType(baseTyp)})genny_rune; }}\n"
+  of "int8", "int16", "int32", "int64", "int":
     &"  {{ long long genny_value = PyLong_AsLongLong({pyExpr}); if (PyErr_Occurred()) return NULL; {outExpr} = ({cType(baseTyp)})genny_value; }}\n"
   of "float32", "float64", "float":
     &"  {{ double genny_value = PyFloat_AsDouble({pyExpr}); if (PyErr_Occurred()) return NULL; {outExpr} = ({cType(baseTyp)})genny_value; }}\n"

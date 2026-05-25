@@ -6,20 +6,31 @@ var
   types {.compiletime.}: string
   procs {.compiletime.}: string
 
+proc stripSink(sym: NimNode): NimNode =
+  if sym.kind == nnkBracketExpr and sym[0].repr == "sink":
+    sym[1]
+  else:
+    sym
+
+proc isSeqLike(sym: NimNode): bool =
+  let typ = sym.stripSink
+  typ.kind == nnkBracketExpr and typ[0].repr in ["seq", "openArray"]
+
 proc exportTypeC(sym: NimNode): string =
-  if sym.kind == nnkBracketExpr:
-    if sym[0].repr == "array":
+  let typ = sym.stripSink
+  if typ.kind == nnkBracketExpr:
+    if typ[0].repr == "array":
       let
-        entryCount = sym[1].repr
-        entryType = exportTypeC(sym[2])
+        entryCount = typ[1].repr
+        entryType = exportTypeC(typ[2])
       result = &"{entryType}[{entryCount}]"
-    elif sym[0].repr == "seq":
-      result = sym.getSeqName()
+    elif typ.isSeqLike:
+      result = typ.getSeqName()
     else:
-      error(&"Unexpected bracket expression {sym[0].repr}[")
+      error(&"Unexpected bracket expression {typ[0].repr}[")
   else:
     result =
-      case sym.repr:
+      case typ.repr:
       of "string": "char*"
       of "bool": "char"
       of "byte": "char"
@@ -42,21 +53,22 @@ proc exportTypeC(sym: NimNode): string =
       of "", "nil": "void"
       of "None": "void"
       else:
-        sym.repr
+        typ.repr
 
 proc exportTypeC(sym: NimNode, name: string): string =
-  if sym.kind == nnkBracketExpr:
-    if sym[0].repr == "array":
+  let typ = sym.stripSink
+  if typ.kind == nnkBracketExpr:
+    if typ[0].repr == "array":
       let
-        entryCount = sym[1].repr
-        entryType = exportTypeC(sym[2], &"{name}[{entryCount}]")
+        entryCount = typ[1].repr
+        entryType = exportTypeC(typ[2], &"{name}[{entryCount}]")
       result = &"{entryType}"
-    elif sym[0].repr == "seq":
-      result = sym.getSeqName() & " " & name
+    elif typ.isSeqLike:
+      result = typ.getSeqName() & " " & name
     else:
-      error(&"Unexpected bracket expression {sym[0].repr}[")
+      error(&"Unexpected bracket expression {typ[0].repr}[")
   else:
-    result = exportTypeC(sym) & " " & name
+    result = exportTypeC(typ) & " " & name
 
 proc dllProc*(procName: string, args: openarray[string], restype: string) =
   var argStr = ""

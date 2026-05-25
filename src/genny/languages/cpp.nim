@@ -11,20 +11,34 @@ var
 proc unCapitalize(s: string): string =
   s[0].toLowerAscii() & s[1 .. ^1]
 
-proc exportTypeCpp(sym: NimNode): string =
-  if sym.kind == nnkBracketExpr:
-    if sym[0].repr == "array":
+proc stripSink(sym: NimNode): NimNode =
+  if sym.kind == nnkBracketExpr and sym[0].repr == "sink":
+    sym[1]
+  else:
+    sym
+
+proc isSeqLike(sym: NimNode): bool =
+  let typ = sym.stripSink
+  typ.kind == nnkBracketExpr and typ[0].repr in ["seq", "openArray"]
+
+proc isRuneType(sym: NimNode): bool =
+  sym.stripSink.repr == "Rune"
+
+proc exportTypeCpp(sym: NimNode, abi = false): string =
+  let typ = sym.stripSink
+  if typ.kind == nnkBracketExpr:
+    if typ[0].repr == "array":
       let
-        entryCount = sym[1].repr
-        entryType = exportTypeCpp(sym[2])
+        entryCount = typ[1].repr
+        entryType = exportTypeCpp(typ[2], abi)
       result = &"{entryType}[{entryCount}]"
-    elif sym[0].repr == "seq":
-      result = sym.getSeqName()
+    elif typ.isSeqLike:
+      result = typ.getSeqName()
     else:
-      error(&"Unexpected bracket expression {sym[0].repr}[")
+      error(&"Unexpected bracket expression {typ[0].repr}[")
   else:
     result =
-      case sym.repr:
+      case typ.repr:
       of "string": "const char*"
       of "bool": "bool"
       of "byte": "char"
@@ -41,30 +55,50 @@ proc exportTypeCpp(sym: NimNode): string =
       of "float32": "float"
       of "float64": "double"
       of "float": "double"
-      of "Rune": "int32_t"
+      of "Rune":
+        if abi: "int32_t" else: "char32_t"
       of "Vec2": "Vector2"
       of "Mat3": "Matrix3"
       of "", "nil": "void"
       of "None": "void"
       else:
-        if sym.getType().kind == nnkBracketExpr:
-          sym.repr
+        if typ.getType().kind == nnkBracketExpr:
+          typ.repr
         else:
-          sym.repr
+          typ.repr
 
-proc exportTypeCpp(sym: NimNode, name: string): string =
-  if sym.kind == nnkBracketExpr:
-    if sym[0].repr == "array":
+proc exportTypeCppAbi(sym: NimNode): string =
+  exportTypeCpp(sym, abi = true)
+
+proc exportTypeCpp(sym: NimNode, name: string, abi = false): string =
+  let typ = sym.stripSink
+  if typ.kind == nnkBracketExpr:
+    if typ[0].repr == "array":
       let
-        entryCount = sym[1].repr
-        entryType = exportTypeCpp(sym[2], &"{name}[{entryCount}]")
+        entryCount = typ[1].repr
+        entryType = exportTypeCpp(typ[2], &"{name}[{entryCount}]", abi)
       result = &"{entryType}"
-    elif sym[0].repr == "seq":
-      result = sym.getSeqName() & " " & name
+    elif typ.isSeqLike:
+      result = typ.getSeqName() & " " & name
     else:
-      error(&"Unexpected bracket expression {sym[0].repr}[")
+      error(&"Unexpected bracket expression {typ[0].repr}[")
   else:
-    result = exportTypeCpp(sym) & " " & name
+    result = exportTypeCpp(typ, abi) & " " & name
+
+proc exportTypeCppAbi(sym: NimNode, name: string): string =
+  exportTypeCpp(sym, name, abi = true)
+
+proc cppArgValue(argType: NimNode, argName: string): string =
+  if argType.isRuneType:
+    &"static_cast<int32_t>({argName})"
+  else:
+    argName
+
+proc cppReturnValue(returnType: NimNode, call: string): string =
+  if returnType.isRuneType:
+    &"static_cast<char32_t>({call})"
+  else:
+    call
 
 proc dllProc*(procName: string, args: openarray[string], restype: string) =
   var argStr = ""
@@ -77,7 +111,7 @@ proc dllProc*(procName: string, args: openarray[string], restype: string) =
 proc dllProc*(procName: string, args: openarray[(NimNode, NimNode)], restype: string) =
   var argsConverted: seq[string]
   for (argName, argType) in args:
-    argsConverted.add exportTypeCpp(argType, toSnakeCase(argName.getName()))
+    argsConverted.add exportTypeCppAbi(argType, toSnakeCase(argName.getName()))
   dllProc(procName, argsConverted, restype)
 
 proc dllProc*(procName: string, restype: string) =
@@ -122,7 +156,7 @@ proc exportProcCpp*(
   var dllParams: seq[(NimNode, NimNode)]
   for param in procParams:
     dllParams.add((param[0], param[1]))
-  dllProc(&"$lib_{apiProcName}", dllParams, exportTypeCpp(procReturn))
+  dllProc(&"$lib_{apiProcName}", dllParams, exportTypeCppAbi(procReturn))
 
   if owner == nil:
     if procReturn.kind != nnkEmpty:
@@ -138,12 +172,14 @@ proc exportProcCpp*(
     members.add "  "
     if procReturn.kind != nnkEmpty:
       members.add "return "
-    members.add &"$lib_{apiProcName}("
+    var call = &"$lib_{apiProcName}("
     for param in procParams:
-      members.add param[0].getName()
-      members.add ", "
-    members.removeSuffix ", "
-    members.add ");\n"
+      call.add cppArgValue(param[1], param[0].getName())
+      call.add ", "
+    call.removeSuffix ", "
+    call.add ")"
+    members.add cppReturnValue(procReturn, call)
+    members.add ";\n"
     members.add "};\n\n"
 
   else:
@@ -181,13 +217,14 @@ proc exportProcCpp*(
       members.add &"  "
     else:
       members.add &"  return "
-    members.add  &"$lib_{apiProcName}("
-    members.add "*this, "
+    var call = &"$lib_{apiProcName}(*this, "
     for param in procParams[1..^1]:
-      members.add param[0].getName()
-      members.add ", "
-    members.removeSuffix ", "
-    members.add ");\n"
+      call.add cppArgValue(param[1], param[0].getName())
+      call.add ", "
+    call.removeSuffix ", "
+    call.add ")"
+    members.add cppReturnValue(procReturn, call)
+    members.add ";\n"
     members.add "};\n\n"
 
 proc exportObjectCpp*(sym: NimNode, constructor: NimNode) =
@@ -206,7 +243,7 @@ proc exportObjectCpp*(sym: NimNode, constructor: NimNode) =
     procs.add &"{objName} $lib_{toSnakeCase(objName)}("
     for identDefs in sym.getImpl()[2][2]:
       for property in identDefs[0 .. ^3]:
-        procs.add &"{exportTypeCpp(identDefs[^2], toSnakeCase(property[1].repr))}, "
+        procs.add &"{exportTypeCppAbi(identDefs[^2], toSnakeCase(property[1].repr))}, "
     procs.removeSuffix ", "
     procs.add ");\n\n"
 
@@ -222,7 +259,7 @@ proc exportObjectCpp*(sym: NimNode, constructor: NimNode) =
     members.add  &"$lib_{toSnakeCase(objName)}("
     for identDefs in sym.getImpl()[2][2]:
       for property in identDefs[0 .. ^3]:
-        members.add property[1].repr
+        members.add cppArgValue(identDefs[^2], property[1].repr)
         members.add ", "
     members.removeSuffix ", "
     members.add ");\n"
@@ -241,10 +278,10 @@ proc genRefObject(objName: string) =
 proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   let objArg = objName & " " & toSnakeCase(objName)
   dllProc(&"{procPrefix}_len", [objArg], "int64_t")
-  dllProc(&"{procPrefix}_get", [objArg, "int64_t index"], exportTypeCpp(entryType))
-  dllProc(&"{procPrefix}_set", [objArg, "int64_t index", exportTypeCpp(entryType, "value")], "void")
+  dllProc(&"{procPrefix}_get", [objArg, "int64_t index"], exportTypeCppAbi(entryType))
+  dllProc(&"{procPrefix}_set", [objArg, "int64_t index", exportTypeCppAbi(entryType, "value")], "void")
   dllProc(&"{procPrefix}_delete", [objArg, "int64_t index"], "void")
-  dllProc(&"{procPrefix}_add", [objArg, exportTypeCpp(entryType, "value")], "void")
+  dllProc(&"{procPrefix}_add", [objArg, exportTypeCppAbi(entryType, "value")], "void")
   dllProc(&"{procPrefix}_clear", [objArg], "void")
 
 proc exportRefObjectCpp*(
@@ -288,7 +325,7 @@ proc exportRefObjectCpp*(
       members.add &"  this->reference = "
       members.add  &"{constructorLibProc}("
       for param in constructorParams:
-        members.add param[0].getName()
+        members.add cppArgValue(param[1], param[0].getName())
         members.add ", "
       members.removeSuffix ", "
       members.add ").reference;\n"
@@ -309,19 +346,21 @@ proc exportRefObjectCpp*(
       let getMemberName = &"get{fieldName.capitalizeAscii}"
       let setMemberName = &"set{fieldName.capitalizeAscii}"
 
-      dllProc(getProcName, [objName & " " & objNameSnaked], exportTypeCpp(fieldType))
-      dllProc(setProcName, [objName & " " & objNameSnaked, exportTypeCpp(fieldType, "value")], exportTypeCpp(nil))
+      dllProc(getProcName, [objName & " " & objNameSnaked], exportTypeCppAbi(fieldType))
+      dllProc(setProcName, [objName & " " & objNameSnaked, exportTypeCppAbi(fieldType, "value")], exportTypeCppAbi(nil))
 
       classes.add &"  {exportTypeCpp(fieldType)} {getMemberName}();\n"
 
       members.add &"{exportTypeCpp(fieldType)} {objName}::{getMemberName}()" & "{\n"
-      members.add &"  return {getProcName}(*this);\n"
+      let getCall = &"{getProcName}(*this)"
+      members.add &"  return {cppReturnValue(fieldType, getCall)};\n"
       members.add "}\n\n"
 
       classes.add &"  void {setMemberName}({exportTypeCpp(fieldType)} value);\n\n"
 
       members.add &"void {objName}::{setMemberName}({exportTypeCpp(fieldType)} value)" & "{\n"
-      members.add &"  {setProcName}(*this, value);\n"
+      let setValue = cppArgValue(fieldType, "value")
+      members.add &"  {setProcName}(*this, {setValue});\n"
       members.add "}\n\n"
 
       # TODO: property

@@ -23,6 +23,27 @@ proc stripSink(sym: NimNode): NimNode =
   else:
     return sym
 
+proc normalizeValueTypeName(sym: NimNode): string =
+  case sym.repr
+  of "Vec2":
+    "Vector2"
+  of "Mat3":
+    "Matrix3"
+  else:
+    sym.repr
+
+proc typeBody(sym: NimNode): NimNode =
+  let typ = sym.stripSink
+  if typ.kind == nnkSym:
+    let impl = typ.getImpl()
+    if impl.kind == nnkTypeDef:
+      return impl[2]
+  typ
+
+proc isRefObjectLike*(sym: NimNode): bool =
+  let typ = sym.stripSink
+  typ.repr in refObjectNames or typ.typeBody.kind == nnkRefTy
+
 proc exportTypeNim*(sym: NimNode): string =
   ## Returns type for Nim wrapper proc signature.
   let typ = sym.stripSink
@@ -36,7 +57,18 @@ proc exportTypeNim*(sym: NimNode): string =
     elif typ.repr == "Rune":
       return "int32"
     else:
-      return typ.repr
+      return typ.normalizeValueTypeName()
+
+proc exportArgTypeNim(sym: NimNode): string =
+  ## Returns the friendly type for Nim wrapper parameters. Unlike return values,
+  ## string parameters stay as Nim strings and are converted at the C boundary.
+  let typ = sym.stripSink
+  if typ.kind == nnkBracketExpr:
+    if not typ.isSeqLike:
+      error(&"Unexpected bracket expression {typ[0].repr}[", typ)
+    return typ.getSeqName()
+  else:
+    return typ.normalizeValueTypeName()
 
 proc exportTypeCImport*(sym: NimNode): string =
   ## Returns type for C import declaration. Ref objects become pointer.
@@ -50,10 +82,10 @@ proc exportTypeCImport*(sym: NimNode): string =
       return "cstring"
     elif typ.repr == "Rune":
       return "int32"
-    elif typ.repr in refObjectNames:
+    elif typ.isRefObjectLike:
       return "pointer"
     else:
-      return typ.repr
+      return typ.normalizeValueTypeName()
 
 proc convertExportFromNim*(sym: NimNode): string =
   ## Converts Nim value to C value (used by DLL side).
@@ -70,6 +102,18 @@ proc convertExportFromNim*(sym: NimNode): string =
     else:
       return ""
 
+proc convertExportExprNim*(expr: string, sym: NimNode): string =
+  ## Converts a Nim expression to the ABI-facing value used by generated
+  ## internal exports.
+  let typ = sym.stripSink
+  case typ.repr
+  of "Vec2":
+    return &"cast[Vector2]({expr})"
+  of "Mat3":
+    return &"cast[Matrix3]({expr})"
+  else:
+    return expr & convertExportFromNim(typ)
+
 proc convertToPointer*(sym: NimNode): string =
   ## Converts client-side wrapper to pointer for C call.
   let typ = sym.stripSink
@@ -82,7 +126,7 @@ proc convertToPointer*(sym: NimNode): string =
       return ".cstring"
     elif typ.repr == "Rune":
       return ".int32"
-    elif typ.repr in refObjectNames:
+    elif typ.isRefObjectLike:
       return ".reference"
     else:
       return ""
@@ -100,6 +144,31 @@ proc convertImportToNim*(sym: NimNode): string =
       return ".Rune"
     else:
       return ""
+
+proc convertImportExprNim*(expr: string, sym: NimNode): string =
+  ## Converts an ABI-facing expression to the Nim value expected by the source
+  ## library implementation.
+  let typ = sym.stripSink
+  case typ.repr
+  of "Vec2":
+    return &"cast[Vec2]({expr})"
+  of "Mat3":
+    return &"cast[Mat3]({expr})"
+  else:
+    return expr & convertImportToNim(typ)
+
+proc exportDefaultValueNim(default, sym: NimNode): string =
+  ## Keeps wrapper defaults in the same ABI-facing type family as the generated
+  ## wrapper signature. Some Pixie APIs use vmath defaults like vec2()/mat3()
+  ## while the wrapper exposes ABI-compatible Vector2/Matrix3 value objects.
+  let typ = sym.stripSink
+  case typ.repr
+  of "Vec2":
+    return &"cast[Vector2]({default.repr})"
+  of "Mat3":
+    return &"cast[Matrix3]({default.repr})"
+  else:
+    return default.repr
 
 proc exportConstNim*(sym: NimNode) =
   let impl = sym.getImpl()
@@ -141,7 +210,7 @@ proc exportProcNim*(
 
   # Check if return type is a ref object
   let returnsRefObject = procReturn.kind != nnkEmpty and
-    (procReturn.repr in refObjectNames or procReturn.kind == nnkBracketExpr)
+    (procReturn.isRefObjectLike or procReturn.isSeqLike)
 
   # C import declaration
   procs.add &"proc {apiProcName}("
@@ -170,18 +239,18 @@ proc exportProcNim*(
     if param[^2].kind == nnkBracketExpr or paramType.repr.startsWith("Some"):
       procs.add &"{param[0].repr}: {exportTypeNim(paramType)}, "
     else:
-      procs.add &"{param[0].repr}: {paramType}"
+      procs.add &"{param[0].repr}: {exportArgTypeNim(paramType)}"
       if defaults[i][1].kind != nnkEmpty:
-        procs.add &" = {defaults[i][1].repr}"
+        procs.add &" = {exportDefaultValueNim(defaults[i][1], paramType)}"
       procs.add ", "
   procs.removeSuffix ", "
   procs.add ")"
   if procReturn.kind != nnkEmpty:
-    procs.add &": {exportTypeNim(procReturn)}"
+    procs.add &": {exportArgTypeNim(procReturn)}"
   procs.add " {.inline.} =\n"
   if returnsRefObject:
     # Wrap returned pointer in ref object
-    procs.add &"  result = {exportTypeNim(procReturn)}(reference: "
+    procs.add &"  result = {exportArgTypeNim(procReturn)}(reference: "
   elif procReturn.kind != nnkEmpty:
     procs.add "  result = "
   else:
@@ -194,6 +263,8 @@ proc exportProcNim*(
   procs.add ")"
   if returnsRefObject:
     procs.add ")"  # Close the TypeName(reference: ...)
+  elif procReturn.kind != nnkEmpty:
+    procs.add convertImportToNim(procReturn)
   procs.add "\n"
   if procRaises:
     procs.add "  if checkError():\n"
@@ -203,10 +274,10 @@ proc exportProcNim*(
 proc exportObjectNim*(sym: NimNode, constructor: NimNode) =
   let objName = sym.repr
 
-  if objName in ["Vector2", "Matrix3", "Rect", "Color"]:
+  if objName in ["Rect", "Color"]:
     return
 
-  types.add &"type {objName}* = object\n"
+  types.add &"type {objName}* {{.bycopy.}} = object\n"
   for identDefs in sym.getImpl()[2][2]:
     for property in identDefs[0 .. ^3]:
       types.add &"  {property.repr}: {identDefs[^2].repr}\n"
@@ -250,7 +321,10 @@ proc genRefObject(objName: string) =
   types.add &"    {apiProcName}(x.reference)\n"
   types.add "\n"
 
-proc genSeqProcs(objName, niceName, procPrefix, refAccessor, entryName: string) =
+proc genSeqProcs(
+  objName, niceName, procPrefix, refAccessor: string,
+  entryType: NimNode
+) =
   ## refAccessor is how to get .reference from the wrapper (e.g. "" for direct, ".parent" for nested)
   let refSuffix = if refAccessor == "": ".reference" else: refAccessor & ".reference"
 
@@ -265,37 +339,43 @@ proc genSeqProcs(objName, niceName, procPrefix, refAccessor, entryName: string) 
   procs.add "\n"
 
   procs.add &"proc {procPrefix}_add"
-  procs.add &"(s: pointer, v: {entryName})"
+  procs.add &"(s: pointer, v: {exportTypeCImport(entryType)})"
   procs.add " {.importc: \""
   procs.add &"{procPrefix}_add"
   procs.add "\", cdecl.}\n"
   procs.add "\n"
 
-  procs.add &"proc add*(s: {niceName}, v: {entryName}) =\n"
-  procs.add &"  {procPrefix}_add(s{refSuffix}, v)\n"
+  procs.add &"proc add*(s: {niceName}, v: {exportArgTypeNim(entryType)}) =\n"
+  procs.add &"  {procPrefix}_add(s{refSuffix}, v{convertToPointer(entryType)})\n"
   procs.add "\n"
 
   procs.add &"proc {procPrefix}_get"
   procs.add &"(s: pointer, i: int)"
-  procs.add &": {entryName}"
+  procs.add &": {exportTypeCImport(entryType)}"
   procs.add " {.importc: \""
   procs.add &"{procPrefix}_get"
   procs.add "\", cdecl.}\n"
   procs.add "\n"
 
-  procs.add &"proc `[]`*(s: {niceName}, i: int): {entryName} =\n"
-  procs.add &"  {procPrefix}_get(s{refSuffix}, i)\n"
+  procs.add &"proc `[]`*(s: {niceName}, i: int): {exportArgTypeNim(entryType)} =\n"
+  if entryType.isRefObjectLike:
+    procs.add &"  {exportTypeNim(entryType)}(reference: "
+    procs.add &"{procPrefix}_get(s{refSuffix}, i))\n"
+  else:
+    procs.add &"  {procPrefix}_get(s{refSuffix}, i)"
+    procs.add convertImportToNim(entryType)
+    procs.add "\n"
   procs.add "\n"
 
   procs.add &"proc {procPrefix}_set(s: pointer, "
-  procs.add &"i: int, v: {entryName})"
+  procs.add &"i: int, v: {exportTypeCImport(entryType)})"
   procs.add " {.importc: \""
   procs.add &"{procPrefix}_set"
   procs.add "\", cdecl.}\n"
   procs.add "\n"
 
-  procs.add &"proc `[]=`*(s: {niceName}, i: int, v: {entryName}) =\n"
-  procs.add &"  {procPrefix}_set(s{refSuffix}, i, v)\n"
+  procs.add &"proc `[]=`*(s: {niceName}, i: int, v: {exportArgTypeNim(entryType)}) =\n"
+  procs.add &"  {procPrefix}_set(s{refSuffix}, i, v{convertToPointer(entryType)})\n"
   procs.add "\n"
 
   procs.add &"proc {procPrefix}_delete(s: pointer, i: int)"
@@ -352,10 +432,14 @@ proc exportRefObjectNim*(
       # Nim wrapper passes .reference
       procs.add &"proc {fieldName}*("
       procs.add &"{toVarCase(objName)}: {objName}): "
-      procs.add &"{exportTypeNim(fieldType)}"
+      procs.add &"{exportArgTypeNim(fieldType)}"
       procs.add " {.inline.} =\n"
-      procs.add &"  {getProcName}({toVarCase(objName)}.reference)"
-      procs.add convertImportToNim(fieldType)
+      if fieldType.isRefObjectLike:
+        procs.add &"  {exportTypeNim(fieldType)}(reference: "
+        procs.add &"{getProcName}({toVarCase(objName)}.reference))"
+      else:
+        procs.add &"  {getProcName}({toVarCase(objName)}.reference)"
+        procs.add convertImportToNim(fieldType)
       procs.add "\n"
       procs.add "\n"
 
@@ -374,7 +458,7 @@ proc exportRefObjectNim*(
       # Nim wrapper passes .reference
       procs.add &"proc `{fieldName}=`*("
       procs.add &"{toVarCase(objName)}: {objName}, "
-      procs.add &"{fieldName}: {fieldType.repr}) =\n"
+      procs.add &"{fieldName}: {exportArgTypeNim(fieldType)}) =\n"
       procs.add &"  {setProcName}({toVarCase(objName)}.reference, "
       procs.add &"{fieldName}{convertToPointer(fieldType)})"
       procs.add "\n"
@@ -399,7 +483,7 @@ proc exportRefObjectNim*(
         helperName,
         &"$lib_{objNameSnaked}_{fieldNameSnaked}",
         &".{toVarCase(objName)}",
-        fieldType[1].repr
+        fieldType[1]
       )
 
 proc exportSeqNim*(sym: NimNode) =
@@ -413,7 +497,7 @@ proc exportSeqNim*(sym: NimNode) =
     seqName,
     &"$lib_{seqNameSnaked}",
     "",
-    sym[1].repr
+    sym[1]
   )
 
   let newSeqProcName = &"$lib_new_{seqNameSnaked}"

@@ -20,7 +20,7 @@ type SimpleEnum* = enum
   Second
   Third
 
-type SimpleObj* = object
+type SimpleObj* {.bycopy.} = object
   simpleA*: int
   simpleB*: byte
   simpleC*: bool
@@ -63,7 +63,7 @@ proc `=destroy`(x: RefObjWithSeqObj) =
   if x.reference != nil:
     test_ref_obj_with_seq_unref(x.reference)
 
-type SimpleObjWithProc* = object
+type SimpleObjWithProc* {.bycopy.} = object
   simpleA*: int
   simpleB*: byte
   simpleC*: bool
@@ -205,20 +205,20 @@ proc test_seq_string_len(s: pointer): int {.importc: "test_seq_string_len", cdec
 proc len*(s: SeqString): int =
   test_seq_string_len(s.reference)
 
-proc test_seq_string_add(s: pointer, v: string) {.importc: "test_seq_string_add", cdecl.}
+proc test_seq_string_add(s: pointer, v: cstring) {.importc: "test_seq_string_add", cdecl.}
 
 proc add*(s: SeqString, v: string) =
-  test_seq_string_add(s.reference, v)
+  test_seq_string_add(s.reference, v.cstring)
 
-proc test_seq_string_get(s: pointer, i: int): string {.importc: "test_seq_string_get", cdecl.}
+proc test_seq_string_get(s: pointer, i: int): cstring {.importc: "test_seq_string_get", cdecl.}
 
 proc `[]`*(s: SeqString, i: int): string =
-  test_seq_string_get(s.reference, i)
+  test_seq_string_get(s.reference, i).`$`
 
-proc test_seq_string_set(s: pointer, i: int, v: string) {.importc: "test_seq_string_set", cdecl.}
+proc test_seq_string_set(s: pointer, i: int, v: cstring) {.importc: "test_seq_string_set", cdecl.}
 
 proc `[]=`*(s: SeqString, i: int, v: string) =
-  test_seq_string_set(s.reference, i, v)
+  test_seq_string_set(s.reference, i, v.cstring)
 
 proc test_seq_string_delete(s: pointer, i: int) {.importc: "test_seq_string_delete", cdecl.}
 

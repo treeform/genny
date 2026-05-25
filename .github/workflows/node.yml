@@ -15,6 +15,16 @@ jobs:
         node-version: '20'
     - name: Setup Nim
       uses: treeform/setup-nim-action@v6
+    - name: Checkout Pixie
+      uses: actions/checkout@v4
+      with:
+        repository: treeform/pixie
+        ref: pixie-binding-abi-fixes
+        path: pixie
+    - name: Move Pixie checkout beside Genny
+      run: rm -rf ../pixie && mv pixie ../pixie
+    - name: Install Pixie dependencies
+      run: cd .. && nimby install -g pixie/pixie.nimble
     - name: Build shared library
       run: nim c --mm:arc --app:lib -d:gennyNode -o:tests/generated/libtest.so tests/test.nim
     - name: Install koffi
@@ -23,3 +33,7 @@ jobs:
     - name: Run tests
       working-directory: tests
       run: node test_node.js
+    - name: Build Pixie bindings
+      run: cd ../pixie && nim c --mm:arc --app:lib -d:gennyNode --path:../genny/src --path:src -o:bindings/generated/libpixie.so bindings/bindings.nim
+    - name: Run Pixie Node tests
+      run: NODE_PATH=$PWD/tests/node_modules PIXIE_ROOT=../pixie PIXIE_BINDINGS_DIR=../pixie/bindings/generated LD_LIBRARY_PATH=$PWD/../pixie/bindings/generated node tests/test_pixie_node.js

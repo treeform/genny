@@ -19,7 +19,8 @@ proc test_simple_ref_obj_unref*(x: SimpleRefObj) {.raises: [], cdecl, exportc, d
 
 proc test_new_simple_ref_obj*(): SimpleRefObj {.raises: [], cdecl, exportc, dynlib.} =
   result = newSimpleRefObj()
-  GC_ref(result)
+  if result != nil:
+    GC_ref(result)
 
 proc test_simple_ref_obj_get_simple_ref_a*(simple_ref_obj: SimpleRefObj): int {.raises: [], cdecl, exportc, dynlib.} =
   simple_ref_obj.simpleRefA
@@ -69,7 +70,8 @@ proc test_ref_obj_with_seq_unref*(x: RefObjWithSeq) {.raises: [], cdecl, exportc
 
 proc test_new_ref_obj_with_seq*(): RefObjWithSeq {.raises: [], cdecl, exportc, dynlib.} =
   result = newRefObjWithSeq()
-  GC_ref(result)
+  if result != nil:
+    GC_ref(result)
 
 proc test_ref_obj_with_seq_data_len*(ref_obj_with_seq: RefObjWithSeq): int {.raises: [], cdecl, exportc, dynlib.} =
   ref_obj_with_seq.data.len
@@ -129,5 +131,7 @@ proc test_seq_string_unref*(s: SeqString) {.raises: [], cdecl, exportc, dynlib.}
   GC_unref(s)
 
 proc test_get_datas*(): SeqString {.raises: [], cdecl, exportc, dynlib.} =
-  SeqString(s: getDatas())
+  result = SeqString(s: getDatas())
+  if result != nil:
+    GC_ref(result)
 
