@@ -44,6 +44,7 @@ approx(mixed.g, 0.25);
 const mat = pixie.translate(3, 4);
 const identity = pixie.translate(0, 0);
 assert.strictEqual(mat.values[6], 3);
+assert.strictEqual(pixie.inverse(mat).values[6], -3);
 assert.deepStrictEqual(pixie.snapToPixels(pixie.rect(1, 2, 3, 4)), pixie.rect(1, 2, 3, 4));
 assert(pixie.miterLimitToAngle(2) > 0);
 assert(pixie.angleToMiterLimit(1) > 0);

@@ -32,6 +32,7 @@ pub fn main() !void {
     const mat = pixie.translate(3, 4);
     const identity = pixie.translate(0, 0);
     try expect(mat.values[6] == 3);
+    try expect(pixie.inverse(mat).values[6] == -3);
     try expect(pixie.snapToPixels(pixie.Rect.init(1, 2, 3, 4)).eql(pixie.Rect.init(1, 2, 3, 4)));
     try expect(pixie.miterLimitToAngle(2) > 0);
     try expect(pixie.angleToMiterLimit(1) > 0);

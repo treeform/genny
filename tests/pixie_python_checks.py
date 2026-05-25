@@ -36,6 +36,7 @@ def run(pixie):
 
     mat = pixie.translate(3, 4)
     assert matrix_values(mat)[6] == 3
+    assert matrix_values(pixie.inverse(mat))[6] == -3
     assert pixie.snap_to_pixels(pixie.Rect(1, 2, 3, 4)) == pixie.Rect(1, 2, 3, 4)
     assert pixie.miter_limit_to_angle(2) > 0
     assert pixie.angle_to_miter_limit(1) > 0

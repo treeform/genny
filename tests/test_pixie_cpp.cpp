@@ -39,6 +39,7 @@ int main() {
     Matrix3 mat = translate(3, 4);
     Matrix3 identity = translate(0, 0);
     assert(mat.values[6] == 3);
+    assert(inverse(mat).values[6] == -3);
     assert(pixie_rect_eq(snapToPixels(rect(1, 2, 3, 4)), rect(1, 2, 3, 4)));
     assert(miterLimitToAngle(2) > 0);
     assert(angleToMiterLimit(1) > 0);

@@ -43,6 +43,7 @@ int main() {
     Matrix3 mat = pixie_translate(3, 4);
     Matrix3 identity = pixie_translate(0, 0);
     assert(mat.values[6] == 3);
+    assert(pixie_inverse(mat).values[6] == -3);
     assert(pixie_rect_eq(pixie_snap_to_pixels(pixie_rect(1, 2, 3, 4)), pixie_rect(1, 2, 3, 4)));
     assert(pixie_miter_limit_to_angle(2) > 0);
     assert(pixie_angle_to_miter_limit(1) > 0);
