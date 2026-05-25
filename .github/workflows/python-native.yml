@@ -31,7 +31,8 @@ jobs:
     - name: Build Pixie native extension
       run: |
         EXT_SUFFIX="$(python -c 'import sysconfig; print(sysconfig.get_config_var("EXT_SUFFIX"))')"
-        nim c --mm:arc --app:lib -d:gennyPythonNative --path:src --path:../pixie/src -o:../pixie/bindings/generated/pixie${EXT_SUFFIX} ../pixie/bindings/bindings.nim
+        cd ../pixie
+        nim c --mm:arc --app:lib -d:gennyPythonNative --path:../genny/src --path:src -o:bindings/generated/pixie${EXT_SUFFIX} bindings/bindings.nim
     - name: Run Pixie native Python test
       run: PIXIE_ROOT=../pixie PIXIE_BINDINGS_DIR=../pixie/bindings/generated LD_LIBRARY_PATH=$PWD/../pixie/bindings/generated python tests/test_pixie_python_native.py
     - name: Run non-gating benchmark
