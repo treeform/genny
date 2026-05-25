@@ -1,4 +1,4 @@
-nimTitle	internal	genny/internal.html	module src/genny/internal		0
+nimTitle	internal	genny/internal.html	module genny/internal		0
 nim	exportConstInternal	genny/internal.html#exportConstInternal,NimNode	proc exportConstInternal(sym: NimNode)		9
 nim	exportEnumInternal	genny/internal.html#exportEnumInternal,NimNode	proc exportEnumInternal(sym: NimNode)		12
 nim	exportProcInternal	genny/internal.html#exportProcInternal,NimNode,NimNode,openArray[NimNode],bool	proc exportProcInternal(sym: NimNode; owner: NimNode = nil;\n                   prefixes: openArray[NimNode] = []; gcRefResult: bool = false)		15

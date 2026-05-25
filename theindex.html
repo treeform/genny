@@ -16,16 +16,19 @@
 <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAA3XAAAN1wFCKJt4AAAAB3RJTUUH4QQQEwksSS9ZWwAAAk1JREFUWMPtll2ITVEUx39nn/O7Y5qR8f05wtCUUr6ZIS++8pEnkZInPImneaCQ5METNdOkeFBKUhMPRIkHKfEuUZSUlGlKPN2TrgfncpvmnntnmlEyq1Z7t89/rf9a6+y99oZxGZf/XeIq61EdtgKXgdXA0xrYAvBjOIF1AI9zvjcC74BSpndrJPkBWDScTF8Aa4E3wDlgHbASaANmVqlcCnwHvgDvgVfAJ+AikAAvgfVZwLnSVZHZaOuKoQi3ZOMi4NkYkpe1p4J7A8BpYAD49hfIy/oqG0+hLomiKP2L5L+1ubn5115S+3OAn4EnwBlgMzCjyt6ZAnQCJ4A7wOs88iRJHvw50HoujuPBoCKwHWiosy8MdfZnAdcHk8dxXFJ3VQbQlCTJvRBCGdRbD4M6uc5glpY3eAihpN5S5w12diSEcCCEcKUO4ljdr15T76ur1FDDLIQQ3qv71EdDOe3Kxj3leRXyk+pxdWnFWod6Wt2bY3de3aSuUHcPBVimHs7mK9WrmeOF6lR1o9qnzskh2ar2qm1qizpfXaPeVGdlmGN5pb09qMxz1Xb1kLqgzn1RyH7JUXW52lr5e/Kqi9qpto7V1atuUzfnARrV7jEib1T76gG2qxdGmXyiekkt1GswPTtek0aBfJp6YySGBfWg2tPQ0FAYgf1stUfdmdcjarbYJEniKIq6gY/Aw+zWHAC+p2labGpqiorFYgGYCEzN7oQdQClN07O1/EfDyGgC0ALMBdYAi4FyK+4H3gLPsxfR1zRNi+NP7nH5J+QntnXe5B5mpfQAAAAASUVORK5CYII=">
 
 <!-- CSS -->
-<link rel="stylesheet" type="text/css" href="nimdoc.out.css?v=2.2.6">
+<link rel="stylesheet" type="text/css" href="nimdoc.out.css?v=2.2.10">
 
 <!-- JS -->
-<script type="text/javascript" src="dochack.js?v=2.2.6"></script>
+<script type="text/javascript" src="dochack.js?v=2.2.10"></script>
 </head>
 <body>
   <div class="document" id="documentId">
+    <input type="checkbox" id="nav-toggle" hidden>
+    <label for="nav-toggle" id="nav-burger">&#9776;</label>
+    <label for="nav-toggle" id="nav-overlay"></label>
     <div class="container">
       <h1 class="title">Index</h1>
-      Modules: <a href="genny.html">genny</a>, <a href="genny/common.html">genny/common</a>, <a href="genny/internal.html">genny/internal</a>, <a href="genny/languages/c.html">genny/languages/c</a>, <a href="genny/languages/cpp.html">genny/languages/cpp</a>, <a href="genny/languages/nim.html">genny/languages/nim</a>, <a href="genny/languages/node.html">genny/languages/node</a>, <a href="genny/languages/python.html">genny/languages/python</a>, <a href="genny/languages/zig.html">genny/languages/zig</a>.<br/><p /><h2>API symbols</h2>
+      Modules: <a href="genny.html">genny</a>, <a href="genny/common.html">genny/common</a>, <a href="genny/internal.html">genny/internal</a>, <a href="genny/languages/nim.html">genny/languages/nim</a>.<br/><p /><h2>API symbols</h2>
 <dl><dt><a name="basicTypes" href="#basicTypes"><span>basicTypes:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="common: const basicTypes" href="genny/common.html#basicTypes">common: const basicTypes</a></li>
@@ -34,71 +37,13 @@
 <li><a class="reference external"
           data-doc-search-tag="nim: proc convertExportFromNim(sym: NimNode): string" href="genny/languages/nim.html#convertExportFromNim%2CNimNode">nim: proc convertExportFromNim(sym: NimNode): string</a></li>
           </ul></dd>
-<dt><a name="convertExportFromNode" href="#convertExportFromNode"><span>convertExportFromNode:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="node: proc convertExportFromNode(sym: NimNode): string" href="genny/languages/node.html#convertExportFromNode%2CNimNode">node: proc convertExportFromNode(sym: NimNode): string</a></li>
-          </ul></dd>
-<dt><a name="convertExportFromPy" href="#convertExportFromPy"><span>convertExportFromPy:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="python: proc convertExportFromPy(sym: NimNode): string" href="genny/languages/python.html#convertExportFromPy%2CNimNode">python: proc convertExportFromPy(sym: NimNode): string</a></li>
-          </ul></dd>
-<dt><a name="convertExportFromZig" href="#convertExportFromZig"><span>convertExportFromZig:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="zig: proc convertExportFromZig(inner: string; sym: string): string" href="genny/languages/zig.html#convertExportFromZig%2Cstring%2Cstring">zig: proc convertExportFromZig(inner: string; sym: string): string</a></li>
-          </ul></dd>
 <dt><a name="convertImportToNim" href="#convertImportToNim"><span>convertImportToNim:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nim: proc convertImportToNim(sym: NimNode): string" href="genny/languages/nim.html#convertImportToNim%2CNimNode">nim: proc convertImportToNim(sym: NimNode): string</a></li>
           </ul></dd>
-<dt><a name="convertImportToNode" href="#convertImportToNode"><span>convertImportToNode:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="node: proc convertImportToNode(sym: NimNode): string" href="genny/languages/node.html#convertImportToNode%2CNimNode">node: proc convertImportToNode(sym: NimNode): string</a></li>
-          </ul></dd>
-<dt><a name="convertImportToPy" href="#convertImportToPy"><span>convertImportToPy:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="python: proc convertImportToPy(sym: NimNode): string" href="genny/languages/python.html#convertImportToPy%2CNimNode">python: proc convertImportToPy(sym: NimNode): string</a></li>
-          </ul></dd>
-<dt><a name="convertImportToZig" href="#convertImportToZig"><span>convertImportToZig:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="zig: proc convertImportToZig(inner: string; sym: string): string" href="genny/languages/zig.html#convertImportToZig%2Cstring%2Cstring">zig: proc convertImportToZig(inner: string; sym: string): string</a></li>
-          </ul></dd>
 <dt><a name="convertToPointer" href="#convertToPointer"><span>convertToPointer:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nim: proc convertToPointer(sym: NimNode): string" href="genny/languages/nim.html#convertToPointer%2CNimNode">nim: proc convertToPointer(sym: NimNode): string</a></li>
-          </ul></dd>
-<dt><a name="dllProc" href="#dllProc"><span>dllProc:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="c: proc dllProc(procName: string; args: openArray[(NimNode, NimNode)]; restype: string)" href="genny/languages/c.html#dllProc%2Cstring%2CopenArray%5B%5D%2Cstring">c: proc dllProc(procName: string; args: openArray[(NimNode, NimNode)]; restype: string)</a></li>
-          <li><a class="reference external"
-          data-doc-search-tag="c: proc dllProc(procName: string; args: openArray[string]; restype: string)" href="genny/languages/c.html#dllProc%2Cstring%2CopenArray%5Bstring%5D%2Cstring">c: proc dllProc(procName: string; args: openArray[string]; restype: string)</a></li>
-          <li><a class="reference external"
-          data-doc-search-tag="c: proc dllProc(procName: string; restype: string)" href="genny/languages/c.html#dllProc%2Cstring%2Cstring">c: proc dllProc(procName: string; restype: string)</a></li>
-          <li><a class="reference external"
-          data-doc-search-tag="cpp: proc dllProc(procName: string; args: openArray[(NimNode, NimNode)]; restype: string)" href="genny/languages/cpp.html#dllProc%2Cstring%2CopenArray%5B%5D%2Cstring">cpp: proc dllProc(procName: string; args: openArray[(NimNode, NimNode)]; restype: string)</a></li>
-          <li><a class="reference external"
-          data-doc-search-tag="cpp: proc dllProc(procName: string; args: openArray[string]; restype: string)" href="genny/languages/cpp.html#dllProc%2Cstring%2CopenArray%5Bstring%5D%2Cstring">cpp: proc dllProc(procName: string; args: openArray[string]; restype: string)</a></li>
-          <li><a class="reference external"
-          data-doc-search-tag="cpp: proc dllProc(procName: string; restype: string)" href="genny/languages/cpp.html#dllProc%2Cstring%2Cstring">cpp: proc dllProc(procName: string; restype: string)</a></li>
-          <li><a class="reference external"
-          data-doc-search-tag="python: proc dllProc(procName: string; args: openArray[string]; restype: string)" href="genny/languages/python.html#dllProc%2Cstring%2CopenArray%5Bstring%5D%2Cstring">python: proc dllProc(procName: string; args: openArray[string]; restype: string)</a></li>
-          <li><a class="reference external"
-          data-doc-search-tag="zig: proc dllProc(procName: string; args: openArray[string]; resType: string)" href="genny/languages/zig.html#dllProc%2Cstring%2CopenArray%5Bstring%5D%2Cstring">zig: proc dllProc(procName: string; args: openArray[string]; resType: string)</a></li>
-          </ul></dd>
-<dt><a name="exportCloseObjectCpp" href="#exportCloseObjectCpp"><span>exportCloseObjectCpp:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="cpp: proc exportCloseObjectCpp()" href="genny/languages/cpp.html#exportCloseObjectCpp">cpp: proc exportCloseObjectCpp()</a></li>
-          </ul></dd>
-<dt><a name="exportCloseObjectZig" href="#exportCloseObjectZig"><span>exportCloseObjectZig:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="zig: proc exportCloseObjectZig()" href="genny/languages/zig.html#exportCloseObjectZig">zig: proc exportCloseObjectZig()</a></li>
-          </ul></dd>
-<dt><a name="exportConstC" href="#exportConstC"><span>exportConstC:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="c: proc exportConstC(sym: NimNode)" href="genny/languages/c.html#exportConstC%2CNimNode">c: proc exportConstC(sym: NimNode)</a></li>
-          </ul></dd>
-<dt><a name="exportConstCpp" href="#exportConstCpp"><span>exportConstCpp:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="cpp: proc exportConstCpp(sym: NimNode)" href="genny/languages/cpp.html#exportConstCpp%2CNimNode">cpp: proc exportConstCpp(sym: NimNode)</a></li>
           </ul></dd>
 <dt><a name="exportConstInternal" href="#exportConstInternal"><span>exportConstInternal:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -108,29 +53,9 @@
 <li><a class="reference external"
           data-doc-search-tag="nim: proc exportConstNim(sym: NimNode)" href="genny/languages/nim.html#exportConstNim%2CNimNode">nim: proc exportConstNim(sym: NimNode)</a></li>
           </ul></dd>
-<dt><a name="exportConstNode" href="#exportConstNode"><span>exportConstNode:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="node: proc exportConstNode(sym: NimNode)" href="genny/languages/node.html#exportConstNode%2CNimNode">node: proc exportConstNode(sym: NimNode)</a></li>
-          </ul></dd>
-<dt><a name="exportConstPy" href="#exportConstPy"><span>exportConstPy:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="python: proc exportConstPy(sym: NimNode)" href="genny/languages/python.html#exportConstPy%2CNimNode">python: proc exportConstPy(sym: NimNode)</a></li>
-          </ul></dd>
 <dt><a name="exportConsts" href="#exportConsts"><span>exportConsts:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="genny: template exportConsts(body: untyped)" href="genny.html#exportConsts.t%2Cuntyped">genny: template exportConsts(body: untyped)</a></li>
-          </ul></dd>
-<dt><a name="exportConstZig" href="#exportConstZig"><span>exportConstZig:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="zig: proc exportConstZig(sym: NimNode)" href="genny/languages/zig.html#exportConstZig%2CNimNode">zig: proc exportConstZig(sym: NimNode)</a></li>
-          </ul></dd>
-<dt><a name="exportEnumC" href="#exportEnumC"><span>exportEnumC:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="c: proc exportEnumC(sym: NimNode)" href="genny/languages/c.html#exportEnumC%2CNimNode">c: proc exportEnumC(sym: NimNode)</a></li>
-          </ul></dd>
-<dt><a name="exportEnumCpp" href="#exportEnumCpp"><span>exportEnumCpp:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="cpp: proc exportEnumCpp(sym: NimNode)" href="genny/languages/cpp.html#exportEnumCpp%2CNimNode">cpp: proc exportEnumCpp(sym: NimNode)</a></li>
           </ul></dd>
 <dt><a name="exportEnumInternal" href="#exportEnumInternal"><span>exportEnumInternal:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -140,33 +65,13 @@
 <li><a class="reference external"
           data-doc-search-tag="nim: proc exportEnumNim(sym: NimNode)" href="genny/languages/nim.html#exportEnumNim%2CNimNode">nim: proc exportEnumNim(sym: NimNode)</a></li>
           </ul></dd>
-<dt><a name="exportEnumNode" href="#exportEnumNode"><span>exportEnumNode:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="node: proc exportEnumNode(sym: NimNode)" href="genny/languages/node.html#exportEnumNode%2CNimNode">node: proc exportEnumNode(sym: NimNode)</a></li>
-          </ul></dd>
-<dt><a name="exportEnumPy" href="#exportEnumPy"><span>exportEnumPy:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="python: proc exportEnumPy(sym: NimNode)" href="genny/languages/python.html#exportEnumPy%2CNimNode">python: proc exportEnumPy(sym: NimNode)</a></li>
-          </ul></dd>
 <dt><a name="exportEnums" href="#exportEnums"><span>exportEnums:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="genny: template exportEnums(body: untyped)" href="genny.html#exportEnums.t%2Cuntyped">genny: template exportEnums(body: untyped)</a></li>
           </ul></dd>
-<dt><a name="exportEnumZig" href="#exportEnumZig"><span>exportEnumZig:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="zig: proc exportEnumZig(sym: NimNode)" href="genny/languages/zig.html#exportEnumZig%2CNimNode">zig: proc exportEnumZig(sym: NimNode)</a></li>
-          </ul></dd>
 <dt><a name="exportObject" href="#exportObject"><span>exportObject:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="genny: template exportObject(sym, body: untyped)" href="genny.html#exportObject.t%2Cuntyped%2Cuntyped">genny: template exportObject(sym, body: untyped)</a></li>
-          </ul></dd>
-<dt><a name="exportObjectC" href="#exportObjectC"><span>exportObjectC:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="c: proc exportObjectC(sym: NimNode; constructor: NimNode)" href="genny/languages/c.html#exportObjectC%2CNimNode%2CNimNode">c: proc exportObjectC(sym: NimNode; constructor: NimNode)</a></li>
-          </ul></dd>
-<dt><a name="exportObjectCpp" href="#exportObjectCpp"><span>exportObjectCpp:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="cpp: proc exportObjectCpp(sym: NimNode; constructor: NimNode)" href="genny/languages/cpp.html#exportObjectCpp%2CNimNode%2CNimNode">cpp: proc exportObjectCpp(sym: NimNode; constructor: NimNode)</a></li>
           </ul></dd>
 <dt><a name="exportObjectInternal" href="#exportObjectInternal"><span>exportObjectInternal:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -175,30 +80,6 @@
 <dt><a name="exportObjectNim" href="#exportObjectNim"><span>exportObjectNim:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nim: proc exportObjectNim(sym: NimNode; constructor: NimNode)" href="genny/languages/nim.html#exportObjectNim%2CNimNode%2CNimNode">nim: proc exportObjectNim(sym: NimNode; constructor: NimNode)</a></li>
-          </ul></dd>
-<dt><a name="exportObjectNode" href="#exportObjectNode"><span>exportObjectNode:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="node: proc exportObjectNode(sym: NimNode; constructor: NimNode)" href="genny/languages/node.html#exportObjectNode%2CNimNode%2CNimNode">node: proc exportObjectNode(sym: NimNode; constructor: NimNode)</a></li>
-          </ul></dd>
-<dt><a name="exportObjectPy" href="#exportObjectPy"><span>exportObjectPy:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="python: proc exportObjectPy(sym: NimNode; constructor: NimNode)" href="genny/languages/python.html#exportObjectPy%2CNimNode%2CNimNode">python: proc exportObjectPy(sym: NimNode; constructor: NimNode)</a></li>
-          </ul></dd>
-<dt><a name="exportObjectZig" href="#exportObjectZig"><span>exportObjectZig:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="zig: proc exportObjectZig(sym: NimNode; constructor: NimNode)" href="genny/languages/zig.html#exportObjectZig%2CNimNode%2CNimNode">zig: proc exportObjectZig(sym: NimNode; constructor: NimNode)</a></li>
-          </ul></dd>
-<dt><a name="exportProcC" href="#exportProcC"><span>exportProcC:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="c: proc exportProcC(sym: NimNode; owner: NimNode = nil;
-            prefixes: openArray[NimNode] = [])" href="genny/languages/c.html#exportProcC%2CNimNode%2CNimNode%2CopenArray%5BNimNode%5D">c: proc exportProcC(sym: NimNode; owner: NimNode = nil;
-            prefixes: openArray[NimNode] = [])</a></li>
-          </ul></dd>
-<dt><a name="exportProcCpp" href="#exportProcCpp"><span>exportProcCpp:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="cpp: proc exportProcCpp(sym: NimNode; owner: NimNode = nil;
-              prefixes: openArray[NimNode] = [])" href="genny/languages/cpp.html#exportProcCpp%2CNimNode%2CNimNode%2CopenArray%5BNimNode%5D">cpp: proc exportProcCpp(sym: NimNode; owner: NimNode = nil;
-              prefixes: openArray[NimNode] = [])</a></li>
           </ul></dd>
 <dt><a name="exportProcInternal" href="#exportProcInternal"><span>exportProcInternal:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -212,43 +93,13 @@
               prefixes: openArray[NimNode] = [])" href="genny/languages/nim.html#exportProcNim%2CNimNode%2CNimNode%2CopenArray%5BNimNode%5D">nim: proc exportProcNim(sym: NimNode; owner: NimNode = nil;
               prefixes: openArray[NimNode] = [])</a></li>
           </ul></dd>
-<dt><a name="exportProcNode" href="#exportProcNode"><span>exportProcNode:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="node: proc exportProcNode(sym: NimNode; owner: NimNode = nil;
-               prefixes: openArray[NimNode] = [])" href="genny/languages/node.html#exportProcNode%2CNimNode%2CNimNode%2CopenArray%5BNimNode%5D">node: proc exportProcNode(sym: NimNode; owner: NimNode = nil;
-               prefixes: openArray[NimNode] = [])</a></li>
-          </ul></dd>
-<dt><a name="exportProcPy" href="#exportProcPy"><span>exportProcPy:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="python: proc exportProcPy(sym: NimNode; owner: NimNode = nil;
-             prefixes: openArray[NimNode] = [])" href="genny/languages/python.html#exportProcPy%2CNimNode%2CNimNode%2CopenArray%5BNimNode%5D">python: proc exportProcPy(sym: NimNode; owner: NimNode = nil;
-             prefixes: openArray[NimNode] = [])</a></li>
-          </ul></dd>
 <dt><a name="exportProcs" href="#exportProcs"><span>exportProcs:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="genny: template exportProcs(body: untyped)" href="genny.html#exportProcs.t%2Cuntyped">genny: template exportProcs(body: untyped)</a></li>
           </ul></dd>
-<dt><a name="exportProcZig" href="#exportProcZig"><span>exportProcZig:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="zig: proc exportProcZig(sym: NimNode; owner: NimNode = nil;
-              prefixes: openArray[NimNode] = []; indent = false; rename = &quot;&quot;)" href="genny/languages/zig.html#exportProcZig%2CNimNode%2CNimNode%2CopenArray%5BNimNode%5D%2Cstring">zig: proc exportProcZig(sym: NimNode; owner: NimNode = nil;
-              prefixes: openArray[NimNode] = []; indent = false; rename = &quot;&quot;)</a></li>
-          </ul></dd>
 <dt><a name="exportRefObject" href="#exportRefObject"><span>exportRefObject:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="genny: template exportRefObject(sym, body: untyped)" href="genny.html#exportRefObject.t%2Cuntyped%2Cuntyped">genny: template exportRefObject(sym, body: untyped)</a></li>
-          </ul></dd>
-<dt><a name="exportRefObjectC" href="#exportRefObjectC"><span>exportRefObjectC:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="c: proc exportRefObjectC(sym: NimNode; fields: seq[(string, NimNode)];
-                 constructor: NimNode)" href="genny/languages/c.html#exportRefObjectC%2CNimNode%2Cseq%5B%5D%2CNimNode">c: proc exportRefObjectC(sym: NimNode; fields: seq[(string, NimNode)];
-                 constructor: NimNode)</a></li>
-          </ul></dd>
-<dt><a name="exportRefObjectCpp" href="#exportRefObjectCpp"><span>exportRefObjectCpp:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="cpp: proc exportRefObjectCpp(sym: NimNode; fields: seq[(string, NimNode)];
-                   constructor: NimNode)" href="genny/languages/cpp.html#exportRefObjectCpp%2CNimNode%2Cseq%5B%5D%2CNimNode">cpp: proc exportRefObjectCpp(sym: NimNode; fields: seq[(string, NimNode)];
-                   constructor: NimNode)</a></li>
           </ul></dd>
 <dt><a name="exportRefObjectInternal" href="#exportRefObjectInternal"><span>exportRefObjectInternal:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -262,35 +113,9 @@
                    constructor: NimNode)" href="genny/languages/nim.html#exportRefObjectNim%2CNimNode%2Cseq%5B%5D%2CNimNode">nim: proc exportRefObjectNim(sym: NimNode; fields: seq[(string, NimNode)];
                    constructor: NimNode)</a></li>
           </ul></dd>
-<dt><a name="exportRefObjectNode" href="#exportRefObjectNode"><span>exportRefObjectNode:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="node: proc exportRefObjectNode(sym: NimNode; fields: seq[(string, NimNode)];
-                    constructor: NimNode)" href="genny/languages/node.html#exportRefObjectNode%2CNimNode%2Cseq%5B%5D%2CNimNode">node: proc exportRefObjectNode(sym: NimNode; fields: seq[(string, NimNode)];
-                    constructor: NimNode)</a></li>
-          </ul></dd>
-<dt><a name="exportRefObjectPy" href="#exportRefObjectPy"><span>exportRefObjectPy:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="python: proc exportRefObjectPy(sym: NimNode; fields: seq[(string, NimNode)];
-                  constructor: NimNode)" href="genny/languages/python.html#exportRefObjectPy%2CNimNode%2Cseq%5B%5D%2CNimNode">python: proc exportRefObjectPy(sym: NimNode; fields: seq[(string, NimNode)];
-                  constructor: NimNode)</a></li>
-          </ul></dd>
-<dt><a name="exportRefObjectZig" href="#exportRefObjectZig"><span>exportRefObjectZig:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="zig: proc exportRefObjectZig(sym: NimNode; fields: seq[(string, NimNode)];
-                   constructor: NimNode)" href="genny/languages/zig.html#exportRefObjectZig%2CNimNode%2Cseq%5B%5D%2CNimNode">zig: proc exportRefObjectZig(sym: NimNode; fields: seq[(string, NimNode)];
-                   constructor: NimNode)</a></li>
-          </ul></dd>
 <dt><a name="exportSeq" href="#exportSeq"><span>exportSeq:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="genny: template exportSeq(sym, body: untyped)" href="genny.html#exportSeq.t%2Cuntyped%2Cuntyped">genny: template exportSeq(sym, body: untyped)</a></li>
-          </ul></dd>
-<dt><a name="exportSeqC" href="#exportSeqC"><span>exportSeqC:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="c: proc exportSeqC(sym: NimNode)" href="genny/languages/c.html#exportSeqC%2CNimNode">c: proc exportSeqC(sym: NimNode)</a></li>
-          </ul></dd>
-<dt><a name="exportSeqCpp" href="#exportSeqCpp"><span>exportSeqCpp:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="cpp: proc exportSeqCpp(sym: NimNode)" href="genny/languages/cpp.html#exportSeqCpp%2CNimNode">cpp: proc exportSeqCpp(sym: NimNode)</a></li>
           </ul></dd>
 <dt><a name="exportSeqInternal" href="#exportSeqInternal"><span>exportSeqInternal:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -299,18 +124,6 @@
 <dt><a name="exportSeqNim" href="#exportSeqNim"><span>exportSeqNim:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nim: proc exportSeqNim(sym: NimNode)" href="genny/languages/nim.html#exportSeqNim%2CNimNode">nim: proc exportSeqNim(sym: NimNode)</a></li>
-          </ul></dd>
-<dt><a name="exportSeqNode" href="#exportSeqNode"><span>exportSeqNode:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="node: proc exportSeqNode(sym: NimNode)" href="genny/languages/node.html#exportSeqNode%2CNimNode">node: proc exportSeqNode(sym: NimNode)</a></li>
-          </ul></dd>
-<dt><a name="exportSeqPy" href="#exportSeqPy"><span>exportSeqPy:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="python: proc exportSeqPy(sym: NimNode)" href="genny/languages/python.html#exportSeqPy%2CNimNode">python: proc exportSeqPy(sym: NimNode)</a></li>
-          </ul></dd>
-<dt><a name="exportSeqZig" href="#exportSeqZig"><span>exportSeqZig:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="zig: proc exportSeqZig(sym: NimNode)" href="genny/languages/zig.html#exportSeqZig%2CNimNode">zig: proc exportSeqZig(sym: NimNode)</a></li>
           </ul></dd>
 <dt><a name="exportTypeCImport" href="#exportTypeCImport"><span>exportTypeCImport:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -348,14 +161,6 @@
 <li><a class="reference external"
           data-doc-search-tag="common: proc toVarCase(s: string): string" href="genny/common.html#toVarCase%2Cstring">common: proc toVarCase(s: string): string</a></li>
           </ul></dd>
-<dt><a name="writeC" href="#writeC"><span>writeC:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="c: proc writeC(dir, lib: string)" href="genny/languages/c.html#writeC%2Cstring%2Cstring">c: proc writeC(dir, lib: string)</a></li>
-          </ul></dd>
-<dt><a name="writeCpp" href="#writeCpp"><span>writeCpp:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="cpp: proc writeCpp(dir, lib: string)" href="genny/languages/cpp.html#writeCpp%2Cstring%2Cstring">cpp: proc writeCpp(dir, lib: string)</a></li>
-          </ul></dd>
 <dt><a name="writeFiles" href="#writeFiles"><span>writeFiles:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="genny: macro writeFiles(dir, lib: static[string])" href="genny.html#writeFiles.m%2Cstatic%5Bstring%5D%2Cstatic%5Bstring%5D">genny: macro writeFiles(dir, lib: static[string])</a></li>
@@ -368,23 +173,11 @@
 <li><a class="reference external"
           data-doc-search-tag="nim: proc writeNim(dir, lib: string)" href="genny/languages/nim.html#writeNim%2Cstring%2Cstring">nim: proc writeNim(dir, lib: string)</a></li>
           </ul></dd>
-<dt><a name="writeNode" href="#writeNode"><span>writeNode:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="node: proc writeNode(dir, lib: string)" href="genny/languages/node.html#writeNode%2Cstring%2Cstring">node: proc writeNode(dir, lib: string)</a></li>
-          </ul></dd>
-<dt><a name="writePy" href="#writePy"><span>writePy:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="python: proc writePy(dir, lib: string)" href="genny/languages/python.html#writePy%2Cstring%2Cstring">python: proc writePy(dir, lib: string)</a></li>
-          </ul></dd>
-<dt><a name="writeZig" href="#writeZig"><span>writeZig:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="zig: proc writeZig(dir, lib: string)" href="genny/languages/zig.html#writeZig%2Cstring%2Cstring">zig: proc writeZig(dir, lib: string)</a></li>
-          </ul></dd>
 </dl>
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-24 23:16:37 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-05-25 04:17:33 UTC</small>
       </div>
     </div>
   </div>

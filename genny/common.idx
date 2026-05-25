@@ -1,4 +1,4 @@
-nimTitle	common	genny/common.html	module src/genny/common		0
+nimTitle	common	genny/common.html	module genny/common		0
 nim	basicTypes	genny/common.html#basicTypes	const basicTypes		3
 nim	toSnakeCase	genny/common.html#toSnakeCase,string	proc toSnakeCase(s: string): string		20
 nim	toCapSnakeCase	genny/common.html#toCapSnakeCase,string	proc toCapSnakeCase(s: string): string		33
