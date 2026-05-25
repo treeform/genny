@@ -30,6 +30,18 @@ block:
   doAssert refObj.simpleRefB == 50, "simpleRefB should be 50"
   refObj.doit()
 
+echo "Testing issue #54 ref object method lifetime"
+proc issue54CrashAfterAccess() =
+  var s2 = newSimpleRefObj()
+  s2.simpleRefA = 3
+  doAssert s2.simpleRefA == 3, "simpleRefA should first be 3"
+  s2.simpleRefA = 8
+  doAssert s2.simpleRefA == 8, "simpleRefA should update to 8"
+  s2.doit()
+
+issue54CrashAfterAccess()
+doAssert simpleCall(42) == 42, "execution should continue after issue #54 regression"
+
 echo "Testing SeqInt"
 block:
   let seqInt = newSeqInt()
