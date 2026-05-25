@@ -107,11 +107,15 @@ exportObject SimpleObjWithProc:
 proc getDatas(): seq[string] =
   @["a", "b", "c"]
 
+proc getMessage(): string =
+  "alpha\0omega"
+
 exportSeq seq[string]:
   discard
 
 exportProcs:
   getDatas
+  getMessage
 
 writeFiles("tests/generated", "test")
 

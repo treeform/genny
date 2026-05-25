@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include "pixie.h"
@@ -24,6 +25,26 @@ static void assert_color(Color actual, Color expected) {
     approx(actual.g, expected.g);
     approx(actual.b, expected.b);
     approx(actual.a, expected.a);
+}
+
+static void assert_buffer_len_gt(GennyBuffer buffer, intptr_t min_len) {
+    assert(buffer != NULL);
+    assert(pixie_genny_buffer_len(buffer) > min_len);
+    pixie_genny_buffer_unref(buffer);
+}
+
+static void assert_buffer_contains(GennyBuffer buffer, const char *needle) {
+    assert(buffer != NULL);
+    assert(strstr(pixie_genny_buffer_data(buffer), needle) != NULL);
+    pixie_genny_buffer_unref(buffer);
+}
+
+static void assert_buffer_equals(GennyBuffer buffer, const char *expected) {
+    assert(buffer != NULL);
+    intptr_t len = pixie_genny_buffer_len(buffer);
+    assert(len == (intptr_t)strlen(expected));
+    assert(memcmp(pixie_genny_buffer_data(buffer), expected, (size_t)len) == 0);
+    pixie_genny_buffer_unref(buffer);
 }
 
 int main() {
@@ -58,7 +79,7 @@ int main() {
     Image image = pixie_new_image(4, 3);
     assert(pixie_image_get_width(image) == 4);
     assert(pixie_image_get_height(image) == 3);
-    assert(strlen(pixie_image_encode_base64(image)) > 20);
+    assert_buffer_len_gt(pixie_image_encode_base64(image), 20);
     pixie_image_fill(image, red);
     assert(pixie_image_is_one_color(image));
     assert(pixie_image_is_opaque(image));
@@ -129,7 +150,7 @@ int main() {
     assert(pixie_path_stroke_overlaps(rect_path, pixie_vector2(0, 5), identity, 2, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, solid_dashes));
 
     Typeface typeface = pixie_read_typeface(FONT_PATH);
-    assert(strstr(pixie_typeface_get_file_path(typeface), "Inter-Regular.ttf") != NULL);
+    assert_buffer_contains(pixie_typeface_get_file_path(typeface), "Inter-Regular.ttf");
     pixie_typeface_set_file_path(typeface, FONT_PATH);
     assert(pixie_typeface_has_glyph(typeface, 'A'));
     assert(pixie_typeface_get_advance(typeface, 'A') > 0);
@@ -155,7 +176,7 @@ int main() {
     SeqSpan spans = pixie_new_seq_span();
     pixie_seq_span_add(spans, span);
     Arrangement arrangement = pixie_seq_span_typeset(spans, pixie_vector2(100, 100), CENTER_ALIGN, BOTTOM_ALIGN, 1);
-    assert(strcmp(pixie_span_get_text(pixie_seq_span_get(spans, 0)), "hello") == 0);
+    assert_buffer_equals(pixie_span_get_text(pixie_seq_span_get(spans, 0)), "hello");
     assert(pixie_arrangement_layout_bounds(arrangement).x > 0);
     assert(pixie_seq_span_layout_bounds(spans).y > 0);
     assert(pixie_arrangement_compute_bounds(arrangement, mat).x > 0);
@@ -226,7 +247,9 @@ int main() {
     pixie_context_save_layer(ctx);
     pixie_context_restore(ctx);
 
-    Image decoded = pixie_decode_base64(pixie_image_encode_base64(canvas));
+    GennyBuffer encoded_canvas = pixie_image_encode_base64(canvas);
+    Image decoded = pixie_decode_base64(pixie_genny_buffer_data(encoded_canvas));
+    pixie_genny_buffer_unref(encoded_canvas);
     assert(pixie_image_get_width(decoded) == pixie_image_get_width(canvas));
     assert(pixie_image_get_height(decoded) == pixie_image_get_height(canvas));
     assert(pixie_image_get_width(pixie_decode_image((char*)ppm)) == 2);
@@ -237,7 +260,7 @@ int main() {
     assert(pixie_path_compute_bounds(pixie_parse_path("M0 0 L10 0 L10 10 Z"), identity).w == 10);
     pixie_parse_color("bad");
     assert(pixie_check_error());
-    assert(strstr(pixie_take_error(), "bad") != NULL);
+    assert_buffer_contains(pixie_take_error(), "bad");
 
     printf("All Pixie C tests passed!\n");
     return 0;

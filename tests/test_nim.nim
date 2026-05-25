@@ -61,8 +61,15 @@ let objWithProc = simpleObjWithProc(1, 2, false)
 doAssert objWithProc.simpleA == 1, "simpleA should be 1"
 objWithProc.extraProc()
 
-# Note: SeqString and getDatas tests are skipped due to cstring lifetime
-# issues across DLL boundaries. The cstring returned from the DLL points
-# to internal string data that can be freed before the client uses it.
+echo "Testing getMessage"
+doAssert getMessage() == "alpha\0omega", "getMessage should preserve embedded NUL"
+
+echo "Testing SeqString via getDatas"
+block:
+  let datas = getDatas()
+  doAssert datas.len == 3, "datas should have 3 elements"
+  doAssert datas[0] == "a", "datas[0] should be a"
+  doAssert datas[1] == "b", "datas[1] should be b"
+  doAssert datas[2] == "c", "datas[2] should be c"
 
 echo "All Nim-C-Nim sandwich tests passed!"

@@ -11,6 +11,23 @@ else:
 
 {.push dynlib: libName.}
 
+proc test_genny_buffer_data(buffer: pointer): cstring {.importc: "test_genny_buffer_data", cdecl.}
+proc test_genny_buffer_len(buffer: pointer): int {.importc: "test_genny_buffer_len", cdecl.}
+proc test_genny_buffer_unref(buffer: pointer) {.importc: "test_genny_buffer_unref", cdecl.}
+
+proc gennyBufferToString(buffer: pointer): string =
+  if buffer == nil:
+    return ""
+  try:
+    let len = test_genny_buffer_len(buffer)
+    if len > 0:
+      let data = test_genny_buffer_data(buffer)
+      if data != nil:
+        result = newString(len)
+        copyMem(result[0].addr, data, len)
+  finally:
+    test_genny_buffer_unref(buffer)
+
 type testError = object of ValueError
 
 const simpleConst* = 123
@@ -210,10 +227,10 @@ proc test_seq_string_add(s: pointer, v: cstring) {.importc: "test_seq_string_add
 proc add*(s: SeqString, v: string) =
   test_seq_string_add(s.reference, v.cstring)
 
-proc test_seq_string_get(s: pointer, i: int): cstring {.importc: "test_seq_string_get", cdecl.}
+proc test_seq_string_get(s: pointer, i: int): pointer {.importc: "test_seq_string_get", cdecl.}
 
 proc `[]`*(s: SeqString, i: int): string =
-  test_seq_string_get(s.reference, i).`$`
+  gennyBufferToString(test_seq_string_get(s.reference, i))
 
 proc test_seq_string_set(s: pointer, i: int, v: cstring) {.importc: "test_seq_string_set", cdecl.}
 
@@ -239,4 +256,10 @@ proc test_get_datas(): pointer {.importc: "test_get_datas", cdecl.}
 
 proc getDatas*(): SeqString {.inline.} =
   result = SeqString(reference: test_get_datas())
+
+proc test_get_message(): pointer {.importc: "test_get_message", cdecl.}
+
+proc getMessage*(): string {.inline.} =
+  let gennyBuffer = test_get_message()
+  result = gennyBufferToString(gennyBuffer)
 

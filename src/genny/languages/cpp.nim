@@ -24,6 +24,9 @@ proc isSeqLike(sym: NimNode): bool =
 proc isRuneType(sym: NimNode): bool =
   sym.stripSink.repr == "Rune"
 
+proc isStringType(sym: NimNode): bool =
+  sym.stripSink.repr == "string"
+
 proc exportTypeCpp(sym: NimNode, abi = false): string =
   let typ = sym.stripSink
   if typ.kind == nnkBracketExpr:
@@ -70,6 +73,18 @@ proc exportTypeCpp(sym: NimNode, abi = false): string =
 proc exportTypeCppAbi(sym: NimNode): string =
   exportTypeCpp(sym, abi = true)
 
+proc exportReturnTypeCpp(sym: NimNode): string =
+  if sym.isStringType:
+    "std::string"
+  else:
+    exportTypeCpp(sym)
+
+proc exportReturnTypeCppAbi(sym: NimNode): string =
+  if sym.isStringType:
+    "GennyBuffer"
+  else:
+    exportTypeCppAbi(sym)
+
 proc exportTypeCpp(sym: NimNode, name: string, abi = false): string =
   let typ = sym.stripSink
   if typ.kind == nnkBracketExpr:
@@ -95,7 +110,9 @@ proc cppArgValue(argType: NimNode, argName: string): string =
     argName
 
 proc cppReturnValue(returnType: NimNode, call: string): string =
-  if returnType.isRuneType:
+  if returnType.isStringType:
+    &"gennyBufferToString({call})"
+  elif returnType.isRuneType:
     &"static_cast<char32_t>({call})"
   else:
     call
@@ -156,11 +173,11 @@ proc exportProcCpp*(
   var dllParams: seq[(NimNode, NimNode)]
   for param in procParams:
     dllParams.add((param[0], param[1]))
-  dllProc(&"$lib_{apiProcName}", dllParams, exportTypeCppAbi(procReturn))
+  dllProc(&"$lib_{apiProcName}", dllParams, exportReturnTypeCppAbi(procReturn))
 
   if owner == nil:
     if procReturn.kind != nnkEmpty:
-      members.add exportTypeCpp(procReturn)
+      members.add exportReturnTypeCpp(procReturn)
       members.add " "
     members.add procName
     members.add "("
@@ -199,14 +216,14 @@ proc exportProcCpp*(
         classes.add &"   * {line}\n"
       classes.add "   */\n"
 
-    classes.add &"  {exportTypeCpp(procReturn)} {procName}("
+    classes.add &"  {exportReturnTypeCpp(procReturn)} {procName}("
     for param in procParams[1..^1]:
       classes.add exportTypeCpp(param[1], param[0].getName())
       classes.add ", "
     classes.removeSuffix ", "
     classes.add ");\n\n"
 
-    members.add &"{exportTypeCpp(procReturn)} {owner.getName()}::{procName}("
+    members.add &"{exportReturnTypeCpp(procReturn)} {owner.getName()}::{procName}("
     for param in procParams[1..^1]:
       members.add exportTypeCpp(param[1], param[0].getName())
       members.add ", "
@@ -278,7 +295,7 @@ proc genRefObject(objName: string) =
 proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   let objArg = objName & " " & toSnakeCase(objName)
   dllProc(&"{procPrefix}_len", [objArg], "std::intptr_t")
-  dllProc(&"{procPrefix}_get", [objArg, "std::intptr_t index"], exportTypeCppAbi(entryType))
+  dllProc(&"{procPrefix}_get", [objArg, "std::intptr_t index"], exportReturnTypeCppAbi(entryType))
   dllProc(&"{procPrefix}_set", [objArg, "std::intptr_t index", exportTypeCppAbi(entryType, "value")], "void")
   dllProc(&"{procPrefix}_delete", [objArg, "std::intptr_t index"], "void")
   dllProc(&"{procPrefix}_add", [objArg, exportTypeCppAbi(entryType, "value")], "void")
@@ -287,12 +304,13 @@ proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
 proc genSeqClassMethods(seqName, procPrefix: string, entryType: NimNode) =
   let
     entryTypeCpp = exportTypeCpp(entryType)
+    entryReturnTypeCpp = exportReturnTypeCpp(entryType)
     entryValue = cppArgValue(entryType, "value")
     getCall = &"{procPrefix}_get(*this, index)"
 
   classes.add &"  std::intptr_t size();\n"
-  classes.add &"  {entryTypeCpp} get(std::intptr_t index);\n"
-  classes.add &"  {entryTypeCpp} operator[](std::intptr_t index);\n"
+  classes.add &"  {entryReturnTypeCpp} get(std::intptr_t index);\n"
+  classes.add &"  {entryReturnTypeCpp} operator[](std::intptr_t index);\n"
   classes.add &"  void set(std::intptr_t index, {entryTypeCpp} value);\n"
   classes.add &"  void removeAt(std::intptr_t index);\n"
   classes.add &"  void add({entryTypeCpp} value);\n"
@@ -302,11 +320,11 @@ proc genSeqClassMethods(seqName, procPrefix: string, entryType: NimNode) =
   members.add &"  return {procPrefix}_len(*this);\n"
   members.add "}\n\n"
 
-  members.add &"{entryTypeCpp} {seqName}::get(std::intptr_t index)" & "{\n"
+  members.add &"{entryReturnTypeCpp} {seqName}::get(std::intptr_t index)" & "{\n"
   members.add &"  return {cppReturnValue(entryType, getCall)};\n"
   members.add "}\n\n"
 
-  members.add &"{entryTypeCpp} {seqName}::operator[](std::intptr_t index)" & "{\n"
+  members.add &"{entryReturnTypeCpp} {seqName}::operator[](std::intptr_t index)" & "{\n"
   members.add &"  return get(index);\n"
   members.add "}\n\n"
 
@@ -332,11 +350,12 @@ proc genSeqFieldMethods(objName, procPrefix, fieldName: string, entryType: NimNo
 
   let
     entryTypeCpp = exportTypeCpp(entryType)
+    entryReturnTypeCpp = exportReturnTypeCpp(entryType)
     entryValue = cppArgValue(entryType, "value")
     getCall = &"{procPrefix}_get(*this, index)"
 
   classes.add &"  std::intptr_t {fieldName}Size();\n"
-  classes.add &"  {entryTypeCpp} get{fieldCap}(std::intptr_t index);\n"
+  classes.add &"  {entryReturnTypeCpp} get{fieldCap}(std::intptr_t index);\n"
   classes.add &"  void set{fieldCap}(std::intptr_t index, {entryTypeCpp} value);\n"
   classes.add &"  void remove{fieldCap}(std::intptr_t index);\n"
   classes.add &"  void add{fieldCap}({entryTypeCpp} value);\n"
@@ -346,7 +365,7 @@ proc genSeqFieldMethods(objName, procPrefix, fieldName: string, entryType: NimNo
   members.add &"  return {procPrefix}_len(*this);\n"
   members.add "}\n\n"
 
-  members.add &"{entryTypeCpp} {objName}::get{fieldCap}(std::intptr_t index)" & "{\n"
+  members.add &"{entryReturnTypeCpp} {objName}::get{fieldCap}(std::intptr_t index)" & "{\n"
   members.add &"  return {cppReturnValue(entryType, getCall)};\n"
   members.add "}\n\n"
 
@@ -428,12 +447,12 @@ proc exportRefObjectCpp*(
       let getMemberName = &"get{fieldName.capitalizeAscii}"
       let setMemberName = &"set{fieldName.capitalizeAscii}"
 
-      dllProc(getProcName, [objName & " " & objNameSnaked], exportTypeCppAbi(fieldType))
+      dllProc(getProcName, [objName & " " & objNameSnaked], exportReturnTypeCppAbi(fieldType))
       dllProc(setProcName, [objName & " " & objNameSnaked, exportTypeCppAbi(fieldType, "value")], exportTypeCppAbi(nil))
 
-      classes.add &"  {exportTypeCpp(fieldType)} {getMemberName}();\n"
+      classes.add &"  {exportReturnTypeCpp(fieldType)} {getMemberName}();\n"
 
-      members.add &"{exportTypeCpp(fieldType)} {objName}::{getMemberName}()" & "{\n"
+      members.add &"{exportReturnTypeCpp(fieldType)} {objName}::{getMemberName}()" & "{\n"
       let getCall = &"{getProcName}(*this)"
       members.add &"  return {cppReturnValue(fieldType, getCall)};\n"
       members.add "}\n\n"
@@ -529,7 +548,59 @@ const header = """
 #ifndef INCLUDE_$LIB_H
 #define INCLUDE_$LIB_H
 
+#include <cstddef>
 #include <cstdint>
+#include <string>
+
+"""
+
+const bufferClass = """
+struct GennyBuffer {
+
+  private:
+
+  std::uintptr_t reference;
+
+  public:
+
+  const char* data();
+  std::intptr_t len();
+  void free();
+
+};
+
+"""
+
+const bufferProcs = """
+const char* $lib_genny_buffer_data(GennyBuffer buffer);
+std::intptr_t $lib_genny_buffer_len(GennyBuffer buffer);
+void $lib_genny_buffer_unref(GennyBuffer buffer);
+
+"""
+
+const bufferMembers = """
+static inline std::string gennyBufferToString(GennyBuffer buffer) {
+  const char* data = $lib_genny_buffer_data(buffer);
+  std::intptr_t len = $lib_genny_buffer_len(buffer);
+  std::string result;
+  if (data != nullptr && len > 0) {
+    result.assign(data, static_cast<std::size_t>(len));
+  }
+  $lib_genny_buffer_unref(buffer);
+  return result;
+}
+
+const char* GennyBuffer::data() {
+  return $lib_genny_buffer_data(*this);
+}
+
+std::intptr_t GennyBuffer::len() {
+  return $lib_genny_buffer_len(*this);
+}
+
+void GennyBuffer::free() {
+  $lib_genny_buffer_unref(*this);
+}
 
 """
 
@@ -542,10 +613,13 @@ proc writeCpp*(dir, lib: string) =
   writeFile(&"{dir}/{toSnakeCase(lib)}.hpp", (
       header &
       types &
+      bufferClass &
       classes &
       "extern \"C\" {\n\n" &
+      bufferProcs &
       procs &
       "}\n\n" &
+      bufferMembers &
       members &
       footer
     ).replace("$lib", toSnakeCase(lib)).replace("$LIB", lib.toUpperAscii())

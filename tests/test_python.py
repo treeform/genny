@@ -42,6 +42,9 @@ assert len(seq_int) == 2, "seq_int should have 2 elements after delete"
 seq_int.clear()
 assert len(seq_int) == 0, "seq_int should be empty after clear"
 
+print("Testing get_message")
+assert test.get_message() == "alpha\0omega", "get_message should preserve embedded NUL"
+
 print("Testing get_datas")
 datas = test.get_datas()
 assert len(datas) == 3, "datas should have 3 elements"

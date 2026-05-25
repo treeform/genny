@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+typedef struct GennyBufferHandle* GennyBuffer;
+
 #define SIMPLE_CONST 123
 
 typedef char SimpleEnum;
@@ -34,6 +36,9 @@ typedef struct SeqStringHandle* SeqString;
 extern "C" {
 #endif
 
+const char* test_genny_buffer_data(GennyBuffer buffer);
+intptr_t test_genny_buffer_len(GennyBuffer buffer);
+void test_genny_buffer_unref(GennyBuffer buffer);
 /**
  * Returns the integer passed in.
  */
@@ -104,7 +109,7 @@ SeqString test_new_seq_string();
 
 intptr_t test_seq_string_len(SeqString seq_string);
 
-const char* test_seq_string_get(SeqString seq_string, intptr_t index);
+GennyBuffer test_seq_string_get(SeqString seq_string, intptr_t index);
 
 void test_seq_string_set(SeqString seq_string, intptr_t index, const char* value);
 
@@ -115,6 +120,8 @@ void test_seq_string_add(SeqString seq_string, const char* value);
 void test_seq_string_clear(SeqString seq_string);
 
 SeqString test_get_datas();
+
+GennyBuffer test_get_message();
 
 #ifdef __cplusplus
 }

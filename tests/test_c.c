@@ -1,7 +1,16 @@
 /* Test C bindings. */
 #include <stdio.h>
 #include <assert.h>
+#include <stdint.h>
+#include <string.h>
 #include "test.h"
+
+static void assert_buffer_equals(GennyBuffer buffer, const char *expected, intptr_t expected_len) {
+    assert(buffer != NULL);
+    assert(test_genny_buffer_len(buffer) == expected_len);
+    assert(memcmp(test_genny_buffer_data(buffer), expected, (size_t)expected_len) == 0);
+    test_genny_buffer_unref(buffer);
+}
 
 int main() {
     printf("Testing C bindings\n");
@@ -45,9 +54,15 @@ int main() {
     assert(test_seq_int_len(seq_int) == 0);
     test_seq_int_unref(seq_int);
 
+    printf("Testing test_get_message\n");
+    assert_buffer_equals(test_get_message(), "alpha\0omega", 11);
+
     printf("Testing test_get_datas\n");
     SeqString datas = test_get_datas();
     assert(test_seq_string_len(datas) == 3);
+    assert_buffer_equals(test_seq_string_get(datas, 0), "a", 1);
+    assert_buffer_equals(test_seq_string_get(datas, 1), "b", 1);
+    assert_buffer_equals(test_seq_string_get(datas, 2), "c", 1);
     test_seq_string_unref(datas);
 
     printf("All C tests passed!\n");

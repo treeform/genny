@@ -14,6 +14,27 @@ if (process.platform === 'win32') {
 
 const lib = koffi.load(path.join(__dirname, libName));
 
+const test_genny_buffer_data = lib.func('test_genny_buffer_data', 'void *', ['uint64']);
+const test_genny_buffer_len = lib.func('test_genny_buffer_len', 'int64', ['uint64']);
+const test_genny_buffer_unref = lib.func('test_genny_buffer_unref', 'void', ['uint64']);
+
+function gennyBufferToString(buffer) {
+  if (buffer === null || buffer === 0 || buffer === 0n) {
+    return '';
+  }
+  try {
+    const length = Number(test_genny_buffer_len(buffer));
+    const data = test_genny_buffer_data(buffer);
+    if (data === null || data === 0 || data === 0n || length <= 0) {
+      return '';
+    }
+    const bytes = koffi.decode(data, 'uint8_t', length);
+    return Buffer.from(bytes).toString('utf8');
+  } finally {
+    test_genny_buffer_unref(buffer);
+  }
+}
+
 class testException extends Error {
   constructor(message) {
     super(message);
@@ -200,7 +221,7 @@ SeqString.prototype.length = function() {
   return test_seq_string_len(this.ref);
 };
 SeqString.prototype.get = function(index) {
-  return test_seq_string_get(this.ref, index);
+  return gennyBufferToString(test_seq_string_get(this.ref, index));
 };
 SeqString.prototype.set = function(index, value) {
   test_seq_string_set(this.ref, index, value);
@@ -216,6 +237,10 @@ SeqString.prototype.clear = function() {
 };
 function getDatas() {
   return new SeqString(test_get_datas());
+}
+
+function getMessage() {
+  return gennyBufferToString(test_get_message());
 }
 
 
@@ -247,12 +272,13 @@ const test_simple_obj_with_proc_extra_proc = lib.func('test_simple_obj_with_proc
 const test_seq_string_unref = lib.func('test_seq_string_unref', 'void', ['uint64']);
 const test_new_seq_string = lib.func('test_new_seq_string', 'uint64', []);
 const test_seq_string_len = lib.func('test_seq_string_len', 'int64', ['uint64']);
-const test_seq_string_get = lib.func('test_seq_string_get', 'str', ['uint64', 'int64']);
+const test_seq_string_get = lib.func('test_seq_string_get', 'uint64', ['uint64', 'int64']);
 const test_seq_string_set = lib.func('test_seq_string_set', 'void', ['uint64', 'int64', 'str']);
 const test_seq_string_delete = lib.func('test_seq_string_delete', 'void', ['uint64', 'int64']);
 const test_seq_string_add = lib.func('test_seq_string_add', 'void', ['uint64', 'str']);
 const test_seq_string_clear = lib.func('test_seq_string_clear', 'void', ['uint64']);
 const test_get_datas = lib.func('test_get_datas', 'uint64', []);
+const test_get_message = lib.func('test_get_message', 'uint64', []);
 
 exports.SIMPLE_CONST = 123;
 exports.SimpleEnum = 'int8';
@@ -274,3 +300,4 @@ exports.simpleObjWithProcExtraProc = simpleObjWithProcExtraProc;
 exports.SeqString = SeqString;
 exports.newSeqString = newSeqString;
 exports.getDatas = getDatas;
+exports.getMessage = getMessage;

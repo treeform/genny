@@ -4,6 +4,26 @@ pub const Error = error{
     testError,
 };
 
+pub const GennyBuffer = opaque {
+    extern fn test_genny_buffer_unref(self: *GennyBuffer) void;
+    extern fn test_genny_buffer_data(self: *GennyBuffer) [*:0]const u8;
+    extern fn test_genny_buffer_len(self: *GennyBuffer) isize;
+
+    pub inline fn deinit(self: *GennyBuffer) void {
+        return test_genny_buffer_unref(self);
+    }
+
+    pub inline fn toOwnedSlice(self: *GennyBuffer, allocator: std.mem.Allocator) std.mem.Allocator.Error![:0]u8 {
+        const len: usize = @intCast(test_genny_buffer_len(self));
+        const output = try allocator.allocSentinel(u8, len, 0);
+        if (len > 0) {
+            const data = test_genny_buffer_data(self);
+            std.mem.copyForwards(u8, output, data[0..len]);
+        }
+        return output;
+    }
+};
+
 pub const simple_const = 123;
 
 pub const SimpleEnum = enum(u8) {
@@ -201,9 +221,12 @@ pub const SeqString = opaque {
         return test_seq_string_len(self);
     }
 
-    extern fn test_seq_string_get(self: *SeqString, index: isize) [*:0]const u8;
-    pub inline fn get(self: *SeqString, index: isize) [:0]const u8 {
-        return std.mem.span(test_seq_string_get(self, index));
+    extern fn test_seq_string_get(self: *SeqString, index: isize) ?*GennyBuffer;
+    pub inline fn get(self: *SeqString, index: isize, allocator: std.mem.Allocator) std.mem.Allocator.Error![:0]u8 {
+        const result = test_seq_string_get(self, index);
+        const buffer = result.?;
+        defer buffer.deinit();
+        return buffer.toOwnedSlice(allocator);
     }
 
     extern fn test_seq_string_set(self: *SeqString, index: isize, value: [*:0]const u8) void;
@@ -230,5 +253,13 @@ pub const SeqString = opaque {
 extern fn test_get_datas() *SeqString;
 pub inline fn getDatas() *SeqString {
     return test_get_datas();
+}
+
+extern fn test_get_message() ?*GennyBuffer;
+pub inline fn getMessage(allocator: std.mem.Allocator) std.mem.Allocator.Error![:0]u8 {
+    const result = test_get_message();
+    const buffer = result.?;
+    defer buffer.deinit();
+    return buffer.toOwnedSlice(allocator);
 }
 

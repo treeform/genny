@@ -17,6 +17,7 @@ def test_module_values():
     assert test.SECOND == 1
     assert test.THIRD == 2
     assert test.SimpleEnum is int
+    assert test.get_message() == "alpha\0omega"
 
 
 def test_value_objects():
