@@ -31,23 +31,23 @@ proc exportTypeC(sym: NimNode): string =
   else:
     result =
       case typ.repr:
-      of "string": "char*"
+      of "string", "cstring": "const char*"
       of "bool": "char"
-      of "byte": "char"
-      of "int8": "char"
-      of "int16": "short"
-      of "int32": "int"
-      of "int64": "long long"
-      of "int": "long long"
-      of "uint8": "unsigned char"
-      of "uint16": "unsigned short"
-      of "uint32": "unsigned int"
-      of "uint64": "unsigned long long"
-      of "uint": "unsigned long long"
+      of "byte": "uint8_t"
+      of "int8": "int8_t"
+      of "int16": "int16_t"
+      of "int32": "int32_t"
+      of "int64": "int64_t"
+      of "int": "intptr_t"
+      of "uint8": "uint8_t"
+      of "uint16": "uint16_t"
+      of "uint32": "uint32_t"
+      of "uint64": "uint64_t"
+      of "uint": "uintptr_t"
       of "float32": "float"
       of "float64": "double"
       of "float": "double"
-      of "Rune": "int"
+      of "Rune": "int32_t"
       of "Vec2": "Vector2"
       of "Mat3": "Matrix3"
       of "", "nil": "void"
@@ -166,7 +166,7 @@ proc exportObjectC*(sym: NimNode, constructor: NimNode) =
   dllProc(&"$lib_{toSnakeCase(objName)}_eq", [&"{objName} a", &"{objName} b"], "char")
 
 proc genRefObject(objName: string) =
-  types.add &"typedef long long {objName};\n\n"
+  types.add &"typedef struct {objName}Handle* {objName};\n\n"
 
   let unrefLibProc = &"$lib_{toSnakeCase(objName)}_unref"
 
@@ -174,10 +174,10 @@ proc genRefObject(objName: string) =
 
 proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   let objArg = objName & " " & toSnakeCase(objName)
-  dllProc(&"{procPrefix}_len", [objArg], "long long")
-  dllProc(&"{procPrefix}_get", [objArg, "long long index"], exportTypeC(entryType))
-  dllProc(&"{procPrefix}_set", [objArg, "long long index", exportTypeC(entryType, "value")], "void")
-  dllProc(&"{procPrefix}_delete", [objArg, "long long index"], "void")
+  dllProc(&"{procPrefix}_len", [objArg], "intptr_t")
+  dllProc(&"{procPrefix}_get", [objArg, "intptr_t index"], exportTypeC(entryType))
+  dllProc(&"{procPrefix}_set", [objArg, "intptr_t index", exportTypeC(entryType, "value")], "void")
+  dllProc(&"{procPrefix}_delete", [objArg, "intptr_t index"], "void")
   dllProc(&"{procPrefix}_add", [objArg, exportTypeC(entryType, "value")], "void")
   dllProc(&"{procPrefix}_clear", [objArg], "void")
 
@@ -249,6 +249,22 @@ const header = """
 #ifndef INCLUDE_$LIB_H
 #define INCLUDE_$LIB_H
 
+#include <stdint.h>
+
+"""
+
+const externCStart = """
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+"""
+
+const externCEnd = """
+#ifdef __cplusplus
+}
+#endif
+
 """
 
 const footer = """
@@ -257,6 +273,6 @@ const footer = """
 
 proc writeC*(dir, lib: string) =
   createDir(dir)
-  writeFile(&"{dir}/{toSnakeCase(lib)}.h", (header & types & procs & footer)
+  writeFile(&"{dir}/{toSnakeCase(lib)}.h", (header & types & externCStart & procs & externCEnd & footer)
     .replace("$lib", toSnakeCase(lib)).replace("$LIB", lib.toUpperAscii())
   )

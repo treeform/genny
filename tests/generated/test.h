@@ -1,6 +1,8 @@
 #ifndef INCLUDE_TEST_H
 #define INCLUDE_TEST_H
 
+#include <stdint.h>
+
 #define SIMPLE_CONST 123
 
 typedef char SimpleEnum;
@@ -9,31 +11,35 @@ typedef char SimpleEnum;
 #define THIRD 2
 
 typedef struct SimpleObj {
-  long long simple_a;
-  char simple_b;
+  intptr_t simple_a;
+  uint8_t simple_b;
   char simple_c;
 } SimpleObj;
 
-typedef long long SimpleRefObj;
+typedef struct SimpleRefObjHandle* SimpleRefObj;
 
-typedef long long SeqInt;
+typedef struct SeqIntHandle* SeqInt;
 
-typedef long long RefObjWithSeq;
+typedef struct RefObjWithSeqHandle* RefObjWithSeq;
 
 typedef struct SimpleObjWithProc {
-  long long simple_a;
-  char simple_b;
+  intptr_t simple_a;
+  uint8_t simple_b;
   char simple_c;
 } SimpleObjWithProc;
 
-typedef long long SeqString;
+typedef struct SeqStringHandle* SeqString;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * Returns the integer passed in.
  */
-long long test_simple_call(long long a);
+intptr_t test_simple_call(intptr_t a);
 
-SimpleObj test_simple_obj(long long simple_a, char simple_b, char simple_c);
+SimpleObj test_simple_obj(intptr_t simple_a, uint8_t simple_b, char simple_c);
 
 char test_simple_obj_eq(SimpleObj a, SimpleObj b);
 
@@ -41,13 +47,13 @@ void test_simple_ref_obj_unref(SimpleRefObj simple_ref_obj);
 
 SimpleRefObj test_new_simple_ref_obj();
 
-long long test_simple_ref_obj_get_simple_ref_a(SimpleRefObj simple_ref_obj);
+intptr_t test_simple_ref_obj_get_simple_ref_a(SimpleRefObj simple_ref_obj);
 
-void test_simple_ref_obj_set_simple_ref_a(SimpleRefObj simple_ref_obj, long long value);
+void test_simple_ref_obj_set_simple_ref_a(SimpleRefObj simple_ref_obj, intptr_t value);
 
-char test_simple_ref_obj_get_simple_ref_b(SimpleRefObj simple_ref_obj);
+uint8_t test_simple_ref_obj_get_simple_ref_b(SimpleRefObj simple_ref_obj);
 
-void test_simple_ref_obj_set_simple_ref_b(SimpleRefObj simple_ref_obj, char value);
+void test_simple_ref_obj_set_simple_ref_b(SimpleRefObj simple_ref_obj, uint8_t value);
 
 /**
  * Does some thing with SimpleRefObj.
@@ -58,15 +64,15 @@ void test_seq_int_unref(SeqInt seq_int);
 
 SeqInt test_new_seq_int();
 
-long long test_seq_int_len(SeqInt seq_int);
+intptr_t test_seq_int_len(SeqInt seq_int);
 
-long long test_seq_int_get(SeqInt seq_int, long long index);
+intptr_t test_seq_int_get(SeqInt seq_int, intptr_t index);
 
-void test_seq_int_set(SeqInt seq_int, long long index, long long value);
+void test_seq_int_set(SeqInt seq_int, intptr_t index, intptr_t value);
 
-void test_seq_int_delete(SeqInt seq_int, long long index);
+void test_seq_int_delete(SeqInt seq_int, intptr_t index);
 
-void test_seq_int_add(SeqInt seq_int, long long value);
+void test_seq_int_add(SeqInt seq_int, intptr_t value);
 
 void test_seq_int_clear(SeqInt seq_int);
 
@@ -74,19 +80,19 @@ void test_ref_obj_with_seq_unref(RefObjWithSeq ref_obj_with_seq);
 
 RefObjWithSeq test_new_ref_obj_with_seq();
 
-long long test_ref_obj_with_seq_data_len(RefObjWithSeq ref_obj_with_seq);
+intptr_t test_ref_obj_with_seq_data_len(RefObjWithSeq ref_obj_with_seq);
 
-char test_ref_obj_with_seq_data_get(RefObjWithSeq ref_obj_with_seq, long long index);
+uint8_t test_ref_obj_with_seq_data_get(RefObjWithSeq ref_obj_with_seq, intptr_t index);
 
-void test_ref_obj_with_seq_data_set(RefObjWithSeq ref_obj_with_seq, long long index, char value);
+void test_ref_obj_with_seq_data_set(RefObjWithSeq ref_obj_with_seq, intptr_t index, uint8_t value);
 
-void test_ref_obj_with_seq_data_delete(RefObjWithSeq ref_obj_with_seq, long long index);
+void test_ref_obj_with_seq_data_delete(RefObjWithSeq ref_obj_with_seq, intptr_t index);
 
-void test_ref_obj_with_seq_data_add(RefObjWithSeq ref_obj_with_seq, char value);
+void test_ref_obj_with_seq_data_add(RefObjWithSeq ref_obj_with_seq, uint8_t value);
 
 void test_ref_obj_with_seq_data_clear(RefObjWithSeq ref_obj_with_seq);
 
-SimpleObjWithProc test_simple_obj_with_proc(long long simple_a, char simple_b, char simple_c);
+SimpleObjWithProc test_simple_obj_with_proc(intptr_t simple_a, uint8_t simple_b, char simple_c);
 
 char test_simple_obj_with_proc_eq(SimpleObjWithProc a, SimpleObjWithProc b);
 
@@ -96,18 +102,22 @@ void test_seq_string_unref(SeqString seq_string);
 
 SeqString test_new_seq_string();
 
-long long test_seq_string_len(SeqString seq_string);
+intptr_t test_seq_string_len(SeqString seq_string);
 
-char* test_seq_string_get(SeqString seq_string, long long index);
+const char* test_seq_string_get(SeqString seq_string, intptr_t index);
 
-void test_seq_string_set(SeqString seq_string, long long index, char* value);
+void test_seq_string_set(SeqString seq_string, intptr_t index, const char* value);
 
-void test_seq_string_delete(SeqString seq_string, long long index);
+void test_seq_string_delete(SeqString seq_string, intptr_t index);
 
-void test_seq_string_add(SeqString seq_string, char* value);
+void test_seq_string_add(SeqString seq_string, const char* value);
 
 void test_seq_string_clear(SeqString seq_string);
 
 SeqString test_get_datas();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
