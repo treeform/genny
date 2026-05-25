@@ -202,6 +202,18 @@ function simpleObjWithProcExtraProc(s) {
   test_simple_obj_with_proc_extra_proc(s);
 }
 
+const ExternalObj = koffi.struct('ExternalObj', {
+  externalA: 'int32',
+  externalB: 'bool'
+});
+
+function externalObj(external_a, external_b) {
+  return {
+    externalA: external_a,
+    externalB: external_b
+  };
+}
+
 class SeqString {
   constructor(ref) {
     this.ref = ref;
@@ -297,6 +309,8 @@ exports.newRefObjWithSeq = newRefObjWithSeq;
 exports.SimpleObjWithProc = SimpleObjWithProc;
 exports.simpleObjWithProc = simpleObjWithProc;
 exports.simpleObjWithProcExtraProc = simpleObjWithProcExtraProc;
+exports.ExternalObj = ExternalObj;
+exports.externalObj = externalObj;
 exports.SeqString = SeqString;
 exports.newSeqString = newSeqString;
 exports.getDatas = getDatas;

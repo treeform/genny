@@ -5,6 +5,7 @@ import
 var
   types {.compiletime.}: string
   procs {.compiletime.}: string
+  imports {.compiletime.}: seq[string]
   refObjectNames {.compiletime.}: HashSet[string]
 
 proc isSeqLike(sym: NimNode): bool =
@@ -44,6 +45,18 @@ proc isRefObjectLike*(sym: NimNode): bool =
   let typ = sym.stripSink
   typ.repr in refObjectNames or typ.typeBody.kind == nnkRefTy
 
+proc addImport(module: string) =
+  if module.len > 0 and module notin imports:
+    imports.add(module)
+
+proc importBlock(): string =
+  if imports.len == 0:
+    return ""
+
+  let modules = imports.join(", ")
+  result.add &"import {modules}\n\n"
+  result.add &"export {modules}\n\n"
+
 proc exportTypeNim*(sym: NimNode): string =
   ## Returns type for Nim wrapper proc signature.
   let typ = sym.stripSink
@@ -77,6 +90,8 @@ proc exportArgTypeNim(sym: NimNode): string =
       error(&"Unexpected bracket expression {typ[0].repr}[", typ)
     return typ.getSeqName()
   else:
+    if typ.repr == "Rune":
+      addImport("unicode")
     return typ.normalizeValueTypeName()
 
 proc exportTypeCImport*(sym: NimNode): string =
@@ -203,8 +218,10 @@ proc exportDefaultValueNim(default, sym: NimNode): string =
   let typ = sym.stripSink
   case typ.repr
   of "Vec2":
+    addImport("vmath")
     return &"cast[Vector2]({default.repr})"
   of "Mat3":
+    addImport("vmath")
     return &"cast[Matrix3]({default.repr})"
   else:
     return default.repr
@@ -315,10 +332,17 @@ proc exportProcNim*(
     procs.add "  result = gennyBufferToString(gennyBuffer)\n"
   procs.add "\n"
 
-proc exportObjectNim*(sym: NimNode, constructor: NimNode) =
+proc exportObjectNim*(
+  sym: NimNode,
+  constructor: NimNode,
+  externalModule: string = ""
+) =
   let objName = sym.repr
 
-  if objName in ["Rect", "Color"]:
+  if externalModule.len > 0:
+    addImport(externalModule)
+    if constructor != nil:
+      exportProcNim(constructor)
     return
 
   types.add &"type {objName}* {{.bycopy.}} = object\n"
@@ -558,10 +582,6 @@ proc exportSeqNim*(sym: NimNode) =
   procs.add "\n"
 
 const header = """
-import bumpy, chroma, unicode, vmath
-
-export bumpy, chroma, unicode, vmath
-
 when defined(windows):
   const libName = "$lib.dll"
 elif defined(macosx):
@@ -594,6 +614,6 @@ type $LibError = object of ValueError
 
 proc writeNim*(dir, lib: string) =
   createDir(dir)
-  writeFile( &"{dir}/{toSnakeCase(lib)}.nim", (header & types & procs)
+  writeFile( &"{dir}/{toSnakeCase(lib)}.nim", (importBlock() & header & types & procs)
     .replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
   )

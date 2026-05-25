@@ -30,6 +30,11 @@ typedef struct SimpleObjWithProc {
   char simple_c;
 } SimpleObjWithProc;
 
+typedef struct ExternalObj {
+  int32_t external_a;
+  char external_b;
+} ExternalObj;
+
 typedef struct SeqStringHandle* SeqString;
 
 #ifdef __cplusplus
@@ -102,6 +107,10 @@ SimpleObjWithProc test_simple_obj_with_proc(intptr_t simple_a, uint8_t simple_b,
 char test_simple_obj_with_proc_eq(SimpleObjWithProc a, SimpleObjWithProc b);
 
 void test_simple_obj_with_proc_extra_proc(SimpleObjWithProc s);
+
+ExternalObj test_external_obj(int32_t external_a, char external_b);
+
+char test_external_obj_eq(ExternalObj a, ExternalObj b);
 
 void test_seq_string_unref(SeqString seq_string);
 

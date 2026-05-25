@@ -22,6 +22,8 @@ struct RefObjWithSeq;
 
 struct SimpleObjWithProc;
 
+struct ExternalObj;
+
 struct SeqString;
 
 struct GennyBuffer {
@@ -120,6 +122,11 @@ struct SimpleObjWithProc {
 
 };
 
+struct ExternalObj {
+  std::int32_t external_a;
+  bool external_b;
+};
+
 struct SeqString {
 
   private:
@@ -205,6 +212,10 @@ SimpleObjWithProc test_simple_obj_with_proc(std::intptr_t simple_a, std::uint8_t
 bool test_simple_obj_with_proc_eq(SimpleObjWithProc a, SimpleObjWithProc b);
 
 void test_simple_obj_with_proc_extra_proc(SimpleObjWithProc s);
+
+ExternalObj test_external_obj(std::int32_t external_a, bool external_b);
+
+bool test_external_obj_eq(ExternalObj a, ExternalObj b);
 
 void test_seq_string_unref(SeqString seq_string);
 
@@ -361,6 +372,10 @@ SimpleObjWithProc simpleObjWithProc(std::intptr_t simpleA, std::uint8_t simpleB,
 
 void SimpleObjWithProc::extraProc() {
   test_simple_obj_with_proc_extra_proc(*this);
+};
+
+ExternalObj externalObj(std::int32_t externalA, bool externalB) {
+  return test_external_obj(externalA, externalB);
 };
 
 SeqString::SeqString(){

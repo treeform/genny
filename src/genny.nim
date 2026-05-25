@@ -177,7 +177,7 @@ macro exportObjectUntyped(sym, body: untyped) =
 
 macro exportObjectTyped(body: typed) =
   let
-    sym = body[0][0][1]
+    sym = body[0][0][0].getTypeInst()
     constructorBlock = body[1]
     procsBlock = body[2]
 
@@ -188,7 +188,14 @@ macro exportObjectTyped(body: typed) =
       nil
 
   exportObjectInternal(sym, constructor)
-  when defined(gennyNim): exportObjectNim(sym, constructor)
+  when defined(gennyNim):
+    let typeExpr = body[0][0][1]
+    let nimModule =
+      if typeExpr.kind == nnkDotExpr:
+        typeExpr[0].repr
+      else:
+        ""
+    exportObjectNim(sym, constructor, nimModule)
   when defined(gennyPython): exportObjectPy(sym, constructor)
   when defined(gennyPythonNative): exportObjectPyNative(sym, constructor)
   when defined(gennyNode): exportObjectNode(sym, constructor)
