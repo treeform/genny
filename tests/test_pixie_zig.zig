@@ -36,6 +36,11 @@ pub fn main() !void {
     const identity = pixie.translate(0, 0);
     try expect(mat.values[6] == 3);
     try expect(pixie.inverse(mat).values[6] == -3);
+    const a = pixie.Vec2.init(1, 2);
+    const b = pixie.Vec2.init(3, 4);
+    try expect(a.add(b).eql(pixie.Vec2.init(4, 6)));
+    try expect(a.mulFloat32(2).eql(pixie.Vec2.init(2, 4)));
+    try expect(mat.mulVec2(a).eql(pixie.Vec2.init(4, 6)));
     try expect(pixie.snapToPixels(pixie.Rect.init(1, 2, 3, 4)).eql(pixie.Rect.init(1, 2, 3, 4)));
     try expect(pixie.miterLimitToAngle(2) > 0);
     try expect(pixie.angleToMiterLimit(1) > 0);
@@ -87,7 +92,7 @@ pub fn main() !void {
     const rect_sub = try resized.subImageRect(pixie.Rect.init(0, 0, 1, 1));
     defer rect_sub.deinit();
     try expect(rect_sub.getHeight() == 1);
-    const shadow = try resized.shadow(pixie.Vector2.init(1, 2), 3, 4, red);
+    const shadow = try resized.shadow(pixie.Vec2.init(1, 2), 3, 4, red);
     defer shadow.deinit();
     try expect(shadow.getWidth() == resized.getWidth());
     const super_image = try resized.superImage(-1, -1, resized.getWidth() + 2, resized.getHeight() + 2);
@@ -104,9 +109,9 @@ pub fn main() !void {
     paint.setImageMat(pixie.scale(2, 3));
     try expect(paint.getKind() == .linear_gradient_paint);
     try approx(paint.getOpacity(), 0.5);
-    paint.appendGradientHandlePositions(pixie.Vector2.init(0.25, 0));
-    paint.appendGradientHandlePositions(pixie.Vector2.init(0.75, 1));
-    paint.setGradientHandlePositions(1, pixie.Vector2.init(0.8, 1));
+    paint.appendGradientHandlePositions(pixie.Vec2.init(0.25, 0));
+    paint.appendGradientHandlePositions(pixie.Vec2.init(0.75, 1));
+    paint.setGradientHandlePositions(1, pixie.Vec2.init(0.8, 1));
     try expect(paint.lenGradientHandlePositions() == 2);
     try approx(paint.getGradientHandlePositions(1).x, 0.8);
     paint.appendGradientStops(pixie.ColorStop.init(red, 0));
@@ -136,8 +141,8 @@ pub fn main() !void {
     rect_path.rect(0, 0, 10, 10, true);
     const solid_dashes = pixie.SeqFloat32.init();
     defer solid_dashes.deinit();
-    try expect(try rect_path.fillOverlaps(pixie.Vector2.init(5, 5), identity, .non_zero));
-    try expect(try rect_path.strokeOverlaps(pixie.Vector2.init(0, 5), identity, 2, .butt_cap, .miter_join, pixie.default_miter_limit, solid_dashes));
+    try expect(try rect_path.fillOverlaps(pixie.Vec2.init(5, 5), identity, .non_zero));
+    try expect(try rect_path.strokeOverlaps(pixie.Vec2.init(0, 5), identity, 2, .butt_cap, .miter_join, pixie.default_miter_limit, solid_dashes));
 
     const typeface = try pixie.readTypeface(font_path);
     defer typeface.deinit();
@@ -165,7 +170,7 @@ pub fn main() !void {
     try expect(font.scale() > 0);
     try expect(font.defaultLineHeight() > 0);
     try expect(font.layoutBounds("abcd").x > 0);
-    const font_arrangement = font.typeset("abcd", pixie.Vector2.init(100, 100), .left_align, .top_align, true);
+    const font_arrangement = font.typeset("abcd", pixie.Vec2.init(100, 100), .left_align, .top_align, true);
     defer font_arrangement.deinit();
     try expect(font_arrangement.layoutBounds().x > 0);
 
@@ -175,7 +180,7 @@ pub fn main() !void {
     const spans = pixie.SeqSpan.init();
     defer spans.deinit();
     spans.append(span);
-    const arrangement = spans.typeset(pixie.Vector2.init(100, 100), .center_align, .bottom_align, true);
+    const arrangement = spans.typeset(pixie.Vec2.init(100, 100), .center_align, .bottom_align, true);
     defer arrangement.deinit();
     const span_text = try spans.get(0).getText(allocator);
     defer allocator.free(span_text);
@@ -187,9 +192,9 @@ pub fn main() !void {
     const canvas = try pixie.Image.init(64, 64);
     defer canvas.deinit();
     canvas.fill(try pixie.parseColor("#ffffff"));
-    try canvas.fillText(font, "abc", mat, pixie.Vector2.init(60, 60), .left_align, .top_align);
+    try canvas.fillText(font, "abc", mat, pixie.Vec2.init(60, 60), .left_align, .top_align);
     try canvas.fillTextArrangement(arrangement, mat);
-    try canvas.strokeText(font, "abc", mat, 2, pixie.Vector2.init(60, 60), .left_align, .top_align, .butt_cap, .miter_join, pixie.default_miter_limit, dashes);
+    try canvas.strokeText(font, "abc", mat, 2, pixie.Vec2.init(60, 60), .left_align, .top_align, .butt_cap, .miter_join, pixie.default_miter_limit, dashes);
     try canvas.strokeTextArrangement(arrangement, mat, 2, .butt_cap, .miter_join, pixie.default_miter_limit, dashes);
     try canvas.fillPath(rect_path, solid, mat, .non_zero);
     try canvas.strokePath(rect_path, solid, mat, 2, .butt_cap, .miter_join, pixie.default_miter_limit, dashes);

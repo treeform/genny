@@ -1,9 +1,15 @@
 import
-  std/[compilesettings, macros, os, sets, strformat, strutils, tables],
+  std/[algorithm, compilesettings, macros, os, sets, strformat, strutils, tables],
   ../common
 
 type
   FieldInfo = tuple[name: string, typ: NimNode]
+  OperatorCase = tuple[
+    rhsType: NimNode,
+    returnType: NimNode,
+    apiProcName: string,
+    procRaises: bool
+  ]
 
 var
   cTypes {.compiletime.}: string
@@ -18,6 +24,7 @@ var
   seqObjectNames {.compiletime.}: HashSet[string]
   valueObjectFields {.compiletime.}: Table[string, seq[FieldInfo]]
   valueObjectConstructors {.compiletime.}: Table[string, string]
+  valueObjectOperators {.compiletime.}: Table[string, Table[string, seq[OperatorCase]]]
   seqEntryTypes {.compiletime.}: Table[string, NimNode]
   seqNewProcs {.compiletime.}: Table[string, string]
   typeMethods {.compiletime.}: Table[string, string]
@@ -53,13 +60,13 @@ proc stripSink(sym: NimNode): NimNode =
 
 proc nativeName(sym: NimNode): string =
   let typ = sym.stripSink
-  if typ.kind == nnkBracketExpr:
+  let valueName = typ.exportedValueTypeName()
+  if valueName.len > 0:
+    valueName
+  elif typ.kind == nnkBracketExpr:
     typ.getSeqName()
   else:
-    case typ.repr
-    of "Vec2": "Vector2"
-    of "Mat3": "Matrix3"
-    else: typ.repr
+    typ.repr
 
 proc typeObjName(name: string): string =
   "GennyPy_" & cIdent(name) & "_Type"
@@ -86,7 +93,7 @@ proc cType(sym: NimNode): string
 proc cArraySuffix(sym: NimNode): string =
   let typ = sym.stripSink
   if typ.isArrayType:
-    result.add &"[{typ[1].repr}]"
+    result.add &"[{typ.arrayCount()}]"
     result.add cArraySuffix(typ[2])
 
 proc cBaseType(sym: NimNode): string =
@@ -164,15 +171,14 @@ proc apiProcName(sym: NimNode, owner: NimNode = nil, prefixes: openarray[NimNode
     result.add &"{toSnakeCase(owner.getName())}_"
   for prefix in prefixes:
     result.add &"{toSnakeCase(prefix.getName())}_"
-  result.add toSnakeCase(sym.repr)
+  result.add toSnakeCase(sym.repr.operatorProcName())
 
 proc pyProcName(sym: NimNode, owner: NimNode = nil, prefixes: openarray[NimNode] = []): string =
   if owner != nil:
     for prefix in prefixes:
-      if prefix.getImpl().kind != nnkNilLit:
-        if prefix.getImpl()[2].kind != nnkEnumTy:
-          result.add &"{toSnakeCase(prefix.repr)}_"
-  result.add toSnakeCase(sym.repr)
+      if prefix.usePrefixName():
+        result.add &"{toSnakeCase(prefix.getName())}_"
+  result.add toSnakeCase(sym.repr.operatorProcName())
 
 proc getDefaults(sym: NimNode): seq[NimNode] =
   let procType = sym.getTypeInst()
@@ -277,6 +283,36 @@ proc convertPyToC(pyExpr, outExpr: string, typ: NimNode, label: string): string 
 proc convertPyToCInt(pyExpr, outExpr: string, typ: NimNode, label: string): string =
   convertPyToC(pyExpr, outExpr, typ, label).replace("return NULL", "return -1")
 
+proc pyNativeTypeCheck(expr: string, typ: NimNode): string =
+  let baseTyp = typ.stripSink
+  let name = baseTyp.pyTypeName()
+  if baseTyp.isValueObjectType:
+    return &"PyObject_TypeCheck({expr}, &{typeObjName(name)})"
+  if baseTyp.isRefLikeObjectType:
+    return &"PyObject_TypeCheck({expr}, &{typeObjName(name)})"
+  if baseTyp.isSeqType:
+    return &"PyObject_TypeCheck({expr}, &{typeObjName(baseTyp.getSeqName())})"
+
+  case baseTyp.nativeName()
+  of "bool":
+    &"PyBool_Check({expr})"
+  of "byte", "uint8", "uint16", "uint32", "uint64", "uint", "int8", "int16", "int32", "int64", "int":
+    &"PyLong_Check({expr})"
+  of "float32", "float64", "float":
+    &"(PyFloat_Check({expr}) || PyLong_Check({expr}))"
+  of "string", "cstring", "Rune":
+    &"PyUnicode_Check({expr})"
+  else:
+    "1"
+
+proc pyNumberSlot(name: string): string =
+  case name.normalizedOperatorName()
+  of "+": "nb_add"
+  of "-": "nb_subtract"
+  of "*": "nb_multiply"
+  of "/": "nb_true_divide"
+  else: ""
+
 proc addProto(procName: string, params: seq[(string, NimNode)], ret: NimNode) =
   cProtos.add "extern " & cReturnType(ret) & " " & procName & "("
   for (name, typ) in params:
@@ -312,7 +348,7 @@ proc declareFields(objName: string, fields: seq[FieldInfo]) =
 proc arrayToPy(fieldExpr: string, fieldType: NimNode): string =
   if not fieldType.isArrayType:
     return pyFromC(fieldExpr, fieldType)
-  let count = fieldType[1].intVal
+  let count = fieldType.arrayCount()
   let elemType = fieldType[2]
   let listName = "genny_list"
   result.add &"  PyObject *{listName} = PyList_New({count});\n"
@@ -325,7 +361,7 @@ proc arrayToPy(fieldExpr: string, fieldType: NimNode): string =
   result.add &"  return {listName};\n"
 
 proc arraySetFromPy(fieldExpr: string, fieldType: NimNode): string =
-  let count = fieldType[1].intVal
+  let count = fieldType.arrayCount()
   let elemType = fieldType[2]
   result.add "  if (!PySequence_Check(value) || PySequence_Size(value) != " & $count & ") {\n"
   result.add &"    PyErr_SetString(PyExc_TypeError, \"expected a sequence of length {count}\");\n"
@@ -365,7 +401,7 @@ proc emitParamSetup(
       continue
     for j in 0 .. param.len - 3:
       let
-        paramName = toSnakeCase(param[j].repr)
+        paramName = toSnakeCase(param[j].getParamName())
         argVar = "arg_" & paramName
         cVar = "c_" & paramName
         paramType = param[^2]
@@ -429,11 +465,29 @@ proc exportProcPyNative*(
   var protoParams: seq[(string, NimNode)]
   for param in procParams:
     for i in 0 .. param.len - 3:
-      protoParams.add((toSnakeCase(param[i].repr), param[^2]))
+      protoParams.add((toSnakeCase(param[i].getParamName()), param[^2]))
   addProto(apiName, protoParams, procReturn)
 
   if procRaises:
     needsErrorBridge = true
+
+  if onType and sym.repr.isOperatorName and ownerTypeName in valueObjectNames and not procReturn.isVoid:
+    if procParams.len < 2:
+      error("Python native operator overloads need a right-hand operand", sym)
+    let slotName = pyNumberSlot(sym.repr)
+    if slotName.len == 0:
+      error("Unsupported Python native operator overload", sym)
+    var ownerOps = valueObjectOperators.getOrDefault(ownerTypeName)
+    var cases = ownerOps.getOrDefault(slotName)
+    cases.add((
+      rhsType: procParams[1][^2],
+      returnType: procReturn,
+      apiProcName: apiName,
+      procRaises: procRaises
+    ))
+    ownerOps[slotName] = cases
+    valueObjectOperators[ownerTypeName] = ownerOps
+    return
 
   cForwardDecls.add &"static PyObject *{wrapperName}(PyObject *self, PyObject *args, PyObject *kwargs);\n"
 
@@ -507,7 +561,7 @@ proc emitValueObjectType(objName: string, fields: seq[FieldInfo], constructor: N
     var protoParams: seq[(string, NimNode)]
     for param in ctorParams:
       for i in 0 .. param.len - 3:
-        protoParams.add((toSnakeCase(param[i].repr), param[^2]))
+        protoParams.add((toSnakeCase(param[i].getParamName()), param[^2]))
     addProto(ctorName, protoParams, ident(objName))
   else:
     var protoParams: seq[(string, NimNode)]
@@ -604,6 +658,9 @@ proc emitValueObjectType(objName: string, fields: seq[FieldInfo], constructor: N
   cTypeBlocks.add &"static PyMethodDef GennyPy_{cIdent(objName)}_methods[] = {{\n"
   cTypeBlocks.add &"/* GENNY_METHODS_{cIdent(objName)} */\n"
   cTypeBlocks.add "  {NULL}\n};\n\n"
+  cTypeBlocks.add &"static PyNumberMethods GennyPy_{cIdent(objName)}_number = {{\n"
+  cTypeBlocks.add &"/* GENNY_NUMBER_{cIdent(objName)} */\n"
+  cTypeBlocks.add "};\n\n"
   cTypeBlocks.add &"static PyTypeObject {typeObj} = {{\n"
   cTypeBlocks.add "  PyVarObject_HEAD_INIT(NULL, 0)\n"
   cTypeBlocks.add &"  .tp_name = {cString(\"$lib.\" & objName)},\n"
@@ -615,6 +672,7 @@ proc emitValueObjectType(objName: string, fields: seq[FieldInfo], constructor: N
   cTypeBlocks.add &"  .tp_new = {newName},\n"
   cTypeBlocks.add &"  .tp_init = (initproc){initName},\n"
   cTypeBlocks.add &"  .tp_richcompare = {richName},\n"
+  cTypeBlocks.add &"  .tp_as_number = &GennyPy_{cIdent(objName)}_number,\n"
   cTypeBlocks.add &"  .tp_methods = GennyPy_{cIdent(objName)}_methods,\n"
   cTypeBlocks.add &"  .tp_getset = GennyPy_{cIdent(objName)}_getset,\n"
   cTypeBlocks.add "};\n\n"
@@ -622,18 +680,21 @@ proc emitValueObjectType(objName: string, fields: seq[FieldInfo], constructor: N
   cModuleInit.add &"  Py_INCREF(&{typeObj});\n"
   cModuleInit.add &"  if (PyModule_AddObject(m, {cString(objName)}, (PyObject *)&{typeObj}) < 0) return NULL;\n"
 
-proc exportObjectPyNative*(sym: NimNode, constructor: NimNode) =
+proc exportObjectPyNative*(
+  sym: NimNode,
+  fields: seq[ObjectField],
+  constructor: NimNode
+) =
   let objName = sym.nativeName()
   valueObjectNames.incl(objName)
 
-  var fields: seq[FieldInfo]
-  for identDefs in sym.getImpl()[2][2]:
-    for property in identDefs[0 .. ^3]:
-      fields.add((property[1].repr, identDefs[^2]))
-  valueObjectFields[objName] = fields
+  var objFields: seq[FieldInfo]
+  for field in sym.objectFields(fields):
+    objFields.add((field.name, field.typ))
+  valueObjectFields[objName] = objFields
   valueObjectConstructors[objName] = if constructor != nil: "$lib_" & toSnakeCase(objName) else: ""
-  declareFields(objName, fields)
-  emitValueObjectType(objName, fields, constructor)
+  declareFields(objName, objFields)
+  emitValueObjectType(objName, objFields, constructor)
 
 proc emitRefLikeType(objName: string, constructor: NimNode, isSeq = false, entryType: NimNode = nil)
 proc emitSeqMethods(objName, procPrefix, refExpr, typePrefix: string, entryType: NimNode, abiObjName = "")
@@ -704,7 +765,7 @@ proc emitRefLikeType(objName: string, constructor: NimNode, isSeq = false, entry
     var protoParams: seq[(string, NimNode)]
     for param in ctorParams:
       for i in 0 .. param.len - 3:
-        protoParams.add((toSnakeCase(param[i].repr), param[^2]))
+        protoParams.add((toSnakeCase(param[i].getParamName()), param[^2]))
     addProto(constructorApi, protoParams, ident(objName))
     cTypeBlocks.add setup.namesArray
     cTypeBlocks.add setup.declarations
@@ -952,6 +1013,54 @@ proc pyConfig(): Table[string, string] =
 proc toUnixPath(s: string): string =
   s.replace("\\", "/")
 
+proc generateNativeOperatorWrappers(finalTypeBlocks: var string): tuple[decls, wrappers: string] =
+  var objNames: seq[string]
+  for objName in valueObjectOperators.keys:
+    objNames.add(objName)
+  objNames.sort()
+
+  for objName in objNames:
+    let
+      pyStruct = pyStructName(objName)
+      typeObj = typeObjName(objName)
+      objOps = valueObjectOperators[objName]
+      marker = &"/* GENNY_NUMBER_{cIdent(objName)} */\n"
+
+    var slotNames: seq[string]
+    for slotName in objOps.keys:
+      slotNames.add(slotName)
+    slotNames.sort()
+
+    var slotLines = ""
+    for slotName in slotNames:
+      let
+        wrapperName = &"GennyPy_{cIdent(objName)}_{slotName}"
+        cases = objOps[slotName]
+      result.decls.add &"static PyObject *{wrapperName}(PyObject *left, PyObject *right);\n"
+      slotLines.add &"  .{slotName} = {wrapperName},\n"
+
+      result.wrappers.add &"static PyObject *{wrapperName}(PyObject *left, PyObject *right) {{\n"
+      result.wrappers.add &"  if (!PyObject_TypeCheck(left, &{typeObj})) {{ Py_RETURN_NOTIMPLEMENTED; }}\n"
+      result.wrappers.add &"  {objName} c_self = (({pyStruct} *)left)->value;\n"
+      for i, opCase in cases:
+        let rhsName = &"c_other_{i}"
+        result.wrappers.add &"  if ({pyNativeTypeCheck(\"right\", opCase.rhsType)}) {{\n"
+        result.wrappers.add &"    {cDecl(opCase.rhsType, rhsName)};\n"
+        result.wrappers.add convertPyToC("right", rhsName, opCase.rhsType, "other").indent(2)
+        if opCase.returnType.isVoid:
+          result.wrappers.add &"    {opCase.apiProcName}(c_self, {rhsName});\n"
+          result.wrappers.add addErrorCheck(opCase.procRaises).indent(2)
+          result.wrappers.add "    Py_RETURN_NONE;\n"
+        else:
+          result.wrappers.add &"    {cReturnType(opCase.returnType)} genny_result = {opCase.apiProcName}(c_self, {rhsName});\n"
+          result.wrappers.add addErrorCheck(opCase.procRaises).indent(2)
+          result.wrappers.add &"    return {pyFromC(\"genny_result\", opCase.returnType)};\n"
+        result.wrappers.add "  }\n"
+      result.wrappers.add "  Py_RETURN_NOTIMPLEMENTED;\n"
+      result.wrappers.add "}\n\n"
+
+    finalTypeBlocks = finalTypeBlocks.replace(marker, slotLines)
+
 proc writePyNative*(dir, lib: string): NimNode =
   createDir(dir)
   let cfg = pyConfig()
@@ -962,6 +1071,7 @@ proc writePyNative*(dir, lib: string): NimNode =
       &"/* GENNY_METHODS_{cIdent(typeName)} */\n",
       entries
     )
+  let nativeOperators = generateNativeOperatorWrappers(finalTypeBlocks)
 
   var code = ""
   code.add "#define PY_SSIZE_T_CLEAN\n"
@@ -1035,11 +1145,13 @@ proc writePyNative*(dir, lib: string): NimNode =
   code.add cTypes
   code.add "\n"
   code.add cForwardDecls
+  code.add nativeOperators.decls
   code.add "\n"
   code.add cProtos
   code.add "\n"
   code.add finalTypeBlocks
   code.add "\n"
+  code.add nativeOperators.wrappers
   code.add cWrappers
   code.add "static PyMethodDef GennyPy_ModuleMethods[] = {\n"
   code.add cModuleMethods

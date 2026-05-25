@@ -128,7 +128,7 @@ proc test_external_obj*(external_a: int32, external_b: bool): ExternalObj {.rais
   result.external_b = external_b
 
 proc test_external_obj_eq*(a, b: ExternalObj): bool {.raises: [], cdecl, exportc, dynlib.}=
-  a.external_a == b.external_a and a.external_b == b.external_b
+  a == b
 
 type SeqString* = ref object
   s: seq[string]

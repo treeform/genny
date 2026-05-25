@@ -29,10 +29,13 @@ proc isStringType(sym: NimNode): bool =
 
 proc exportTypeCpp(sym: NimNode, abi = false): string =
   let typ = sym.stripSink
+  let valueName = typ.exportedValueTypeName()
+  if valueName.len > 0:
+    return valueName
   if typ.kind == nnkBracketExpr:
     if typ[0].repr == "array":
       let
-        entryCount = typ[1].repr
+        entryCount = $typ.arrayCount()
         entryType = exportTypeCpp(typ[2], abi)
       result = &"{entryType}[{entryCount}]"
     elif typ.isSeqLike:
@@ -60,8 +63,6 @@ proc exportTypeCpp(sym: NimNode, abi = false): string =
       of "float": "double"
       of "Rune":
         if abi: "std::int32_t" else: "char32_t"
-      of "Vec2": "Vector2"
-      of "Mat3": "Matrix3"
       of "", "nil": "void"
       of "None": "void"
       else:
@@ -87,10 +88,13 @@ proc exportReturnTypeCppAbi(sym: NimNode): string =
 
 proc exportTypeCpp(sym: NimNode, name: string, abi = false): string =
   let typ = sym.stripSink
+  let valueName = typ.exportedValueTypeName()
+  if valueName.len > 0:
+    return valueName & " " & name
   if typ.kind == nnkBracketExpr:
     if typ[0].repr == "array":
       let
-        entryCount = typ[1].repr
+        entryCount = $typ.arrayCount()
         entryType = exportTypeCpp(typ[2], &"{name}[{entryCount}]", abi)
       result = &"{entryType}"
     elif typ.isSeqLike:
@@ -128,7 +132,7 @@ proc dllProc*(procName: string, args: openarray[string], restype: string) =
 proc dllProc*(procName: string, args: openarray[(NimNode, NimNode)], restype: string) =
   var argsConverted: seq[string]
   for (argName, argType) in args:
-    argsConverted.add exportTypeCppAbi(argType, toSnakeCase(argName.getName()))
+    argsConverted.add exportTypeCppAbi(argType, toSnakeCase(argName.getParamName()))
   dllProc(procName, argsConverted, restype)
 
 proc dllProc*(procName: string, restype: string) =
@@ -152,7 +156,7 @@ proc exportProcCpp*(
 ) =
   let
     procName = sym.repr
-    procNameSnaked = toSnakeCase(procName)
+    procNameSnaked = toSnakeCase(procName.operatorProcName())
     procType = sym.getTypeInst()
     procParams = procType[0][1 .. ^1]
     procReturn = procType[0][0]
@@ -182,7 +186,7 @@ proc exportProcCpp*(
     members.add procName
     members.add "("
     for param in procParams:
-      members.add exportTypeCpp(param[1], param[0].getName())
+      members.add exportTypeCpp(param[1], param[0].getParamName())
       members.add ", "
     members.removeSuffix ", "
     members.add ") {\n"
@@ -191,7 +195,7 @@ proc exportProcCpp*(
       members.add "return "
     var call = &"$lib_{apiProcName}("
     for param in procParams:
-      call.add cppArgValue(param[1], param[0].getName())
+      call.add cppArgValue(param[1], param[0].getParamName())
       call.add ", "
     call.removeSuffix ", "
     call.add ")"
@@ -216,16 +220,22 @@ proc exportProcCpp*(
         classes.add &"   * {line}\n"
       classes.add "   */\n"
 
-    classes.add &"  {exportReturnTypeCpp(procReturn)} {procName}("
+    let methodName =
+      if procName.isOperatorName:
+        procName.cppOperatorName()
+      else:
+        procName
+
+    classes.add &"  {exportReturnTypeCpp(procReturn)} {methodName}("
     for param in procParams[1..^1]:
-      classes.add exportTypeCpp(param[1], param[0].getName())
+      classes.add exportTypeCpp(param[1], param[0].getParamName())
       classes.add ", "
     classes.removeSuffix ", "
     classes.add ");\n\n"
 
-    members.add &"{exportReturnTypeCpp(procReturn)} {owner.getName()}::{procName}("
+    members.add &"{exportReturnTypeCpp(procReturn)} {owner.getName()}::{methodName}("
     for param in procParams[1..^1]:
-      members.add exportTypeCpp(param[1], param[0].getName())
+      members.add exportTypeCpp(param[1], param[0].getParamName())
       members.add ", "
     members.removeSuffix ", "
     members.add ") "
@@ -236,7 +246,7 @@ proc exportProcCpp*(
       members.add &"  return "
     var call = &"$lib_{apiProcName}(*this, "
     for param in procParams[1..^1]:
-      call.add cppArgValue(param[1], param[0].getName())
+      call.add cppArgValue(param[1], param[0].getParamName())
       call.add ", "
     call.removeSuffix ", "
     call.add ")"
@@ -244,40 +254,42 @@ proc exportProcCpp*(
     members.add ";\n"
     members.add "};\n\n"
 
-proc exportObjectCpp*(sym: NimNode, constructor: NimNode) =
-  let objName = sym.repr
+proc exportObjectCpp*(
+  sym: NimNode,
+  fields: seq[ObjectField],
+  constructor: NimNode
+) =
+  let
+    objName = sym.repr
+    objFields = sym.objectFields(fields)
 
   types.add &"struct {objName};\n\n"
 
   classes.add &"struct {objName} " & "{\n"
-  for identDefs in sym.getImpl()[2][2]:
-    for property in identDefs[0 .. ^3]:
-      classes.add &"  {exportTypeCpp(identDefs[^2], toSnakeCase(property[1].repr))};\n"
+  for field in objFields:
+    classes.add &"  {exportTypeCpp(field.typ, toSnakeCase(field.name))};\n"
 
   if constructor != nil:
     exportProcCpp(constructor)
   else:
     procs.add &"{objName} $lib_{toSnakeCase(objName)}("
-    for identDefs in sym.getImpl()[2][2]:
-      for property in identDefs[0 .. ^3]:
-        procs.add &"{exportTypeCppAbi(identDefs[^2], toSnakeCase(property[1].repr))}, "
+    for field in objFields:
+      procs.add &"{exportTypeCppAbi(field.typ, toSnakeCase(field.name))}, "
     procs.removeSuffix ", "
     procs.add ");\n\n"
 
     members.add &"{objName} {objName.unCapitalize()}("
-    for identDefs in sym.getImpl()[2][2]:
-      for property in identDefs[0 .. ^3]:
-        members.add &"{exportTypeCpp(identDefs[^2], property[1].repr)}"
-        members.add ", "
+    for field in objFields:
+      members.add &"{exportTypeCpp(field.typ, field.name)}"
+      members.add ", "
     members.removeSuffix ", "
     members.add ") "
     members.add "{\n"
     members.add &"  return "
     members.add  &"$lib_{toSnakeCase(objName)}("
-    for identDefs in sym.getImpl()[2][2]:
-      for property in identDefs[0 .. ^3]:
-        members.add cppArgValue(identDefs[^2], property[1].repr)
-        members.add ", "
+    for field in objFields:
+      members.add cppArgValue(field.typ, field.name)
+      members.add ", "
     members.removeSuffix ", "
     members.add ");\n"
     members.add "};\n\n"
@@ -411,14 +423,14 @@ proc exportRefObjectCpp*(
 
       classes.add &"  {objName}("
       for param in constructorParams:
-        classes.add exportTypeCpp(param[1], param[0].getName())
+        classes.add exportTypeCpp(param[1], param[0].getParamName())
         classes.add ", "
       classes.removeSuffix ", "
       classes.add ");\n\n"
 
       members.add &"{objName}::{objName}("
       for param in constructorParams:
-        members.add exportTypeCpp(param[1], param[0].getName())
+        members.add exportTypeCpp(param[1], param[0].getParamName())
         members.add ", "
       members.removeSuffix ", "
       members.add ")"
@@ -426,7 +438,7 @@ proc exportRefObjectCpp*(
       members.add &"  this->reference = "
       members.add  &"{constructorLibProc}("
       for param in constructorParams:
-        members.add cppArgValue(param[1], param[0].getName())
+        members.add cppArgValue(param[1], param[0].getParamName())
         members.add ", "
       members.removeSuffix ", "
       members.add ").reference;\n"

@@ -7,6 +7,7 @@ var
   procs {.compiletime.}: string
   imports {.compiletime.}: seq[string]
   refObjectNames {.compiletime.}: HashSet[string]
+  nimWrapperSignatures {.compiletime.}: HashSet[string]
 
 proc isSeqLike(sym: NimNode): bool =
   ## Returns true for sequence-shaped types that Genny should expose through
@@ -23,15 +24,6 @@ proc stripSink(sym: NimNode): NimNode =
     return sym[1]
   else:
     return sym
-
-proc normalizeValueTypeName(sym: NimNode): string =
-  case sym.repr
-  of "Vec2":
-    "Vector2"
-  of "Mat3":
-    "Matrix3"
-  else:
-    sym.repr
 
 proc typeBody(sym: NimNode): NimNode =
   let typ = sym.stripSink
@@ -57,9 +49,22 @@ proc importBlock(): string =
   result.add &"import {modules}\n\n"
   result.add &"export {modules}\n\n"
 
+proc stripExportMark(name: string): string =
+  result = name
+  result.removeSuffix("*")
+
+proc exportedFieldName(name: string): string =
+  name.stripExportMark() & "*"
+
+proc localFieldName(name: string): string =
+  toSnakeCase(name.stripExportMark())
+
 proc exportTypeNim*(sym: NimNode): string =
   ## Returns type for Nim wrapper proc signature.
   let typ = sym.stripSink
+  let valueName = typ.exportedValueTypeName()
+  if valueName.len > 0:
+    return valueName
   if typ.kind == nnkBracketExpr:
     if not typ.isSeqLike:
       error(&"Unexpected bracket expression {typ[0].repr}[", typ)
@@ -70,7 +75,7 @@ proc exportTypeNim*(sym: NimNode): string =
     elif typ.repr == "Rune":
       return "int32"
     else:
-      return typ.normalizeValueTypeName()
+      return typ.repr
 
 proc exportReturnTypeNim*(sym: NimNode): string =
   ## Returns type for internal ABI return values. Returned strings cross the
@@ -85,6 +90,9 @@ proc exportArgTypeNim(sym: NimNode): string =
   ## Returns the friendly type for Nim wrapper parameters. Unlike return values,
   ## string parameters stay as Nim strings and are converted at the C boundary.
   let typ = sym.stripSink
+  let valueName = typ.exportedValueTypeName()
+  if valueName.len > 0:
+    return valueName
   if typ.kind == nnkBracketExpr:
     if not typ.isSeqLike:
       error(&"Unexpected bracket expression {typ[0].repr}[", typ)
@@ -92,11 +100,14 @@ proc exportArgTypeNim(sym: NimNode): string =
   else:
     if typ.repr == "Rune":
       addImport("unicode")
-    return typ.normalizeValueTypeName()
+    return typ.repr
 
 proc exportTypeCImport*(sym: NimNode): string =
   ## Returns type for C import declaration. Ref objects become pointer.
   let typ = sym.stripSink
+  let valueName = typ.exportedValueTypeName()
+  if valueName.len > 0:
+    return valueName
   if typ.kind == nnkBracketExpr:
     if not typ.isSeqLike:
       error(&"Unexpected bracket expression {typ[0].repr}[", typ)
@@ -109,7 +120,7 @@ proc exportTypeCImport*(sym: NimNode): string =
     elif typ.isRefObjectLike:
       return "pointer"
     else:
-      return typ.normalizeValueTypeName()
+      return typ.repr
 
 proc exportReturnTypeCImport*(sym: NimNode): string =
   ## Returns type for C import return declarations in the generated Nim wrapper.
@@ -122,6 +133,8 @@ proc exportReturnTypeCImport*(sym: NimNode): string =
 proc convertExportFromNim*(sym: NimNode): string =
   ## Converts Nim value to C value (used by DLL side).
   let typ = sym.stripSink
+  if typ.exportedValueTypeName().len > 0:
+    return ""
   if typ.kind == nnkBracketExpr:
     if not typ.isSeqLike:
       error(&"Unexpected bracket expression {typ[0].repr}[", typ)
@@ -138,13 +151,7 @@ proc convertExportExprNim*(expr: string, sym: NimNode): string =
   ## Converts a Nim expression to the ABI-facing value used by generated
   ## internal exports.
   let typ = sym.stripSink
-  case typ.repr
-  of "Vec2":
-    return &"cast[Vector2]({expr})"
-  of "Mat3":
-    return &"cast[Matrix3]({expr})"
-  else:
-    return expr & convertExportFromNim(typ)
+  expr & convertExportFromNim(typ)
 
 proc convertExportReturnExprNim*(expr: string, sym: NimNode): string =
   ## Converts a Nim expression to the ABI-facing return value used by generated
@@ -158,6 +165,8 @@ proc convertExportReturnExprNim*(expr: string, sym: NimNode): string =
 proc convertToPointer*(sym: NimNode): string =
   ## Converts client-side wrapper to pointer for C call.
   let typ = sym.stripSink
+  if typ.exportedValueTypeName().len > 0:
+    return ""
   if typ.kind == nnkBracketExpr:
     if not typ.isSeqLike:
       error(&"Unexpected bracket expression {typ[0].repr}[", typ)
@@ -174,6 +183,8 @@ proc convertToPointer*(sym: NimNode): string =
 
 proc convertImportToNim*(sym: NimNode): string =
   let typ = sym.stripSink
+  if typ.exportedValueTypeName().len > 0:
+    return ""
   if typ.kind == nnkBracketExpr:
     if not typ.isSeqLike:
       error(&"Unexpected bracket expression {typ[0].repr}[", typ)
@@ -190,13 +201,7 @@ proc convertImportExprNim*(expr: string, sym: NimNode): string =
   ## Converts an ABI-facing expression to the Nim value expected by the source
   ## library implementation.
   let typ = sym.stripSink
-  case typ.repr
-  of "Vec2":
-    return &"cast[Vec2]({expr})"
-  of "Mat3":
-    return &"cast[Mat3]({expr})"
-  else:
-    return expr & convertImportToNim(typ)
+  expr & convertImportToNim(typ)
 
 proc convertImportReturnExprNim*(expr: string, sym: NimNode): string =
   ## Converts an ABI-facing return expression to the friendly Nim wrapper type.
@@ -204,27 +209,11 @@ proc convertImportReturnExprNim*(expr: string, sym: NimNode): string =
   case typ.repr
   of "string":
     return &"gennyBufferToString({expr})"
-  of "Vec2":
-    return &"cast[Vector2]({expr})"
-  of "Mat3":
-    return &"cast[Matrix3]({expr})"
   else:
     return convertImportExprNim(expr, typ)
 
 proc exportDefaultValueNim(default, sym: NimNode): string =
-  ## Keeps wrapper defaults in the same ABI-facing type family as the generated
-  ## wrapper signature. Some Pixie APIs use vmath defaults like vec2()/mat3()
-  ## while the wrapper exposes ABI-compatible Vector2/Matrix3 value objects.
-  let typ = sym.stripSink
-  case typ.repr
-  of "Vec2":
-    addImport("vmath")
-    return &"cast[Vector2]({default.repr})"
-  of "Mat3":
-    addImport("vmath")
-    return &"cast[Matrix3]({default.repr})"
-  else:
-    return default.repr
+  default.repr
 
 proc exportConstNim*(sym: NimNode) =
   let impl = sym.getImpl()
@@ -245,7 +234,7 @@ proc exportProcNim*(
 ) =
   let
     procName = sym.repr
-    procNameSnaked = toSnakeCase(procName)
+    procNameSnaked = toSnakeCase(procName.operatorProcName())
     procType = sym.getTypeInst()
     procParams = procType[0][1 .. ^1]
     procReturn = procType[0][0]
@@ -277,7 +266,7 @@ proc exportProcNim*(
       var paramType = param[^2]
       if paramType.repr.endsWith(":type"):
         paramType = owner
-      procs.add &"{toSnakeCase(param[i].repr)}: {exportTypeCImport(paramType)}, "
+      procs.add &"{toSnakeCase(param[i].getParamName())}: {exportTypeCImport(paramType)}, "
   procs.removeSuffix ", "
   procs.add ")"
   if procReturn.kind != nnkEmpty:
@@ -289,15 +278,28 @@ proc exportProcNim*(
   procs.add "\n"
 
   # Nim wrapper proc
-  procs.add &"proc {procName}*("
+  var wrapperSignature = &"{procName.nimCallableName()}("
+  for param in procParams:
+    var paramType = param[^2]
+    if paramType.repr.endsWith(":type"):
+      paramType = owner
+    for i in 0 .. param.len - 3:
+      wrapperSignature.add exportArgTypeNim(paramType)
+      wrapperSignature.add ","
+  wrapperSignature.add ")"
+  if wrapperSignature in nimWrapperSignatures:
+    return
+  nimWrapperSignatures.incl(wrapperSignature)
+
+  procs.add &"proc {procName.nimCallableName()}*("
   for i, param in procParams:
     var paramType = param[1]
     if paramType.repr.endsWith(":type"):
       paramType = owner
     if param[^2].kind == nnkBracketExpr or paramType.repr.startsWith("Some"):
-      procs.add &"{param[0].repr}: {exportTypeNim(paramType)}, "
+      procs.add &"{param[0].getParamName()}: {exportTypeNim(paramType)}, "
     else:
-      procs.add &"{param[0].repr}: {exportArgTypeNim(paramType)}"
+      procs.add &"{param[0].getParamName()}: {exportArgTypeNim(paramType)}"
       if defaults[i][1].kind != nnkEmpty:
         procs.add &" = {exportDefaultValueNim(defaults[i][1], paramType)}"
       procs.add ", "
@@ -309,7 +311,7 @@ proc exportProcNim*(
   var callExpr = &"{apiProcName}("
   for param in procParams:
     for i in 0 .. param.len - 3:
-      callExpr.add &"{param[i].repr}{convertToPointer(param[^2])}, "
+      callExpr.add &"{param[i].getParamName()}{convertToPointer(param[^2])}, "
   callExpr.removeSuffix ", "
   callExpr.add ")"
 
@@ -334,10 +336,13 @@ proc exportProcNim*(
 
 proc exportObjectNim*(
   sym: NimNode,
+  fields: seq[ObjectField],
   constructor: NimNode,
   externalModule: string = ""
 ) =
-  let objName = sym.repr
+  let
+    objName = sym.repr
+    objFields = sym.objectFields(fields)
 
   if externalModule.len > 0:
     addImport(externalModule)
@@ -346,24 +351,21 @@ proc exportObjectNim*(
     return
 
   types.add &"type {objName}* {{.bycopy.}} = object\n"
-  for identDefs in sym.getImpl()[2][2]:
-    for property in identDefs[0 .. ^3]:
-      types.add &"  {property.repr}: {identDefs[^2].repr}\n"
+  for field in objFields:
+    types.add &"  {field.name.exportedFieldName()}: {field.typ.repr}\n"
   types.add "\n"
 
   if constructor != nil:
     exportProcNim(constructor)
   else:
     types.add &"proc {toVarCase(objName)}*("
-    for identDefs in sym.getImpl()[2][2]:
-      for property in identDefs[0 .. ^3]:
-        types.add &"{toSnakeCase(property[1].repr)}: {identDefs[^2].repr}, "
+    for field in objFields:
+      types.add &"{field.name.localFieldName()}: {field.typ.repr}, "
     types.removeSuffix ", "
     types.add &"): {objName} =\n"
-    for identDefs in sym.getImpl()[2][2]:
-      for property in identDefs[0 .. ^3]:
-        types.add &"  result.{toSnakeCase(property[1].repr)} = "
-        types.add &"{toSnakeCase(property[1].repr)}\n"
+    for field in objFields:
+      types.add &"  result.{field.name.localFieldName()} = "
+      types.add &"{field.name.localFieldName()}\n"
     types.add "\n"
 
 proc genRefObject(objName: string) =

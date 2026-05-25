@@ -37,10 +37,21 @@ int main() {
     approx(mixed.r, 0.75f);
     approx(mixed.g, 0.25f);
 
-    Matrix3 mat = translate(3, 4);
-    Matrix3 identity = translate(0, 0);
+    Mat3 mat = translate(3, 4);
+    Mat3 identity = translate(0, 0);
     assert(mat.values[6] == 3);
     assert(inverse(mat).values[6] == -3);
+    Vec2 a = vec2(1, 2);
+    Vec2 b = vec2(3, 4);
+    Vec2 sum = a + b;
+    assert(sum.x == 4);
+    assert(sum.y == 6);
+    Vec2 scaled = a * 2.0f;
+    assert(scaled.x == 2);
+    assert(scaled.y == 4);
+    Vec2 moved = mat * a;
+    assert(moved.x == 4);
+    assert(moved.y == 6);
     assert(pixie_rect_eq(snapToPixels(rect(1, 2, 3, 4)), rect(1, 2, 3, 4)));
     assert(miterLimitToAngle(2) > 0);
     assert(angleToMiterLimit(1) > 0);
@@ -80,7 +91,7 @@ int main() {
     assert(resized.getHeight() == 6);
     assert(resized.subImage(0, 0, 2, 2).getWidth() == 2);
     assert(resized.subImage(rect(0, 0, 1, 1)).getHeight() == 1);
-    assert(resized.shadow(vector2(1, 2), 3, 4, red).getWidth() == resized.getWidth());
+    assert(resized.shadow(vec2(1, 2), 3, 4, red).getWidth() == resized.getWidth());
     assert(resized.superImage(-1, -1, resized.getWidth() + 2, resized.getHeight() + 2).getWidth() == resized.getWidth() + 2);
     assert(resized.opaqueBounds().w > 0);
 
@@ -92,9 +103,9 @@ int main() {
     paint.setImageMat(scale(2, 3));
     assert(paint.getKind() == LINEAR_GRADIENT_PAINT);
     approx(paint.getOpacity(), 0.5f);
-    paint.addGradientHandlePositions(vector2(0.25f, 0));
-    paint.addGradientHandlePositions(vector2(0.75f, 1));
-    paint.setGradientHandlePositions(1, vector2(0.8f, 1));
+    paint.addGradientHandlePositions(vec2(0.25f, 0));
+    paint.addGradientHandlePositions(vec2(0.75f, 1));
+    paint.setGradientHandlePositions(1, vec2(0.8f, 1));
     assert(paint.gradientHandlePositionsSize() == 2);
     approx(paint.getGradientHandlePositions(1).x, 0.8f);
     paint.addGradientStops(colorStop(red, 0));
@@ -121,8 +132,8 @@ int main() {
     Path rectPath;
     rectPath.rect(0, 0, 10, 10, true);
     SeqFloat32 solidDashes;
-    assert(rectPath.fillOverlaps(vector2(5, 5), identity, NON_ZERO));
-    assert(rectPath.strokeOverlaps(vector2(0, 5), identity, 2, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, solidDashes));
+    assert(rectPath.fillOverlaps(vec2(5, 5), identity, NON_ZERO));
+    assert(rectPath.strokeOverlaps(vec2(0, 5), identity, 2, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, solidDashes));
 
     Typeface typeface = readTypeface(FONT_PATH);
     assert(typeface.getFilePath().find("Inter-Regular.ttf") != std::string::npos);
@@ -144,13 +155,13 @@ int main() {
     assert(font.scale() > 0);
     assert(font.defaultLineHeight() > 0);
     assert(font.layoutBounds("abcd").x > 0);
-    assert(font.typeset("abcd", vector2(100, 100), LEFT_ALIGN, TOP_ALIGN, true).layoutBounds().x > 0);
+    assert(font.typeset("abcd", vec2(100, 100), LEFT_ALIGN, TOP_ALIGN, true).layoutBounds().x > 0);
 
     Span span("hi", font);
     span.setText("hello");
     SeqSpan spans;
     spans.add(span);
-    Arrangement arrangement = spans.typeset(vector2(100, 100), CENTER_ALIGN, BOTTOM_ALIGN, true);
+    Arrangement arrangement = spans.typeset(vec2(100, 100), CENTER_ALIGN, BOTTOM_ALIGN, true);
     assert(spans[0].getText() == "hello");
     assert(arrangement.layoutBounds().x > 0);
     assert(spans.layoutBounds().y > 0);
@@ -158,9 +169,9 @@ int main() {
 
     Image canvas(64, 64);
     canvas.fill(parseColor("#ffffff"));
-    canvas.fillText(font, "abc", mat, vector2(60, 60), LEFT_ALIGN, TOP_ALIGN);
+    canvas.fillText(font, "abc", mat, vec2(60, 60), LEFT_ALIGN, TOP_ALIGN);
     canvas.fillText(arrangement, mat);
-    canvas.strokeText(font, "abc", mat, 2, vector2(60, 60), LEFT_ALIGN, TOP_ALIGN, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, dashes);
+    canvas.strokeText(font, "abc", mat, 2, vec2(60, 60), LEFT_ALIGN, TOP_ALIGN, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, dashes);
     canvas.strokeText(arrangement, mat, 2, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, dashes);
     canvas.fillPath(rectPath, solid, mat, NON_ZERO);
     canvas.strokePath(rectPath, solid, mat, 2, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, dashes);

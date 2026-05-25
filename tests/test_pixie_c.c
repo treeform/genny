@@ -61,10 +61,21 @@ int main() {
     approx(mixed.r, 0.75f);
     approx(mixed.g, 0.25f);
 
-    Matrix3 mat = pixie_translate(3, 4);
-    Matrix3 identity = pixie_translate(0, 0);
+    Mat3 mat = pixie_translate(3, 4);
+    Mat3 identity = pixie_translate(0, 0);
     assert(mat.values[6] == 3);
     assert(pixie_inverse(mat).values[6] == -3);
+    Vec2 a = pixie_vec2(1, 2);
+    Vec2 b = pixie_vec2(3, 4);
+    Vec2 sum = pixie_vec2_add(a, b);
+    assert(sum.x == 4);
+    assert(sum.y == 6);
+    Vec2 scaled = pixie_vec2_float32_mul(a, 2);
+    assert(scaled.x == 2);
+    assert(scaled.y == 4);
+    Vec2 moved = pixie_mat3_vec2_mul(mat, a);
+    assert(moved.x == 4);
+    assert(moved.y == 6);
     assert(pixie_rect_eq(pixie_snap_to_pixels(pixie_rect(1, 2, 3, 4)), pixie_rect(1, 2, 3, 4)));
     assert(pixie_miter_limit_to_angle(2) > 0);
     assert(pixie_angle_to_miter_limit(1) > 0);
@@ -105,7 +116,7 @@ int main() {
     assert(pixie_image_get_height(resized) == 6);
     assert(pixie_image_get_width(pixie_image_sub_image(resized, 0, 0, 2, 2)) == 2);
     assert(pixie_image_get_height(pixie_image_rect_sub_image(resized, pixie_rect(0, 0, 1, 1))) == 1);
-    assert(pixie_image_get_width(pixie_image_shadow(resized, pixie_vector2(1, 2), 3, 4, red)) == pixie_image_get_width(resized));
+    assert(pixie_image_get_width(pixie_image_shadow(resized, pixie_vec2(1, 2), 3, 4, red)) == pixie_image_get_width(resized));
     assert(pixie_image_get_width(pixie_image_super_image(resized, -1, -1, pixie_image_get_width(resized) + 2, pixie_image_get_height(resized) + 2)) == pixie_image_get_width(resized) + 2);
     assert(pixie_image_opaque_bounds(resized).w > 0);
 
@@ -117,9 +128,9 @@ int main() {
     pixie_paint_set_image_mat(paint, pixie_scale(2, 3));
     assert(pixie_paint_get_kind(paint) == LINEAR_GRADIENT_PAINT);
     approx(pixie_paint_get_opacity(paint), 0.5f);
-    pixie_paint_gradient_handle_positions_add(paint, pixie_vector2(0.25f, 0));
-    pixie_paint_gradient_handle_positions_add(paint, pixie_vector2(0.75f, 1));
-    pixie_paint_gradient_handle_positions_set(paint, 1, pixie_vector2(0.8f, 1));
+    pixie_paint_gradient_handle_positions_add(paint, pixie_vec2(0.25f, 0));
+    pixie_paint_gradient_handle_positions_add(paint, pixie_vec2(0.75f, 1));
+    pixie_paint_gradient_handle_positions_set(paint, 1, pixie_vec2(0.8f, 1));
     assert(pixie_paint_gradient_handle_positions_len(paint) == 2);
     approx(pixie_paint_gradient_handle_positions_get(paint, 1).x, 0.8f);
     pixie_paint_gradient_stops_add(paint, pixie_color_stop(red, 0));
@@ -146,8 +157,8 @@ int main() {
     Path rect_path = pixie_new_path();
     pixie_path_rect(rect_path, 0, 0, 10, 10, 1);
     SeqFloat32 solid_dashes = pixie_new_seq_float32();
-    assert(pixie_path_fill_overlaps(rect_path, pixie_vector2(5, 5), identity, NON_ZERO));
-    assert(pixie_path_stroke_overlaps(rect_path, pixie_vector2(0, 5), identity, 2, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, solid_dashes));
+    assert(pixie_path_fill_overlaps(rect_path, pixie_vec2(5, 5), identity, NON_ZERO));
+    assert(pixie_path_stroke_overlaps(rect_path, pixie_vec2(0, 5), identity, 2, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, solid_dashes));
 
     Typeface typeface = pixie_read_typeface(FONT_PATH);
     assert_buffer_contains(pixie_typeface_get_file_path(typeface), "Inter-Regular.ttf");
@@ -169,13 +180,13 @@ int main() {
     assert(pixie_font_scale(font) > 0);
     assert(pixie_font_default_line_height(font) > 0);
     assert(pixie_font_layout_bounds(font, "abcd").x > 0);
-    assert(pixie_arrangement_layout_bounds(pixie_font_typeset(font, "abcd", pixie_vector2(100, 100), LEFT_ALIGN, TOP_ALIGN, 1)).x > 0);
+    assert(pixie_arrangement_layout_bounds(pixie_font_typeset(font, "abcd", pixie_vec2(100, 100), LEFT_ALIGN, TOP_ALIGN, 1)).x > 0);
 
     Span span = pixie_new_span("hi", font);
     pixie_span_set_text(span, "hello");
     SeqSpan spans = pixie_new_seq_span();
     pixie_seq_span_add(spans, span);
-    Arrangement arrangement = pixie_seq_span_typeset(spans, pixie_vector2(100, 100), CENTER_ALIGN, BOTTOM_ALIGN, 1);
+    Arrangement arrangement = pixie_seq_span_typeset(spans, pixie_vec2(100, 100), CENTER_ALIGN, BOTTOM_ALIGN, 1);
     assert_buffer_equals(pixie_span_get_text(pixie_seq_span_get(spans, 0)), "hello");
     assert(pixie_arrangement_layout_bounds(arrangement).x > 0);
     assert(pixie_seq_span_layout_bounds(spans).y > 0);
@@ -183,9 +194,9 @@ int main() {
 
     Image canvas = pixie_new_image(64, 64);
     pixie_image_fill(canvas, pixie_parse_color("#ffffff"));
-    pixie_image_fill_text(canvas, font, "abc", mat, pixie_vector2(60, 60), LEFT_ALIGN, TOP_ALIGN);
+    pixie_image_fill_text(canvas, font, "abc", mat, pixie_vec2(60, 60), LEFT_ALIGN, TOP_ALIGN);
     pixie_image_arrangement_fill_text(canvas, arrangement, mat);
-    pixie_image_stroke_text(canvas, font, "abc", mat, 2, pixie_vector2(60, 60), LEFT_ALIGN, TOP_ALIGN, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, dashes);
+    pixie_image_stroke_text(canvas, font, "abc", mat, 2, pixie_vec2(60, 60), LEFT_ALIGN, TOP_ALIGN, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, dashes);
     pixie_image_arrangement_stroke_text(canvas, arrangement, mat, 2, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, dashes);
     pixie_image_fill_path(canvas, rect_path, solid, mat, NON_ZERO);
     pixie_image_stroke_path(canvas, rect_path, solid, mat, 2, BUTT_CAP, MITER_JOIN, DEFAULT_MITER_LIMIT, dashes);
