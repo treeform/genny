@@ -11,20 +11,31 @@ var
 proc unCapitalize(s: string): string =
   s[0].toLowerAscii() & s[1 .. ^1]
 
+proc stripSink(sym: NimNode): NimNode =
+  if sym.kind == nnkBracketExpr and sym[0].repr == "sink":
+    sym[1]
+  else:
+    sym
+
+proc isSeqLike(sym: NimNode): bool =
+  let typ = sym.stripSink
+  typ.kind == nnkBracketExpr and typ[0].repr in ["seq", "openArray"]
+
 proc exportTypeCpp(sym: NimNode): string =
-  if sym.kind == nnkBracketExpr:
-    if sym[0].repr == "array":
+  let typ = sym.stripSink
+  if typ.kind == nnkBracketExpr:
+    if typ[0].repr == "array":
       let
-        entryCount = sym[1].repr
-        entryType = exportTypeCpp(sym[2])
+        entryCount = typ[1].repr
+        entryType = exportTypeCpp(typ[2])
       result = &"{entryType}[{entryCount}]"
-    elif sym[0].repr == "seq":
-      result = sym.getSeqName()
+    elif typ.isSeqLike:
+      result = typ.getSeqName()
     else:
-      error(&"Unexpected bracket expression {sym[0].repr}[")
+      error(&"Unexpected bracket expression {typ[0].repr}[")
   else:
     result =
-      case sym.repr:
+      case typ.repr:
       of "string": "const char*"
       of "bool": "bool"
       of "byte": "char"
@@ -47,24 +58,25 @@ proc exportTypeCpp(sym: NimNode): string =
       of "", "nil": "void"
       of "None": "void"
       else:
-        if sym.getType().kind == nnkBracketExpr:
-          sym.repr
+        if typ.getType().kind == nnkBracketExpr:
+          typ.repr
         else:
-          sym.repr
+          typ.repr
 
 proc exportTypeCpp(sym: NimNode, name: string): string =
-  if sym.kind == nnkBracketExpr:
-    if sym[0].repr == "array":
+  let typ = sym.stripSink
+  if typ.kind == nnkBracketExpr:
+    if typ[0].repr == "array":
       let
-        entryCount = sym[1].repr
-        entryType = exportTypeCpp(sym[2], &"{name}[{entryCount}]")
+        entryCount = typ[1].repr
+        entryType = exportTypeCpp(typ[2], &"{name}[{entryCount}]")
       result = &"{entryType}"
-    elif sym[0].repr == "seq":
-      result = sym.getSeqName() & " " & name
+    elif typ.isSeqLike:
+      result = typ.getSeqName() & " " & name
     else:
-      error(&"Unexpected bracket expression {sym[0].repr}[")
+      error(&"Unexpected bracket expression {typ[0].repr}[")
   else:
-    result = exportTypeCpp(sym) & " " & name
+    result = exportTypeCpp(typ) & " " & name
 
 proc dllProc*(procName: string, args: openarray[string], restype: string) =
   var argStr = ""

@@ -10,9 +10,24 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: treeform/setup-nim-action@v6
+    - name: Checkout Pixie
+      uses: actions/checkout@v4
+      with:
+        repository: treeform/pixie
+        path: pixie
+    - name: Move Pixie checkout beside Genny
+      run: rm -rf ../pixie && mv pixie ../pixie
+    - name: Install Pixie dependencies
+      run: cd .. && nimby install -g pixie/pixie.nimble
     - name: Build test DLL
       run: nim c --mm:arc --app:lib -d:gennyC -o:tests/generated/libtest.so tests/test.nim
     - name: Compile C test
       run: gcc -o tests/test_c tests/test_c.c -I tests/generated -L tests/generated -l:libtest.so -Wl,-rpath,'$ORIGIN/generated'
     - name: Run C test
       run: ./tests/test_c
+    - name: Build Pixie bindings
+      run: nim c --mm:arc --app:lib -d:gennyC --path:src --path:../pixie/src -o:../pixie/bindings/generated/libpixie.so ../pixie/bindings/bindings.nim
+    - name: Compile Pixie C test
+      run: gcc -o tests/test_pixie_c tests/test_pixie_c.c -I ../pixie/bindings/generated -L ../pixie/bindings/generated -l:libpixie.so -lm -Wl,-rpath,'$ORIGIN/../../pixie/bindings/generated'
+    - name: Run Pixie C test
+      run: ./tests/test_pixie_c

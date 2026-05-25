@@ -10,6 +10,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: treeform/setup-nim-action@v6
+    - name: Checkout Pixie
+      uses: actions/checkout@v4
+      with:
+        repository: treeform/pixie
+        path: pixie
+    - name: Move Pixie checkout beside Genny
+      run: rm -rf ../pixie && mv pixie ../pixie
+    - name: Install Pixie dependencies
+      run: cd .. && nimby install -g pixie/pixie.nimble
     - uses: actions/setup-python@v5
       with:
         python-version: '3.12'
@@ -17,6 +26,10 @@ jobs:
       run: nim c --mm:arc --app:lib -d:gennyPython -o:tests/generated/libtest.so tests/test.nim
     - name: Run Python test
       run: python tests/test_python.py
+    - name: Build Pixie bindings
+      run: nim c --mm:arc --app:lib -d:gennyPython --path:src --path:../pixie/src -o:../pixie/bindings/generated/libpixie.so ../pixie/bindings/bindings.nim
+    - name: Run Pixie Python test
+      run: PIXIE_ROOT=../pixie PIXIE_BINDINGS_DIR=../pixie/bindings/generated LD_LIBRARY_PATH=$PWD/../pixie/bindings/generated python tests/test_pixie_python.py
     - name: Run non-gating benchmark
       continue-on-error: true
       run: python tests/bench_python.py

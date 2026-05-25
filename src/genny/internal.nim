@@ -26,6 +26,9 @@ proc exportProcInternal*(
     procReturn = procType[0][0]
     procRaises = sym.raises()
     procReturnsSeq = procReturn.kind == nnkBracketExpr
+    shouldGcRefResult = gcRefResult or procReturnsSeq or (
+      procReturn.kind != nnkEmpty and procReturn.isRefObjectLike
+    )
 
   var apiProcName = &"$lib_"
   if owner != nil:
@@ -50,29 +53,31 @@ proc exportProcInternal*(
     internal.add "  try:\n  "
   if procRaises and procReturn.kind != nnkEmpty:
     internal.add "  result = "
-  elif gcRefResult:
+  elif shouldGcRefResult:
     internal.add "  result = "
   else:
     internal.add "  "
-  if procReturnsSeq:
-    internal.add &"{procReturn.getSeqName()}(s: "
-  internal.add &"{procName}("
+  var callExpr = &"{procName}("
   for param in procParams:
     for i in 0 .. param.len - 3:
-      internal.add &"{toSnakeCase(param[i].repr)}"
-      internal.add &"{convertImportToNim(param[^2])}, "
-  internal.removeSuffix ", "
-  internal.add ")"
+      callExpr.add convertImportExprNim(toSnakeCase(param[i].repr), param[^2])
+      callExpr.add ", "
+  callExpr.removeSuffix ", "
+  callExpr.add ")"
+
   if procReturnsSeq:
-    internal.add ")"
-  if procReturn.kind != nnkEmpty:
-    internal.add convertExportFromNim(procReturn)
+    internal.add &"{procReturn.getSeqName()}(s: {callExpr})"
+  elif procReturn.kind != nnkEmpty:
+    internal.add convertExportExprNim(callExpr, procReturn)
+  else:
+    internal.add callExpr
   if procRaises:
     internal.add "\n"
     internal.add "  except $LibError as e:\n"
     internal.add "    lastError = e"
-  if gcRefResult:
-    internal.add "\n  GC_ref(result)"
+  if shouldGcRefResult:
+    internal.add "\n  if result != nil:"
+    internal.add "\n    GC_ref(result)"
   internal.add "\n"
   internal.add "\n"
 
@@ -147,8 +152,8 @@ proc exportRefObjectInternal*(
       internal.add &"$lib_{objNameSnaked}_get_{fieldNameSnaked}*"
       internal.add &"({objNameSnaked}: {objName}): {exportTypeNim(fieldType)}"
       internal.add &" {exportProcPragmas} =\n"
-      internal.add &"  {objNameSnaked}.{fieldName}"
-      internal.add convertExportFromNim(fieldType)
+      internal.add "  "
+      internal.add convertExportExprNim(&"{objNameSnaked}.{fieldName}", fieldType)
       internal.add "\n"
       internal.add "\n"
 
@@ -157,8 +162,8 @@ proc exportRefObjectInternal*(
       internal.add &"({objNameSnaked}: {objName}, "
       internal.add &"{fieldName}: {exportTypeNim(fieldType)})"
       internal.add &" {exportProcPragmas} =\n"
-      internal.add &"  {objNameSnaked}.{fieldName} = {fieldName}"
-      internal.add convertImportToNim(fieldType)
+      internal.add &"  {objNameSnaked}.{fieldName} = "
+      internal.add convertImportExprNim(fieldName, fieldType)
       internal.add "\n"
       internal.add "\n"
     else:
@@ -219,19 +224,25 @@ proc generateSeqs(sym: NimNode) =
   internal.add &"proc $lib_{seqNameSnaked}_add*(s: {seqName}, v: {exportTypeNim(sym[1])})"
   internal.add &" {exportProcPragmas}"
   internal.add " =\n"
-  internal.add &"  s.s.add(v{convertImportToNim(sym[1])})\n"
+  internal.add "  s.s.add("
+  internal.add convertImportExprNim("v", sym[1])
+  internal.add ")\n"
   internal.add "\n"
 
   internal.add &"proc $lib_{seqNameSnaked}_get*(s: {seqName}, i: int): {exportTypeNim(sym[1])}"
   internal.add &" {exportProcPragmas}"
   internal.add " =\n"
-  internal.add &"  s.s[i]{convertExportFromNim(sym[1])}\n"
+  internal.add "  "
+  internal.add convertExportExprNim("s.s[i]", sym[1])
+  internal.add "\n"
   internal.add "\n"
 
   internal.add &"proc $lib_{seqNameSnaked}_set*(s: {seqName}, i: int, v: {exportTypeNim(sym[1])})"
   internal.add &" {exportProcPragmas}"
   internal.add " =\n"
-  internal.add &"  s.s[i] = v{convertImportToNim(sym[1])}\n"
+  internal.add "  s.s[i] = "
+  internal.add convertImportExprNim("v", sym[1])
+  internal.add "\n"
   internal.add "\n"
 
   internal.add &"proc $lib_{seqNameSnaked}_delete*(s: {seqName}, i: int)"

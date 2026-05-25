@@ -6,22 +6,53 @@ var
   types {.compiletime.}: string
   procs {.compiletime.}: string
   exports {.compiletime.}: string
+  objects {.compiletime.}: HashSet[string]
   refObjects {.compiletime.}: HashSet[string]
 
+proc stripSink(sym: NimNode): NimNode =
+  if sym.kind == nnkBracketExpr and sym[0].repr == "sink":
+    sym[1]
+  else:
+    sym
+
+proc isSeqLike(sym: NimNode): bool =
+  let typ = sym.stripSink
+  typ.kind == nnkBracketExpr and typ[0].repr in ["seq", "openArray"]
+
+proc typeBody(sym: NimNode): NimNode =
+  let typ = sym.stripSink
+  if typ.kind == nnkSym:
+    let impl = typ.getImpl()
+    if impl.kind == nnkTypeDef:
+      return impl[2]
+  typ
+
+proc isObjectLike(sym: NimNode): bool =
+  let typ = sym.stripSink
+  typ.repr in objects or typ.typeBody.kind == nnkObjectTy
+
+proc isRefObjectLike(sym: NimNode): bool =
+  let typ = sym.stripSink
+  typ.repr in refObjects or typ.typeBody.kind == nnkRefTy
+
+proc isEnumLike(sym: NimNode): bool =
+  sym.typeBody.kind == nnkEnumTy
+
 proc exportTypeNode(sym: NimNode): string =
-  if sym.kind == nnkBracketExpr:
-    if sym[0].repr == "array":
+  let typ = sym.stripSink
+  if typ.kind == nnkBracketExpr:
+    if typ[0].repr == "array":
       let
-        entryCount = sym[1].repr
-        entryType = exportTypeNode(sym[2])
+        entryCount = typ[1].repr
+        entryType = exportTypeNode(typ[2])
       result = &"koffi.array({entryType}, {entryCount})"
-    elif sym[0].repr == "seq":
+    elif typ.isSeqLike:
       result = "'uint64'"  # Opaque pointer
     else:
-      error(&"Unexpected bracket expression {sym[0].repr}[")
+      error(&"Unexpected bracket expression {typ[0].repr}[")
   else:
     result =
-      case sym.repr:
+      case typ.repr:
       of "string": "'str'"
       of "bool": "'bool'"
       of "byte": "'uint8'"
@@ -44,7 +75,29 @@ proc exportTypeNode(sym: NimNode): string =
       of "Mat3": "Matrix3"
       of "": "'void'"
       else:
-        "'uint64'"  # Treat ref objects as opaque pointers
+        if typ.isEnumLike:
+          "'int8'"
+        elif typ.isObjectLike:
+          typ.repr
+        else:
+          "'uint64'"  # Treat ref objects as opaque pointers
+
+proc jsArgValue(argType: NimNode, argName: string): string =
+  if argType.isSeqLike or argType.isRefObjectLike:
+    &"{argName}.ref"
+  else:
+    argName
+
+proc jsReturnValue(returnType: NimNode, call: string): string =
+  let typ = returnType.stripSink
+  if typ.kind == nnkEmpty:
+    call
+  elif typ.isSeqLike:
+    &"new {typ.getName()}({call})"
+  elif typ.isRefObjectLike:
+    &"new {typ.getName()}({call})"
+  else:
+    call
 
 proc convertExportFromNode*(sym: NimNode): string =
   discard
@@ -155,19 +208,23 @@ proc exportProcNode*(
   types.add "  "
   if procReturn.kind != nnkEmpty:
     types.add "return "
-  types.add &"{apiProcName}("
+  var call = &"{apiProcName}("
   for i, param in procParams[0 .. ^1]:
     if isRefObject and i == 0:
-      types.add "this.ref"
+      call.add "this.ref"
     else:
-      types.add &"{toSnakeCase(param[0].repr)}"
-    types.add &", "
-  types.removeSuffix ", "
-  types.add ");\n"
+      let argName = toSnakeCase(param[0].repr)
+      call.add jsArgValue(param[^2], argName)
+    call.add &", "
+  call.removeSuffix ", "
+  call.add ")"
+  types.add jsReturnValue(procReturn, call)
+  types.add ";\n"
   types.add "}\n\n"
 
 proc exportObjectNode*(sym: NimNode, constructor: NimNode) =
   let objName = sym.repr
+  objects.incl(objName)
 
   # Define struct type with koffi
   types.add &"const {objName} = koffi.struct('{objName}', {{\n"
@@ -223,14 +280,16 @@ proc genSeqProcs(objName, className, procPrefix, selfAccessor: string, entryType
 
   # get
   procs.add &"const {procPrefix}_get = lib.func('{procPrefix}_get', {exportTypeNode(entryType)}, ['uint64', 'int64']);\n"
+  let getCall = &"{procPrefix}_get({selfAccessor}, index)"
   types.add &"{className}.prototype.get = function(index) {{\n"
-  types.add &"  return {procPrefix}_get({selfAccessor}, index);\n"
+  types.add &"  return {jsReturnValue(entryType, getCall)};\n"
   types.add "};\n"
 
   # set
   procs.add &"const {procPrefix}_set = lib.func('{procPrefix}_set', 'void', ['uint64', 'int64', {exportTypeNode(entryType)}]);\n"
+  let setValue = jsArgValue(entryType, "value")
   types.add &"{className}.prototype.set = function(index, value) {{\n"
-  types.add &"  {procPrefix}_set({selfAccessor}, index, value);\n"
+  types.add &"  {procPrefix}_set({selfAccessor}, index, {setValue});\n"
   types.add "};\n"
 
   # delete
@@ -242,7 +301,7 @@ proc genSeqProcs(objName, className, procPrefix, selfAccessor: string, entryType
   # add
   procs.add &"const {procPrefix}_add = lib.func('{procPrefix}_add', 'void', ['uint64', {exportTypeNode(entryType)}]);\n"
   types.add &"{className}.prototype.add = function(value) {{\n"
-  types.add &"  {procPrefix}_add({selfAccessor}, value);\n"
+  types.add &"  {procPrefix}_add({selfAccessor}, {setValue});\n"
   types.add "};\n"
 
   # clear
@@ -280,7 +339,8 @@ proc exportRefObjectNode*(
     types.add ") {\n"
     types.add &"  const ref = {constructorLibProc}("
     for i, param in constructorParams[0 .. ^1]:
-      types.add &"{toSnakeCase(param[0].repr)}"
+      let argName = toSnakeCase(param[0].repr)
+      types.add jsArgValue(param[^2], argName)
       types.add ", "
     types.removeSuffix ", "
     types.add ");\n"
@@ -299,8 +359,10 @@ proc exportRefObjectNode*(
       procs.add &"const {setProcName} = lib.func('{setProcName}', 'void', ['uint64', {exportTypeNode(fieldType)}]);\n"
 
       types.add &"Object.defineProperty({objName}.prototype, '{fieldName}', {{\n"
-      types.add &"  get: function() {{ return {getProcName}(this.ref); }},\n"
-      types.add &"  set: function(v) {{ {setProcName}(this.ref, v); }}\n"
+      let getCall = &"{getProcName}(this.ref)"
+      let setValue = jsArgValue(fieldType, "v")
+      types.add &"  get: function() {{ return {jsReturnValue(fieldType, getCall)}; }},\n"
+      types.add &"  set: function(v) {{ {setProcName}(this.ref, {setValue}); }}\n"
       types.add "});\n"
 
     else:
@@ -382,6 +444,6 @@ proc writeNode*(dir, lib: string) =
   createDir(dir)
   writeFile(
     &"{dir}/{toSnakeCase(lib)}.js",
-    (header & procs & "\n" & types & "\n" & exports)
+    (header & types & "\n" & procs & "\n" & exports)
       .replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
   )
