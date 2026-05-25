@@ -5,4 +5,4 @@ nim	exportProcInternal	genny/internal.html#exportProcInternal,NimNode,NimNode,op
 nim	exportObjectInternal	genny/internal.html#exportObjectInternal,NimNode,NimNode	proc exportObjectInternal(sym: NimNode; constructor: NimNode)		84
 nim	exportRefObjectInternal	genny/internal.html#exportRefObjectInternal,NimNode,seq[],NimNode	proc exportRefObjectInternal(sym: NimNode; fields: seq[(string, NimNode)];\n                        constructor: NimNode)		134
 nim	exportSeqInternal	genny/internal.html#exportSeqInternal,NimNode	proc exportSeqInternal(sym: NimNode)		277
-nim	writeInternal	genny/internal.html#writeInternal,string,string	proc writeInternal(dir, lib: string)		288
+nim	writeInternal	genny/internal.html#writeInternal,string,string	proc writeInternal(dir, lib: string)		309
