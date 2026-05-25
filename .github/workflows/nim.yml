@@ -34,3 +34,5 @@ jobs:
       run: |
         nim c --mm:arc -o:tests/test_pixie_nim tests/test_pixie_nim.nim
         PIXIE_ROOT=../pixie LD_LIBRARY_PATH=$PWD/../pixie/bindings/generated ./tests/test_pixie_nim
+    - name: Compare Pixie render goldens
+      run: nim r --mm:arc --path:../pixie/src tests/test_no_gold_diff.nim

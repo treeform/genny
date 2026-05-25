@@ -18,9 +18,6 @@
 #define IMAGE_PATH PIXIE_ROOT "/tests/images/turtle.png"
 
 static const std::string renderOutputDir = "tests/generated/pixie_images";
-static const std::string goldenDir = "tests/goldens";
-static constexpr float maxChannelDelta = 0.02f;
-static constexpr double maxAvgDelta = 0.002;
 
 static void approx(float value, float expected, float eps = 0.0001f) {
     assert(std::fabs(value - expected) <= eps);
@@ -33,13 +30,6 @@ static void assertColor(Color actual, Color expected) {
     approx(actual.a, expected.a);
 }
 
-static void recordDelta(float delta, double &totalDelta, float &maxDelta) {
-    totalDelta += delta;
-    if (delta > maxDelta) {
-        maxDelta = delta;
-    }
-}
-
 static void ensureRenderOutputDir() {
 #ifdef _WIN32
     _mkdir("tests/generated");
@@ -50,41 +40,12 @@ static void ensureRenderOutputDir() {
 #endif
 }
 
-static void assertImagesNearlyEqual(const std::string &actualPath, const std::string &goldenPath) {
-    Image actual = readImage(actualPath.c_str());
-    Image golden = readImage(goldenPath.c_str());
-
-    int width = actual.getWidth();
-    int height = actual.getHeight();
-    assert(width == golden.getWidth());
-    assert(height == golden.getHeight());
-
-    double totalDelta = 0;
-    float maxDelta = 0;
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            Color actualColor = actual.getColor(x, y);
-            Color goldenColor = golden.getColor(x, y);
-            recordDelta(std::fabs(actualColor.r - goldenColor.r), totalDelta, maxDelta);
-            recordDelta(std::fabs(actualColor.g - goldenColor.g), totalDelta, maxDelta);
-            recordDelta(std::fabs(actualColor.b - goldenColor.b), totalDelta, maxDelta);
-            recordDelta(std::fabs(actualColor.a - goldenColor.a), totalDelta, maxDelta);
-        }
-    }
-
-    double avgDelta = totalDelta / static_cast<double>(width * height * 4);
-    assert(maxDelta <= maxChannelDelta);
-    assert(avgDelta <= maxAvgDelta);
-}
-
 static void writeRenderStep(Image &image, const std::string &label, const std::string &step) {
     std::string actualPath = renderOutputDir + "/" + label + "_" + step + ".png";
-    std::string goldenPath = goldenDir + "/pixie_render_" + step + ".png";
     image.writeFile(actualPath.c_str());
-    assertImagesNearlyEqual(actualPath, goldenPath);
 }
 
-static void runRenderGoldens(const std::string &label) {
+static void writeRenderImages(const std::string &label) {
     ensureRenderOutputDir();
 
     Image image(32, 32);
@@ -344,7 +305,7 @@ int main() {
     assert(readImageDimensions(IMAGE_PATH).height == 40);
     approx(readFont(FONT_PATH).getSize(), 12);
     assert(parsePath("M0 0 L10 0 L10 10 Z").computeBounds(identity).w == 10);
-    runRenderGoldens("cpp");
+    writeRenderImages("cpp");
     parseColor("bad");
     assert(checkError());
     assert(takeError().find("bad") != std::string::npos);

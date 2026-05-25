@@ -14,54 +14,14 @@ fn approxEps(value: f32, expected: f32, eps: f32) !void {
 }
 
 const render_output_dir = "generated/pixie_images";
-const golden_dir = "goldens";
-const max_channel_delta: f32 = 0.02;
-const max_avg_delta: f64 = 0.002;
-
-fn recordDelta(delta: f32, total_delta: *f64, max_delta: *f32) void {
-    total_delta.* += delta;
-    if (delta > max_delta.*) max_delta.* = delta;
-}
-
-fn expectImagesNearlyEqual(actual_path: [:0]const u8, golden_path: [:0]const u8) !void {
-    const actual = try pixie.readImage(actual_path);
-    defer actual.deinit();
-    const golden = try pixie.readImage(golden_path);
-    defer golden.deinit();
-
-    try expect(actual.getWidth() == golden.getWidth());
-    try expect(actual.getHeight() == golden.getHeight());
-
-    var total_delta: f64 = 0;
-    var max_delta: f32 = 0;
-    var y: isize = 0;
-    while (y < actual.getHeight()) : (y += 1) {
-        var x: isize = 0;
-        while (x < actual.getWidth()) : (x += 1) {
-            const actual_color = actual.getColor(x, y);
-            const golden_color = golden.getColor(x, y);
-            recordDelta(@abs(actual_color.r - golden_color.r), &total_delta, &max_delta);
-            recordDelta(@abs(actual_color.g - golden_color.g), &total_delta, &max_delta);
-            recordDelta(@abs(actual_color.b - golden_color.b), &total_delta, &max_delta);
-            recordDelta(@abs(actual_color.a - golden_color.a), &total_delta, &max_delta);
-        }
-    }
-
-    const denominator: f64 = @floatFromInt(actual.getWidth() * actual.getHeight() * 4);
-    try expect(max_delta <= max_channel_delta);
-    try expect(total_delta / denominator <= max_avg_delta);
-}
 
 fn writeRenderStep(image: *pixie.Image, label: []const u8, step: []const u8) !void {
     var actual_path_buffer: [128]u8 = undefined;
-    var golden_path_buffer: [128]u8 = undefined;
     const actual_path = try std.fmt.bufPrintZ(&actual_path_buffer, "{s}/{s}_{s}.png", .{ render_output_dir, label, step });
-    const golden_path = try std.fmt.bufPrintZ(&golden_path_buffer, "{s}/pixie_render_{s}.png", .{ golden_dir, step });
     try image.writeFile(actual_path);
-    try expectImagesNearlyEqual(actual_path, golden_path);
 }
 
-fn runRenderGoldens() !void {
+fn writeRenderImages() !void {
     const image = try pixie.Image.init(32, 32);
     defer image.deinit();
     image.fill(try pixie.parseColor("#112233"));
@@ -373,7 +333,7 @@ pub fn main() !void {
     const parsed_path = try pixie.parsePath("M0 0 L10 0 L10 10 Z");
     defer parsed_path.deinit();
     try expect((try parsed_path.computeBounds(identity)).w == 10);
-    try runRenderGoldens();
+    try writeRenderImages();
     if (pixie.parseColor("bad")) |_| {
         return error.TestFailed;
     } else |err| {

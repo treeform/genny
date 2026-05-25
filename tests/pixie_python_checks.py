@@ -1,10 +1,7 @@
 import os
 from pathlib import Path
 
-GOLDEN_DIR = Path(__file__).resolve().parent / "goldens"
 RENDER_OUTPUT_DIR = Path(__file__).resolve().parent / "generated" / "pixie_images"
-MAX_CHANNEL_DELTA = 0.02
-MAX_AVG_DELTA = 0.002
 
 
 def pixie_root():
@@ -23,43 +20,13 @@ def matrix_values(matrix):
     return list(matrix.values)
 
 
-def assert_images_nearly_equal(pixie, actual_path, golden_path):
-    actual = pixie.read_image(str(actual_path))
-    golden = pixie.read_image(str(golden_path))
-    assert actual.width == golden.width
-    assert actual.height == golden.height
-
-    total_delta = 0.0
-    max_delta = 0.0
-    for y in range(actual.height):
-        for x in range(actual.width):
-            actual_color = actual.get_color(x, y)
-            golden_color = golden.get_color(x, y)
-            for channel in ("r", "g", "b", "a"):
-                delta = abs(getattr(actual_color, channel) - getattr(golden_color, channel))
-                total_delta += delta
-                max_delta = max(max_delta, delta)
-
-    avg_delta = total_delta / (actual.width * actual.height * 4)
-    assert max_delta <= MAX_CHANNEL_DELTA, f"{actual_path} differs from {golden_path}: max delta {max_delta}"
-    assert avg_delta <= MAX_AVG_DELTA, f"{actual_path} differs from {golden_path}: avg delta {avg_delta}"
-
-
-def write_render_step(pixie, image, label, step):
+def write_render_step(image, label, step):
     RENDER_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     actual_path = RENDER_OUTPUT_DIR / f"{label}_{step}.png"
-    golden_path = GOLDEN_DIR / f"pixie_render_{step}.png"
     image.write_file(str(actual_path))
 
-    if os.environ.get("UPDATE_PIXIE_GOLDENS"):
-        GOLDEN_DIR.mkdir(parents=True, exist_ok=True)
-        image.write_file(str(golden_path))
-    else:
-        assert golden_path.exists(), f"missing golden image: {golden_path}"
-        assert_images_nearly_equal(pixie, actual_path, golden_path)
 
-
-def run_render_goldens(pixie, label):
+def write_render_images(pixie, label):
     image = pixie.Image(32, 32)
     image.fill(pixie.parse_color("#112233"))
 
@@ -67,14 +34,14 @@ def run_render_goldens(pixie, label):
     for y in range(2, 10):
         for x in range(2, 10):
             image.set_color(x, y, orange)
-    write_render_step(pixie, image, label, "step1")
+    write_render_step(image, label, "step1")
 
     rect_paint = pixie.Paint(pixie.SOLID_PAINT)
     rect_paint.color = pixie.parse_color("#209cee")
     rect_path = pixie.Path()
     rect_path.rect(12, 3, 14, 16)
     image.fill_path(rect_path, rect_paint, pixie.translate(1, 2), pixie.NON_ZERO)
-    write_render_step(pixie, image, label, "step2")
+    write_render_step(image, label, "step2")
 
     circle_paint = pixie.Paint(pixie.SOLID_PAINT)
     circle_paint.color = pixie.parse_color("#8ac926")
@@ -98,7 +65,7 @@ def run_render_goldens(pixie, label):
         dashes,
     )
     image.set_color(31, 31, pixie.parse_color("#ff00ff"))
-    write_render_step(pixie, image, label, "step3")
+    write_render_step(image, label, "step3")
 
 
 def run(pixie, label="python"):
@@ -329,7 +296,7 @@ def run(pixie, label="python"):
     assert pixie.read_image_dimensions(image_path).height == 40
     assert pixie.read_font(font_path).size == 12
     assert pixie.parse_path("M0 0 L10 0 L10 10 Z").compute_bounds().w == 10
-    run_render_goldens(pixie, label)
+    write_render_images(pixie, label)
 
     try:
         pixie.parse_color("bad")

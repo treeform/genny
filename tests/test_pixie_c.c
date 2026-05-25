@@ -17,9 +17,6 @@
 #define FONT_PATH PIXIE_ROOT "/tests/fonts/Inter-Regular.ttf"
 #define IMAGE_PATH PIXIE_ROOT "/tests/images/turtle.png"
 #define PIXIE_RENDER_DIR "tests/generated/pixie_images"
-#define PIXIE_GOLDEN_DIR "tests/goldens"
-#define PIXIE_MAX_CHANNEL_DELTA 0.02f
-#define PIXIE_MAX_AVG_DELTA 0.002f
 
 static void approx(float value, float expected) {
     assert(fabsf(value - expected) < 0.0001f);
@@ -66,55 +63,14 @@ static void ensure_render_output_dir(void) {
 #endif
 }
 
-static void record_delta(float delta, double *total_delta, float *max_delta) {
-    *total_delta += delta;
-    if (delta > *max_delta) {
-        *max_delta = delta;
-    }
-}
-
-static void assert_images_nearly_equal(const char *actual_path, const char *golden_path) {
-    Image actual = pixie_read_image(actual_path);
-    assert(!pixie_check_error());
-    Image golden = pixie_read_image(golden_path);
-    assert(!pixie_check_error());
-
-    intptr_t width = pixie_image_get_width(actual);
-    intptr_t height = pixie_image_get_height(actual);
-    assert(width == pixie_image_get_width(golden));
-    assert(height == pixie_image_get_height(golden));
-
-    double total_delta = 0;
-    float max_delta = 0;
-    for (intptr_t y = 0; y < height; y++) {
-        for (intptr_t x = 0; x < width; x++) {
-            Color actual_color = pixie_image_get_color(actual, x, y);
-            Color golden_color = pixie_image_get_color(golden, x, y);
-            record_delta(fabsf(actual_color.r - golden_color.r), &total_delta, &max_delta);
-            record_delta(fabsf(actual_color.g - golden_color.g), &total_delta, &max_delta);
-            record_delta(fabsf(actual_color.b - golden_color.b), &total_delta, &max_delta);
-            record_delta(fabsf(actual_color.a - golden_color.a), &total_delta, &max_delta);
-        }
-    }
-
-    double avg_delta = total_delta / (double)(width * height * 4);
-    assert(max_delta <= PIXIE_MAX_CHANNEL_DELTA);
-    assert(avg_delta <= PIXIE_MAX_AVG_DELTA);
-    pixie_image_unref(actual);
-    pixie_image_unref(golden);
-}
-
 static void write_render_step(Image image, const char *label, const char *step) {
     char actual_path[256];
-    char golden_path[256];
     snprintf(actual_path, sizeof(actual_path), "%s/%s_%s.png", PIXIE_RENDER_DIR, label, step);
-    snprintf(golden_path, sizeof(golden_path), "%s/pixie_render_%s.png", PIXIE_GOLDEN_DIR, step);
     pixie_image_write_file(image, actual_path);
     assert(!pixie_check_error());
-    assert_images_nearly_equal(actual_path, golden_path);
 }
 
-static void run_render_goldens(const char *label) {
+static void write_render_images(const char *label) {
     ensure_render_output_dir();
 
     Image image = pixie_new_image(32, 32);
@@ -387,7 +343,7 @@ int main() {
     assert(pixie_read_image_dimensions(IMAGE_PATH).height == 40);
     approx(pixie_font_get_size(pixie_read_font(FONT_PATH)), 12);
     assert(pixie_path_compute_bounds(pixie_parse_path("M0 0 L10 0 L10 10 Z"), identity).w == 10);
-    run_render_goldens("c");
+    write_render_images("c");
     pixie_parse_color("bad");
     assert(pixie_check_error());
     assert_buffer_contains(pixie_take_error(), "bad");

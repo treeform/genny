@@ -3,51 +3,17 @@ import ../../pixie/bindings/generated/pixie
 
 const
   renderOutputDir = "tests" / "generated" / "pixie_images"
-  goldenDir = "tests" / "goldens"
-  maxChannelDelta = 0.02'f32
-  maxAvgDelta = 0.002'f32
 
 proc approx(value, expected: float32; eps: float32 = 0.0001) =
   doAssert abs(value - expected) <= eps
-
-proc recordDelta(delta: float32; totalDelta, maxDelta: var float32) =
-  totalDelta += delta
-  if delta > maxDelta:
-    maxDelta = delta
-
-proc assertImagesNearlyEqual(actualPath, goldenPath: string) =
-  let
-    actual = readImage(actualPath)
-    golden = readImage(goldenPath)
-  doAssert actual.width == golden.width
-  doAssert actual.height == golden.height
-
-  var
-    totalDelta = 0'f32
-    maxDelta = 0'f32
-  for y in 0 ..< actual.height:
-    for x in 0 ..< actual.width:
-      let
-        actualColor = actual.getColor(x, y)
-        goldenColor = golden.getColor(x, y)
-      recordDelta(abs(actualColor.r - goldenColor.r), totalDelta, maxDelta)
-      recordDelta(abs(actualColor.g - goldenColor.g), totalDelta, maxDelta)
-      recordDelta(abs(actualColor.b - goldenColor.b), totalDelta, maxDelta)
-      recordDelta(abs(actualColor.a - goldenColor.a), totalDelta, maxDelta)
-
-  let avgDelta = totalDelta / float32(actual.width * actual.height * 4)
-  doAssert maxDelta <= maxChannelDelta
-  doAssert avgDelta <= maxAvgDelta
 
 proc writeRenderStep(image: Image; label, step: string) =
   createDir(renderOutputDir)
   let
     actualPath = renderOutputDir / (label & "_" & step & ".png")
-    goldenPath = goldenDir / ("pixie_render_" & step & ".png")
   image.writeFile(actualPath)
-  assertImagesNearlyEqual(actualPath, goldenPath)
 
-proc runRenderGoldens(label: string) =
+proc writeRenderImages(label: string) =
   let image = newImage(32, 32)
   image.fill(parseColor("#112233"))
 
@@ -296,7 +262,7 @@ doAssert readImage(imagePath).width == 40
 doAssert readImageDimensions(imagePath).height == 40
 approx(readFont(fontPath).size, 12)
 doAssert parsePath("M0 0 L10 0 L10 10 Z").computeBounds(identity).w == 10
-runRenderGoldens("nim")
+writeRenderImages("nim")
 try:
   discard parseColor("bad")
   doAssert false

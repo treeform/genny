@@ -12,9 +12,6 @@ const pixieRoot = path.resolve(process.env.PIXIE_ROOT || path.join(__dirname, '.
 const bindingsDir = path.resolve(process.env.PIXIE_BINDINGS_DIR || path.join(pixieRoot, 'bindings', 'generated'));
 const pixie = require(path.join(bindingsDir, 'pixie.js'));
 const renderOutputDir = path.join(__dirname, 'generated', 'pixie_images');
-const goldenDir = path.join(__dirname, 'goldens');
-const maxChannelDelta = 0.02;
-const maxAvgDelta = 0.002;
 
 function asset(...parts) {
   return path.join(pixieRoot, ...parts);
@@ -31,43 +28,13 @@ function assertColor(actual, expected) {
   approx(actual.a, expected.a);
 }
 
-function recordDelta(delta, totals) {
-  totals.total += delta;
-  totals.max = Math.max(totals.max, delta);
-}
-
-function assertImagesNearlyEqual(actualPath, goldenPath) {
-  const actual = pixie.readImage(actualPath);
-  const golden = pixie.readImage(goldenPath);
-  assert.strictEqual(actual.width, golden.width);
-  assert.strictEqual(actual.height, golden.height);
-
-  const totals = { total: 0, max: 0 };
-  for (let y = 0; y < actual.height; y++) {
-    for (let x = 0; x < actual.width; x++) {
-      const actualColor = actual.getColor(x, y);
-      const goldenColor = golden.getColor(x, y);
-      recordDelta(Math.abs(actualColor.r - goldenColor.r), totals);
-      recordDelta(Math.abs(actualColor.g - goldenColor.g), totals);
-      recordDelta(Math.abs(actualColor.b - goldenColor.b), totals);
-      recordDelta(Math.abs(actualColor.a - goldenColor.a), totals);
-    }
-  }
-
-  const avg = totals.total / (actual.width * actual.height * 4);
-  assert(totals.max <= maxChannelDelta, `${actualPath} differs from ${goldenPath}: max delta ${totals.max}`);
-  assert(avg <= maxAvgDelta, `${actualPath} differs from ${goldenPath}: avg delta ${avg}`);
-}
-
 function writeRenderStep(image, label, step) {
   fs.mkdirSync(renderOutputDir, { recursive: true });
   const actualPath = path.join(renderOutputDir, `${label}_${step}.png`);
-  const goldenPath = path.join(goldenDir, `pixie_render_${step}.png`);
   image.writeFile(actualPath);
-  assertImagesNearlyEqual(actualPath, goldenPath);
 }
 
-function runRenderGoldens(label) {
+function writeRenderImages(label) {
   const render = pixie.newImage(32, 32);
   render.fill(pixie.parseColor('#112233'));
 
@@ -319,7 +286,7 @@ assert.strictEqual(pixie.readImage(imagePath).width, 40);
 assert.strictEqual(pixie.readImageDimensions(imagePath).height, 40);
 assert.strictEqual(pixie.readFont(fontPath).size, 12);
 assert.strictEqual(pixie.parsePath('M0 0 L10 0 L10 10 Z').computeBounds(identity).w, 10);
-runRenderGoldens('node');
+writeRenderImages('node');
 pixie.parseColor('bad');
 assert(pixie.checkError());
 assert(pixie.takeError().includes('bad'));
