@@ -83,7 +83,10 @@ proc exportTypeNode(sym: NimNode): string =
           "'uint64'"  # Treat ref objects as opaque pointers
 
 proc jsArgValue(argType: NimNode, argName: string): string =
-  if argType.isSeqLike or argType.isRefObjectLike:
+  let typ = argType.stripSink
+  if typ.repr == "Rune":
+    &"runeToInt({argName})"
+  elif typ.isSeqLike or typ.isRefObjectLike:
     &"{argName}.ref"
   else:
     argName
@@ -92,6 +95,8 @@ proc jsReturnValue(returnType: NimNode, call: string): string =
   let typ = returnType.stripSink
   if typ.kind == nnkEmpty:
     call
+  elif typ.repr == "Rune":
+    &"intToRune({call})"
   elif typ.isSeqLike:
     &"new {typ.getName()}({call})"
   elif typ.isRefObjectLike:
@@ -418,6 +423,7 @@ proc exportSeqNode*(sym: NimNode) =
 const header = """
 const koffi = require('koffi');
 const path = require('path');
+const assert = require('assert');
 
 // Determine library path based on platform.
 let libName;
@@ -436,6 +442,19 @@ class $LibException extends Error {
     super(message);
     this.name = '$LibException';
   }
+}
+
+function runeToInt(value) {
+  assert.strictEqual(typeof value, 'string', 'expected rune string');
+  const chars = Array.from(value);
+  assert.strictEqual(chars.length, 1, 'expected exactly one Unicode scalar value');
+  const code = chars[0].codePointAt(0);
+  assert(!(code >= 0xd800 && code <= 0xdfff), 'expected Unicode scalar value');
+  return code;
+}
+
+function intToRune(value) {
+  return String.fromCodePoint(value);
 }
 
 """

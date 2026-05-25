@@ -110,9 +110,9 @@ doAssert rectPath.strokeOverlaps(vector2(0, 5), identity, 2, ButtCap, MiterJoin,
 let typeface = readTypeface(fontPath)
 doAssert ($typeface.filePath).endsWith("Inter-Regular.ttf")
 typeface.filePath = fontPath
-doAssert typeface.hasGlyph(int32(ord('A')))
-doAssert typeface.getAdvance(int32(ord('A'))) > 0
-doAssert typeface.getGlyphPath(int32(ord('A'))).computeBounds(identity).w > 0
+doAssert typeface.hasGlyph(Rune(ord('A')))
+doAssert typeface.getAdvance(Rune(ord('A'))) > 0
+doAssert typeface.getGlyphPath(Rune(ord('A'))).computeBounds(identity).w > 0
 
 let font = typeface.newFont()
 font.size = 24

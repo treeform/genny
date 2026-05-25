@@ -126,9 +126,9 @@ int main() {
     Typeface typeface = readTypeface(FONT_PATH);
     assert(std::strstr(typeface.getFilePath(), "Inter-Regular.ttf") != nullptr);
     typeface.setFilePath(FONT_PATH);
-    assert(typeface.hasGlyph('A'));
-    assert(typeface.getAdvance('A') > 0);
-    assert(typeface.getGlyphPath('A').computeBounds(identity).w > 0);
+    assert(typeface.hasGlyph(U'A'));
+    assert(typeface.getAdvance(U'A') > 0);
+    assert(typeface.getGlyphPath(U'A').computeBounds(identity).w > 0);
 
     Font font = typeface.newFont();
     font.setSize(24);

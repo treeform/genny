@@ -127,9 +127,15 @@ def run(pixie):
     typeface = pixie.read_typeface(font_path)
     assert typeface.file_path.endswith("Inter-Regular.ttf")
     typeface.file_path = font_path
-    assert typeface.has_glyph(ord("A"))
-    assert typeface.get_advance(ord("A")) > 0
-    assert typeface.get_glyph_path(ord("A")).compute_bounds().w > 0
+    assert typeface.has_glyph("A")
+    assert typeface.get_advance("A") > 0
+    assert typeface.get_glyph_path("A").compute_bounds().w > 0
+    for invalid_rune in ("AB", "\ud800"):
+        try:
+            typeface.has_glyph(invalid_rune)
+        except AssertionError:
+            continue
+        raise AssertionError("invalid rune was accepted")
 
     font = typeface.new_font()
     font.size = 24

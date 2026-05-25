@@ -20,7 +20,7 @@ type SimpleEnum* = enum
   Second
   Third
 
-type SimpleObj* = object
+type SimpleObj* {.bycopy.} = object
   simpleA*: int
   simpleB*: byte
   simpleC*: bool
@@ -63,7 +63,7 @@ proc `=destroy`(x: RefObjWithSeqObj) =
   if x.reference != nil:
     test_ref_obj_with_seq_unref(x.reference)
 
-type SimpleObjWithProc* = object
+type SimpleObjWithProc* {.bycopy.} = object
   simpleA*: int
   simpleB*: byte
   simpleC*: bool

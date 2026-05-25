@@ -59,14 +59,26 @@ proc exportTypeZig(sym: NimNode): string =
 proc convertExportFromZig*(inner: string, sym: string): string =
   if sym == "[:0]const u8":
     inner & ".ptr"
+  elif sym == "u21":
+    &"@intCast({inner})"
   else:
     inner
 
 proc convertImportToZig*(inner: string, sym: string): string =
   if sym == "[:0]const u8":
     "std.mem.span(" & inner & ")"
+  elif sym == "u21":
+    &"@intCast({inner})"
   else:
     inner
+
+proc exportTypeZigAbi(sym: string): string =
+  if sym == "[:0]const u8":
+    "[*:0]const u8"
+  elif sym == "u21":
+    "i32"
+  else:
+    sym.replace("[:0]", "[*:0]")
 
 proc toArgSeq(args: seq[NimNode]): seq[(string, string)] =
   for i, arg in args[0 .. ^1]:
@@ -111,12 +123,12 @@ proc exportProc(
     else:
       code.add toSnakeCase(param[0])
     code.add ": "
-    code.add param[1].replace("[:0]", "[*:0]")
+    code.add exportTypeZigAbi(param[1])
     code.add &", "
   code.removeSuffix ", "
   code.add ") callconv(.C) "
   if procReturn != "":
-    code.add procReturn.replace("[:0]", "[*:0]");
+    code.add exportTypeZigAbi(procReturn);
   else:
     code.add "void"
   code.add ";\n"

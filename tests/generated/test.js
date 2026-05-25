@@ -1,5 +1,6 @@
 const koffi = require('koffi');
 const path = require('path');
+const assert = require('assert');
 
 // Determine library path based on platform.
 let libName;
@@ -20,40 +21,18 @@ class testException extends Error {
   }
 }
 
-const test_simple_call = lib.func('test_simple_call', 'int64', ['int64']);
-const test_simple_ref_obj_unref = lib.func('test_simple_ref_obj_unref', 'void', ['uint64']);
-const test_new_simple_ref_obj = lib.func('test_new_simple_ref_obj', 'uint64', []);
-const test_simple_ref_obj_get_simple_ref_a = lib.func('test_simple_ref_obj_get_simple_ref_a', 'int64', ['uint64']);
-const test_simple_ref_obj_set_simple_ref_a = lib.func('test_simple_ref_obj_set_simple_ref_a', 'void', ['uint64', 'int64']);
-const test_simple_ref_obj_get_simple_ref_b = lib.func('test_simple_ref_obj_get_simple_ref_b', 'uint8', ['uint64']);
-const test_simple_ref_obj_set_simple_ref_b = lib.func('test_simple_ref_obj_set_simple_ref_b', 'void', ['uint64', 'uint8']);
-const test_simple_ref_obj_doit = lib.func('test_simple_ref_obj_doit', 'void', ['uint64']);
-const test_seq_int_unref = lib.func('test_seq_int_unref', 'void', ['uint64']);
-const test_new_seq_int = lib.func('test_new_seq_int', 'uint64', []);
-const test_seq_int_len = lib.func('test_seq_int_len', 'int64', ['uint64']);
-const test_seq_int_get = lib.func('test_seq_int_get', 'int64', ['uint64', 'int64']);
-const test_seq_int_set = lib.func('test_seq_int_set', 'void', ['uint64', 'int64', 'int64']);
-const test_seq_int_delete = lib.func('test_seq_int_delete', 'void', ['uint64', 'int64']);
-const test_seq_int_add = lib.func('test_seq_int_add', 'void', ['uint64', 'int64']);
-const test_seq_int_clear = lib.func('test_seq_int_clear', 'void', ['uint64']);
-const test_ref_obj_with_seq_unref = lib.func('test_ref_obj_with_seq_unref', 'void', ['uint64']);
-const test_new_ref_obj_with_seq = lib.func('test_new_ref_obj_with_seq', 'uint64', []);
-const test_ref_obj_with_seq_data_len = lib.func('test_ref_obj_with_seq_data_len', 'int64', ['uint64']);
-const test_ref_obj_with_seq_data_get = lib.func('test_ref_obj_with_seq_data_get', 'uint8', ['uint64', 'int64']);
-const test_ref_obj_with_seq_data_set = lib.func('test_ref_obj_with_seq_data_set', 'void', ['uint64', 'int64', 'uint8']);
-const test_ref_obj_with_seq_data_delete = lib.func('test_ref_obj_with_seq_data_delete', 'void', ['uint64', 'int64']);
-const test_ref_obj_with_seq_data_add = lib.func('test_ref_obj_with_seq_data_add', 'void', ['uint64', 'uint8']);
-const test_ref_obj_with_seq_data_clear = lib.func('test_ref_obj_with_seq_data_clear', 'void', ['uint64']);
-const test_simple_obj_with_proc_extra_proc = lib.func('test_simple_obj_with_proc_extra_proc', 'void', ['uint64']);
-const test_seq_string_unref = lib.func('test_seq_string_unref', 'void', ['uint64']);
-const test_new_seq_string = lib.func('test_new_seq_string', 'uint64', []);
-const test_seq_string_len = lib.func('test_seq_string_len', 'int64', ['uint64']);
-const test_seq_string_get = lib.func('test_seq_string_get', 'str', ['uint64', 'int64']);
-const test_seq_string_set = lib.func('test_seq_string_set', 'void', ['uint64', 'int64', 'str']);
-const test_seq_string_delete = lib.func('test_seq_string_delete', 'void', ['uint64', 'int64']);
-const test_seq_string_add = lib.func('test_seq_string_add', 'void', ['uint64', 'str']);
-const test_seq_string_clear = lib.func('test_seq_string_clear', 'void', ['uint64']);
-const test_get_datas = lib.func('test_get_datas', 'uint64', []);
+function runeToInt(value) {
+  assert.strictEqual(typeof value, 'string', 'expected rune string');
+  const chars = Array.from(value);
+  assert.strictEqual(chars.length, 1, 'expected exactly one Unicode scalar value');
+  const code = chars[0].codePointAt(0);
+  assert(!(code >= 0xd800 && code <= 0xdfff), 'expected Unicode scalar value');
+  return code;
+}
+
+function intToRune(value) {
+  return String.fromCodePoint(value);
+}
 
 /**
  * Returns the integer passed in.
@@ -236,9 +215,44 @@ SeqString.prototype.clear = function() {
   test_seq_string_clear(this.ref);
 };
 function getDatas() {
-  return test_get_datas();
+  return new SeqString(test_get_datas());
 }
 
+
+const test_simple_call = lib.func('test_simple_call', 'int64', ['int64']);
+const test_simple_ref_obj_unref = lib.func('test_simple_ref_obj_unref', 'void', ['uint64']);
+const test_new_simple_ref_obj = lib.func('test_new_simple_ref_obj', 'uint64', []);
+const test_simple_ref_obj_get_simple_ref_a = lib.func('test_simple_ref_obj_get_simple_ref_a', 'int64', ['uint64']);
+const test_simple_ref_obj_set_simple_ref_a = lib.func('test_simple_ref_obj_set_simple_ref_a', 'void', ['uint64', 'int64']);
+const test_simple_ref_obj_get_simple_ref_b = lib.func('test_simple_ref_obj_get_simple_ref_b', 'uint8', ['uint64']);
+const test_simple_ref_obj_set_simple_ref_b = lib.func('test_simple_ref_obj_set_simple_ref_b', 'void', ['uint64', 'uint8']);
+const test_simple_ref_obj_doit = lib.func('test_simple_ref_obj_doit', 'void', ['uint64']);
+const test_seq_int_unref = lib.func('test_seq_int_unref', 'void', ['uint64']);
+const test_new_seq_int = lib.func('test_new_seq_int', 'uint64', []);
+const test_seq_int_len = lib.func('test_seq_int_len', 'int64', ['uint64']);
+const test_seq_int_get = lib.func('test_seq_int_get', 'int64', ['uint64', 'int64']);
+const test_seq_int_set = lib.func('test_seq_int_set', 'void', ['uint64', 'int64', 'int64']);
+const test_seq_int_delete = lib.func('test_seq_int_delete', 'void', ['uint64', 'int64']);
+const test_seq_int_add = lib.func('test_seq_int_add', 'void', ['uint64', 'int64']);
+const test_seq_int_clear = lib.func('test_seq_int_clear', 'void', ['uint64']);
+const test_ref_obj_with_seq_unref = lib.func('test_ref_obj_with_seq_unref', 'void', ['uint64']);
+const test_new_ref_obj_with_seq = lib.func('test_new_ref_obj_with_seq', 'uint64', []);
+const test_ref_obj_with_seq_data_len = lib.func('test_ref_obj_with_seq_data_len', 'int64', ['uint64']);
+const test_ref_obj_with_seq_data_get = lib.func('test_ref_obj_with_seq_data_get', 'uint8', ['uint64', 'int64']);
+const test_ref_obj_with_seq_data_set = lib.func('test_ref_obj_with_seq_data_set', 'void', ['uint64', 'int64', 'uint8']);
+const test_ref_obj_with_seq_data_delete = lib.func('test_ref_obj_with_seq_data_delete', 'void', ['uint64', 'int64']);
+const test_ref_obj_with_seq_data_add = lib.func('test_ref_obj_with_seq_data_add', 'void', ['uint64', 'uint8']);
+const test_ref_obj_with_seq_data_clear = lib.func('test_ref_obj_with_seq_data_clear', 'void', ['uint64']);
+const test_simple_obj_with_proc_extra_proc = lib.func('test_simple_obj_with_proc_extra_proc', 'void', [SimpleObjWithProc]);
+const test_seq_string_unref = lib.func('test_seq_string_unref', 'void', ['uint64']);
+const test_new_seq_string = lib.func('test_new_seq_string', 'uint64', []);
+const test_seq_string_len = lib.func('test_seq_string_len', 'int64', ['uint64']);
+const test_seq_string_get = lib.func('test_seq_string_get', 'str', ['uint64', 'int64']);
+const test_seq_string_set = lib.func('test_seq_string_set', 'void', ['uint64', 'int64', 'str']);
+const test_seq_string_delete = lib.func('test_seq_string_delete', 'void', ['uint64', 'int64']);
+const test_seq_string_add = lib.func('test_seq_string_add', 'void', ['uint64', 'str']);
+const test_seq_string_clear = lib.func('test_seq_string_clear', 'void', ['uint64']);
+const test_get_datas = lib.func('test_get_datas', 'uint64', []);
 
 exports.SIMPLE_CONST = 123;
 exports.SimpleEnum = 'int8';

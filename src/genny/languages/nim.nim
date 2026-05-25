@@ -246,11 +246,11 @@ proc exportProcNim*(
   procs.removeSuffix ", "
   procs.add ")"
   if procReturn.kind != nnkEmpty:
-    procs.add &": {exportTypeNim(procReturn)}"
+    procs.add &": {exportArgTypeNim(procReturn)}"
   procs.add " {.inline.} =\n"
   if returnsRefObject:
     # Wrap returned pointer in ref object
-    procs.add &"  result = {exportTypeNim(procReturn)}(reference: "
+    procs.add &"  result = {exportArgTypeNim(procReturn)}(reference: "
   elif procReturn.kind != nnkEmpty:
     procs.add "  result = "
   else:
@@ -263,6 +263,8 @@ proc exportProcNim*(
   procs.add ")"
   if returnsRefObject:
     procs.add ")"  # Close the TypeName(reference: ...)
+  elif procReturn.kind != nnkEmpty:
+    procs.add convertImportToNim(procReturn)
   procs.add "\n"
   if procRaises:
     procs.add "  if checkError():\n"
@@ -430,7 +432,7 @@ proc exportRefObjectNim*(
       # Nim wrapper passes .reference
       procs.add &"proc {fieldName}*("
       procs.add &"{toVarCase(objName)}: {objName}): "
-      procs.add &"{exportTypeNim(fieldType)}"
+      procs.add &"{exportArgTypeNim(fieldType)}"
       procs.add " {.inline.} =\n"
       if fieldType.isRefObjectLike:
         procs.add &"  {exportTypeNim(fieldType)}(reference: "

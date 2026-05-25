@@ -131,9 +131,11 @@ assert(rectPath.strokeOverlaps(pixie.vector2(0, 5), identity, 2, pixie.BUTT_CAP,
 const typeface = pixie.readTypeface(fontPath);
 assert(typeface.filePath.endsWith('Inter-Regular.ttf'));
 typeface.filePath = fontPath;
-assert(typeface.hasGlyph('A'.codePointAt(0)));
-assert(typeface.getAdvance('A'.codePointAt(0)) > 0);
-assert(typeface.getGlyphPath('A'.codePointAt(0)).computeBounds(identity).w > 0);
+assert(typeface.hasGlyph('A'));
+assert(typeface.getAdvance('A') > 0);
+assert(typeface.getGlyphPath('A').computeBounds(identity).w > 0);
+assert.throws(() => typeface.hasGlyph('AB'), assert.AssertionError);
+assert.throws(() => typeface.hasGlyph('\uD800'), assert.AssertionError);
 
 const font = typeface.newFont();
 font.size = 24;

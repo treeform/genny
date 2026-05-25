@@ -74,6 +74,26 @@ proc convertImportToPy*(sym: NimNode): string =
   if typ.repr == "string":
     result = ".decode(\"utf8\")"
 
+proc exportExprPy(expr: string, sym: NimNode): string =
+  let typ = sym.stripSink
+  case typ.repr
+  of "string":
+    expr & ".encode(\"utf8\")"
+  of "Rune":
+    &"_rune_to_int({expr})"
+  else:
+    expr
+
+proc importExprPy(expr: string, sym: NimNode): string =
+  let typ = sym.stripSink
+  case typ.repr
+  of "string":
+    expr & ".decode(\"utf8\")"
+  of "Rune":
+    &"_int_to_rune({expr})"
+  else:
+    expr
+
 proc toArgTypes(args: openarray[NimNode]): seq[string] =
   for arg in args:
     result.add exportTypePy(arg)
@@ -197,15 +217,17 @@ proc exportProcPy*(
   types.add "    "
   if procReturn.kind != nnkEmpty:
     types.add "result = "
-  types.add &"dll.$lib_{apiProcName}("
+  var call = &"dll.$lib_{apiProcName}("
   for i, param in procParams[0 .. ^1]:
     if onClass and i == 0:
-      types.add "self"
+      call.add "self"
     else:
-      types.add &"{toSnakeCase(param[0].repr)}{convertExportFromPy(param[1])}"
-    types.add &", "
-  types.removeSuffix ", "
-  types.add &"){convertImportToPy(procReturn)}\n"
+      call.add exportExprPy(toSnakeCase(param[0].repr), param[1])
+    call.add &", "
+  call.removeSuffix ", "
+  call.add ")"
+  types.add importExprPy(call, procReturn)
+  types.add "\n"
   if procRaises:
     if onClass:
       types.add "    "
@@ -253,7 +275,7 @@ proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
     types.add "):\n"
     types.add &"        tmp = dll.$lib_{toSnakeCase(objName)}("
     for param in constructorParams:
-      types.add &"{toSnakeCase(param[0].repr)}"
+      types.add exportExprPy(toSnakeCase(param[0].repr), param[1])
       types.add ", "
     types.removeSuffix ", "
     types.add ")\n"
@@ -324,11 +346,13 @@ proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   types.add "\n"
 
   types.add &"{baseIndent}def __getitem__(self, index):\n"
-  types.add &"{baseIndent}    return dll.{procPrefix}_get(self{selfSuffix}, index){convertImportToPy(entryType)}\n"
+  let getCall = &"dll.{procPrefix}_get(self{selfSuffix}, index)"
+  types.add &"{baseIndent}    return {importExprPy(getCall, entryType)}\n"
   types.add "\n"
 
   types.add &"{baseIndent}def __setitem__(self, index, value):\n"
-  types.add &"{baseIndent}    dll.{procPrefix}_set(self{selfSuffix}, index, value{convertExportFromPy(entryType)})\n"
+  let setValue = exportExprPy("value", entryType)
+  types.add &"{baseIndent}    dll.{procPrefix}_set(self{selfSuffix}, index, {setValue})\n"
   types.add "\n"
 
   types.add &"{baseIndent}def __delitem__(self, index):\n"
@@ -336,7 +360,7 @@ proc genSeqProcs(objName, procPrefix, selfSuffix: string, entryType: NimNode) =
   types.add "\n"
 
   types.add &"{baseIndent}def append(self, value):\n"
-  types.add &"{baseIndent}    dll.{procPrefix}_add(self{selfSuffix}, value)\n"
+  types.add &"{baseIndent}    dll.{procPrefix}_add(self{selfSuffix}, {setValue})\n"
   types.add "\n"
 
   types.add &"{baseIndent}def clear(self):\n"
@@ -382,7 +406,7 @@ proc exportRefObjectPy*(
     types.add &"        result = "
     types.add &"{constructorLibProc}("
     for param in constructorParams:
-      types.add &"{toSnakeCase(param[0].repr)}{convertExportFromPy(param[1])}"
+      types.add exportExprPy(toSnakeCase(param[0].repr), param[1])
       types.add ", "
     types.removeSuffix ", "
     types.add ")\n"
@@ -408,7 +432,8 @@ proc exportRefObjectPy*(
       types.add "    @property\n"
       types.add &"    def {fieldNameSnaked}(self):\n"
       types.add "        "
-      types.add &"return {getProcName}(self){convertImportToPy(fieldType)}\n"
+      let getCall = &"{getProcName}(self)"
+      types.add &"return {importExprPy(getCall, fieldType)}\n"
 
       let setProcName = &"dll.$lib_{objNameSnaked}_set_{fieldNameSnaked}"
 
@@ -417,7 +442,7 @@ proc exportRefObjectPy*(
       types.add &"    def {fieldNameSnaked}(self, {fieldNameSnaked}):\n"
       types.add "        "
       types.add &"{setProcName}(self, "
-      types.add &"{fieldNameSnaked}{convertExportFromPy(fieldType)}"
+      types.add exportExprPy(fieldNameSnaked, fieldType)
       types.add ")\n"
       types.add "\n"
 
@@ -483,6 +508,16 @@ dll = cdll.LoadLibrary(os.path.join(dir, libName))
 
 class $LibError(Exception):
     pass
+
+def _rune_to_int(value):
+    assert isinstance(value, str), "expected rune string"
+    assert len(value) == 1, "expected exactly one Unicode scalar value"
+    code = ord(value)
+    assert code < 0xD800 or code > 0xDFFF, "expected Unicode scalar value"
+    return code
+
+def _int_to_rune(value):
+    return chr(value)
 
 class SeqIterator(object):
     def __init__(self, seq):
