@@ -72,6 +72,26 @@ def simple_call(a):
     result = dll.test_simple_call(a)
     return result
 
+def check_error():
+    result = dll.test_check_error()
+    return result
+
+def take_error():
+    result = _genny_buffer_to_string(dll.test_take_error())
+    return result
+
+def maybe_message(message, fail):
+    result = _genny_buffer_to_string(dll.test_maybe_message(message.encode("utf8"), fail))
+    if check_error():
+        raise testError(take_error())
+    return result
+
+def maybe_number(value, fail):
+    result = dll.test_maybe_number(value, fail)
+    if check_error():
+        raise testError(take_error())
+    return result
+
 class SimpleObj(Structure):
     _fields_ = [
         ("simple_a", c_longlong),
@@ -284,6 +304,18 @@ def get_message():
 
 dll.test_simple_call.argtypes = [c_longlong]
 dll.test_simple_call.restype = c_longlong
+
+dll.test_check_error.argtypes = []
+dll.test_check_error.restype = c_bool
+
+dll.test_take_error.argtypes = []
+dll.test_take_error.restype = _GennyBuffer
+
+dll.test_maybe_message.argtypes = [c_char_p, c_bool]
+dll.test_maybe_message.restype = _GennyBuffer
+
+dll.test_maybe_number.argtypes = [c_longlong, c_bool]
+dll.test_maybe_number.restype = c_longlong
 
 dll.test_simple_ref_obj_unref.argtypes = [SimpleRefObj]
 dll.test_simple_ref_obj_unref.restype = None

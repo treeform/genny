@@ -38,6 +38,38 @@ pub inline fn simpleCall(a: isize) isize {
     return test_simple_call(a);
 }
 
+extern fn test_check_error() bool;
+pub inline fn checkError() bool {
+    return test_check_error();
+}
+
+extern fn test_take_error() ?*GennyBuffer;
+pub inline fn takeError(allocator: std.mem.Allocator) std.mem.Allocator.Error![:0]u8 {
+    const result = test_take_error();
+    const buffer = result.?;
+    defer buffer.deinit();
+    return buffer.toOwnedSlice(allocator);
+}
+
+extern fn test_maybe_message(message: [*:0]const u8, fail: bool) ?*GennyBuffer;
+pub inline fn maybeMessage(message: [:0]const u8, fail: bool, allocator: std.mem.Allocator) (Error || std.mem.Allocator.Error)![:0]u8 {
+    const result = test_maybe_message(message.ptr, fail);
+    if (checkError()) {
+        if (result) |buffer| buffer.deinit();
+        return error.testError;
+    }
+    const buffer = result.?;
+    defer buffer.deinit();
+    return buffer.toOwnedSlice(allocator);
+}
+
+extern fn test_maybe_number(value: isize, fail: bool) isize;
+pub inline fn maybeNumber(value: isize, fail: bool) Error!isize {
+    const result = test_maybe_number(value, fail);
+    if (checkError()) return error.testError;
+    return result;
+}
+
 pub const SimpleObj = extern struct {
     simple_a: isize,
     simple_b: u8,

@@ -287,8 +287,10 @@ assert.strictEqual(pixie.readImageDimensions(imagePath).height, 40);
 assert.strictEqual(pixie.readFont(fontPath).size, 12);
 assert.strictEqual(pixie.parsePath('M0 0 L10 0 L10 10 Z').computeBounds(identity).w, 10);
 writeRenderImages('node');
-pixie.parseColor('bad');
-assert(pixie.checkError());
-assert(pixie.takeError().includes('bad'));
+assert.throws(
+  () => pixie.parseColor('bad'),
+  (err) => err instanceof pixie.PixieException && err.message.includes('bad')
+);
+assert.strictEqual(pixie.checkError(), false);
 
 console.log('All Pixie Node tests passed!');

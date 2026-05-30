@@ -49,6 +49,14 @@ void test_genny_buffer_unref(GennyBuffer buffer);
  */
 intptr_t test_simple_call(intptr_t a);
 
+char test_check_error();
+
+GennyBuffer test_take_error();
+
+GennyBuffer test_maybe_message(const char* message, char fail);
+
+intptr_t test_maybe_number(intptr_t value, char fail);
+
 SimpleObj test_simple_obj(intptr_t simple_a, uint8_t simple_b, char simple_c);
 
 char test_simple_obj_eq(SimpleObj a, SimpleObj b);

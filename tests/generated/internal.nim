@@ -27,6 +27,24 @@ proc test_genny_buffer_unref*(buffer: GennyBuffer) {.raises: [], cdecl, exportc,
 proc test_simple_call*(a: int): int {.raises: [], cdecl, exportc, dynlib.} =
   simpleCall(a)
 
+proc test_check_error*(): bool {.raises: [], cdecl, exportc, dynlib.} =
+  checkError()
+
+proc test_take_error*(): GennyBuffer {.raises: [], cdecl, exportc, dynlib.} =
+  newGennyBuffer(takeError())
+
+proc test_maybe_message*(message: cstring, fail: bool): GennyBuffer {.raises: [], cdecl, exportc, dynlib.} =
+  try:
+    result = newGennyBuffer(maybeMessage(message.`$`, fail))
+  except testError as e:
+    lastError = e
+
+proc test_maybe_number*(value: int, fail: bool): int {.raises: [], cdecl, exportc, dynlib.} =
+  try:
+    result = maybeNumber(value, fail)
+  except testError as e:
+    lastError = e
+
 proc test_simple_obj*(simple_a: int, simple_b: byte, simple_c: bool): SimpleObj {.raises: [], cdecl, exportc, dynlib.} =
   result.simple_a = simple_a
   result.simple_b = simple_b

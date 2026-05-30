@@ -306,9 +306,13 @@ int main() {
     approx(readFont(FONT_PATH).getSize(), 12);
     assert(parsePath("M0 0 L10 0 L10 10 Z").computeBounds(identity).w == 10);
     writeRenderImages("cpp");
-    parseColor("bad");
-    assert(checkError());
-    assert(takeError().find("bad") != std::string::npos);
+    try {
+        parseColor("bad");
+        assert(false);
+    } catch (const PixieException& e) {
+        assert(std::string(e.what()).find("bad") != std::string::npos);
+    }
+    assert(!checkError());
 
     std::cout << "All Pixie C++ tests passed!" << std::endl;
     return 0;
