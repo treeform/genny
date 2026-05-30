@@ -1,4 +1,5 @@
 // Test Node.js bindings.
+const assert = require('assert');
 const test = require('./generated/test.js');
 
 console.log("Testing Node.js bindings");
@@ -6,6 +7,20 @@ console.log("Testing Node.js bindings");
 console.log("Testing simpleCall");
 console.assert(test.simpleCall(42) === 42, "simpleCall should return input");
 console.assert(test.simpleCall(0) === 0, "simpleCall should return 0");
+
+console.log("Testing exceptions");
+console.assert(test.maybeMessage("hello", false) === "ok:hello", "maybeMessage should return on success");
+console.assert(test.maybeNumber(7, false) === 7, "maybeNumber should return on success");
+console.assert(test.checkError() === false, "checkError should start false");
+assert.throws(
+  () => test.maybeMessage("bad message", true),
+  (err) => err instanceof test.testException && err.message.includes("bad message")
+);
+console.assert(test.checkError() === false, "thrown exception should consume the pending error");
+assert.throws(
+  () => test.maybeNumber(9, true),
+  (err) => err instanceof test.testException && err.message.includes("bad number 9")
+);
 
 console.log("Testing SIMPLE_CONST");
 console.assert(test.SIMPLE_CONST === 123, "SIMPLE_CONST should be 123");
