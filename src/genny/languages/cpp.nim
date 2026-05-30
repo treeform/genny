@@ -7,6 +7,7 @@ var
   procs {.compiletime.}: string
   classes {.compiletime.}: string
   members {.compiletime.}: string
+  hasRaisingProcs {.compiletime.}: bool
 
 proc unCapitalize(s: string): string =
   s[0].toLowerAscii() & s[1 .. ^1]
@@ -121,6 +122,31 @@ proc cppReturnValue(returnType: NimNode, call: string): string =
   else:
     call
 
+proc addCppCall(
+  returnType: NimNode,
+  call: string,
+  raises: bool
+) =
+  if not raises:
+    members.add "  "
+    if returnType.kind != nnkEmpty:
+      members.add "return "
+    members.add cppReturnValue(returnType, call)
+    members.add ";\n"
+    return
+
+  hasRaisingProcs = true
+  if returnType.kind == nnkEmpty:
+    members.add &"  {call};\n"
+    members.add "  throwIfError();\n"
+  else:
+    members.add &"  auto result = {call};\n"
+    if returnType.isStringType:
+      members.add "  throwIfError(result);\n"
+    else:
+      members.add "  throwIfError();\n"
+    members.add &"  return {cppReturnValue(returnType, \"result\")};\n"
+
 proc dllProc*(procName: string, args: openarray[string], restype: string) =
   var argStr = ""
   for arg in args:
@@ -160,6 +186,7 @@ proc exportProcCpp*(
     procType = sym.getTypeInst()
     procParams = procType[0][1 .. ^1]
     procReturn = procType[0][0]
+    procRaises = sym.raises()
 
   var apiProcName = ""
   if owner != nil:
@@ -190,17 +217,13 @@ proc exportProcCpp*(
       members.add ", "
     members.removeSuffix ", "
     members.add ") {\n"
-    members.add "  "
-    if procReturn.kind != nnkEmpty:
-      members.add "return "
     var call = &"$lib_{apiProcName}("
     for param in procParams:
       call.add cppArgValue(param[1], param[0].getParamName())
       call.add ", "
     call.removeSuffix ", "
     call.add ")"
-    members.add cppReturnValue(procReturn, call)
-    members.add ";\n"
+    addCppCall(procReturn, call, procRaises)
     members.add "};\n\n"
 
   else:
@@ -240,18 +263,13 @@ proc exportProcCpp*(
     members.removeSuffix ", "
     members.add ") "
     members.add "{\n"
-    if procReturn.kind == nnkEmpty:
-      members.add &"  "
-    else:
-      members.add &"  return "
     var call = &"$lib_{apiProcName}(*this, "
     for param in procParams[1..^1]:
       call.add cppArgValue(param[1], param[0].getParamName())
       call.add ", "
     call.removeSuffix ", "
     call.add ")"
-    members.add cppReturnValue(procReturn, call)
-    members.add ";\n"
+    addCppCall(procReturn, call, procRaises)
     members.add "};\n\n"
 
 proc exportObjectCpp*(
@@ -435,13 +453,17 @@ proc exportRefObjectCpp*(
       members.removeSuffix ", "
       members.add ")"
       members.add " {\n"
-      members.add &"  this->reference = "
+      members.add &"  auto result = "
       members.add  &"{constructorLibProc}("
       for param in constructorParams:
         members.add cppArgValue(param[1], param[0].getParamName())
         members.add ", "
       members.removeSuffix ", "
-      members.add ").reference;\n"
+      members.add ");\n"
+      if constructorRaises:
+        hasRaisingProcs = true
+        members.add "  throwIfError();\n"
+      members.add "  this->reference = result.reference;\n"
       members.add "}\n\n"
 
       var dllParams: seq[(NimNode, NimNode)]
@@ -562,6 +584,7 @@ const header = """
 
 #include <cstddef>
 #include <cstdint>
+#include <stdexcept>
 #include <string>
 
 """
@@ -616,11 +639,36 @@ void GennyBuffer::free() {
 
 """
 
+const errorMembers = """
+struct $LibException : public std::runtime_error {
+  explicit $LibException(const std::string& message) : std::runtime_error(message) {}
+};
+
+static inline void throwIfError() {
+  if ($lib_check_error()) {
+    throw $LibException(gennyBufferToString($lib_take_error()));
+  }
+}
+
+static inline void throwIfError(GennyBuffer buffer) {
+  if ($lib_check_error()) {
+    $lib_genny_buffer_unref(buffer);
+    throw $LibException(gennyBufferToString($lib_take_error()));
+  }
+}
+
+"""
+
 const footer = """
 #endif
 """
 
 proc writeCpp*(dir, lib: string) =
+  let errorBlock =
+    if hasRaisingProcs:
+      errorMembers
+    else:
+      ""
   createDir(dir)
   writeFile(&"{dir}/{toSnakeCase(lib)}.hpp", (
       header &
@@ -632,7 +680,8 @@ proc writeCpp*(dir, lib: string) =
       procs &
       "}\n\n" &
       bufferMembers &
+      errorBlock &
       members &
       footer
-    ).replace("$lib", toSnakeCase(lib)).replace("$LIB", lib.toUpperAscii())
+    ).replace("$Lib", lib).replace("$lib", toSnakeCase(lib)).replace("$LIB", lib.toUpperAscii())
   )

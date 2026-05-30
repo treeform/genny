@@ -106,6 +106,34 @@ proc test_simple_call(a: int): int {.importc: "test_simple_call", cdecl.}
 proc simpleCall*(a: int): int {.inline.} =
   result = test_simple_call(a)
 
+proc test_check_error(): bool {.importc: "test_check_error", cdecl.}
+
+proc checkError*(): bool {.inline.} =
+  result = test_check_error()
+
+proc test_take_error(): pointer {.importc: "test_take_error", cdecl.}
+
+proc takeError*(): string {.inline.} =
+  let gennyBuffer = test_take_error()
+  result = gennyBufferToString(gennyBuffer)
+
+proc test_maybe_message(message: cstring, fail: bool): pointer {.importc: "test_maybe_message", cdecl.}
+
+proc maybeMessage*(message: string, fail: bool): string {.inline.} =
+  let gennyBuffer = test_maybe_message(message.cstring, fail)
+  if checkError():
+    if gennyBuffer != nil:
+      test_genny_buffer_unref(gennyBuffer)
+    raise newException(testError, $takeError())
+  result = gennyBufferToString(gennyBuffer)
+
+proc test_maybe_number(value: int, fail: bool): int {.importc: "test_maybe_number", cdecl.}
+
+proc maybeNumber*(value: int, fail: bool): int {.inline.} =
+  result = test_maybe_number(value, fail)
+  if checkError():
+    raise newException(testError, $takeError())
+
 proc test_new_simple_ref_obj(): pointer {.importc: "test_new_simple_ref_obj", cdecl.}
 
 proc newSimpleRefObj*(): SimpleRefObj {.inline.} =

@@ -116,6 +116,30 @@ proc jsReturnValue(returnType: NimNode, call: string): string =
   else:
     call
 
+proc addNodeCall(
+  returnType: NimNode,
+  call: string,
+  raises: bool
+) =
+  if not raises:
+    types.add "  "
+    if returnType.kind != nnkEmpty:
+      types.add "return "
+    types.add jsReturnValue(returnType, call)
+    types.add ";\n"
+    return
+
+  if returnType.kind == nnkEmpty:
+    types.add &"  {call};\n"
+    types.add "  throwIfError();\n"
+  else:
+    types.add &"  const result = {call};\n"
+    if returnType.isStringType:
+      types.add "  throwIfError(result);\n"
+    else:
+      types.add "  throwIfError();\n"
+    types.add &"  return {jsReturnValue(returnType, \"result\")};\n"
+
 proc convertExportFromNode*(sym: NimNode): string =
   discard
 
@@ -219,9 +243,6 @@ proc exportProcNode*(
       types.add &", "
   types.removeSuffix ", "
   types.add ") {\n"
-  types.add "  "
-  if procReturn.kind != nnkEmpty:
-    types.add "return "
   var call = &"{apiProcName}("
   for i, param in procParams[0 .. ^1]:
     if isRefObject and i == 0:
@@ -232,8 +253,7 @@ proc exportProcNode*(
     call.add &", "
   call.removeSuffix ", "
   call.add ")"
-  types.add jsReturnValue(procReturn, call)
-  types.add ";\n"
+  addNodeCall(procReturn, call, procRaises)
   types.add "}\n\n"
 
 proc exportObjectNode*(
@@ -343,6 +363,7 @@ proc exportRefObjectNode*(
       constructorLibProc = &"$lib_{toSnakeCase(constructor.repr)}"
       constructorType = constructor.getTypeInst()
       constructorParams = constructorType[0][1 .. ^1]
+      constructorRaises = constructor.raises()
 
     # Declare constructor C function
     declareFunc(constructorLibProc, constructorParams, "'uint64'")
@@ -361,6 +382,8 @@ proc exportRefObjectNode*(
       types.add ", "
     types.removeSuffix ", "
     types.add ");\n"
+    if constructorRaises:
+      types.add "  throwIfError();\n"
     types.add &"  return new {objName}(ref);\n"
     types.add "}\n\n"
 
@@ -474,6 +497,17 @@ class $LibException extends Error {
   constructor(message) {
     super(message);
     this.name = '$LibException';
+  }
+}
+
+exports.$LibException = $LibException;
+
+function throwIfError(buffer = null) {
+  if (checkError()) {
+    if (buffer !== null && buffer !== 0 && buffer !== 0n) {
+      $lib_genny_buffer_unref(buffer);
+    }
+    throw new $LibException(takeError());
   }
 }
 

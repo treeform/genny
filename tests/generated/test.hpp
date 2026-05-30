@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <stdexcept>
 #include <string>
 
 static constexpr auto SIMPLE_CONST = 123;
@@ -157,6 +158,14 @@ void test_genny_buffer_unref(GennyBuffer buffer);
 
 std::intptr_t test_simple_call(std::intptr_t a);
 
+bool test_check_error();
+
+GennyBuffer test_take_error();
+
+GennyBuffer test_maybe_message(const char* message, bool fail);
+
+std::intptr_t test_maybe_number(std::intptr_t value, bool fail);
+
 SimpleObj test_simple_obj(std::intptr_t simple_a, std::uint8_t simple_b, bool simple_c);
 
 bool test_simple_obj_eq(SimpleObj a, SimpleObj b);
@@ -262,8 +271,45 @@ void GennyBuffer::free() {
   test_genny_buffer_unref(*this);
 }
 
+struct testException : public std::runtime_error {
+  explicit testException(const std::string& message) : std::runtime_error(message) {}
+};
+
+static inline void throwIfError() {
+  if (test_check_error()) {
+    throw testException(gennyBufferToString(test_take_error()));
+  }
+}
+
+static inline void throwIfError(GennyBuffer buffer) {
+  if (test_check_error()) {
+    test_genny_buffer_unref(buffer);
+    throw testException(gennyBufferToString(test_take_error()));
+  }
+}
+
 std::intptr_t simpleCall(std::intptr_t a) {
   return test_simple_call(a);
+};
+
+bool checkError() {
+  return test_check_error();
+};
+
+std::string takeError() {
+  return gennyBufferToString(test_take_error());
+};
+
+std::string maybeMessage(const char* message, bool fail) {
+  auto result = test_maybe_message(message, fail);
+  throwIfError(result);
+  return gennyBufferToString(result);
+};
+
+std::intptr_t maybeNumber(std::intptr_t value, bool fail) {
+  auto result = test_maybe_number(value, fail);
+  throwIfError();
+  return result;
 };
 
 SimpleObj simpleObj(std::intptr_t simpleA, std::uint8_t simpleB, bool simpleC) {
@@ -271,7 +317,8 @@ SimpleObj simpleObj(std::intptr_t simpleA, std::uint8_t simpleB, bool simpleC) {
 };
 
 SimpleRefObj::SimpleRefObj() {
-  this->reference = test_new_simple_ref_obj().reference;
+  auto result = test_new_simple_ref_obj();
+  this->reference = result.reference;
 }
 
 std::intptr_t SimpleRefObj::getSimpleRefA(){
@@ -335,7 +382,8 @@ void SeqInt::free(){
 }
 
 RefObjWithSeq::RefObjWithSeq() {
-  this->reference = test_new_ref_obj_with_seq().reference;
+  auto result = test_new_ref_obj_with_seq();
+  this->reference = result.reference;
 }
 
 std::intptr_t RefObjWithSeq::dataSize(){

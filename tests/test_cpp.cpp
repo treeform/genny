@@ -11,6 +11,24 @@ int main() {
     assert(simpleCall(42) == 42);
     assert(simpleCall(0) == 0);
 
+    std::cout << "Testing exceptions" << std::endl;
+    assert(maybeMessage("hello", false) == "ok:hello");
+    assert(maybeNumber(7, false) == 7);
+    assert(!checkError());
+    try {
+        maybeMessage("bad message", true);
+        assert(false);
+    } catch (const testException& e) {
+        assert(std::string(e.what()).find("bad message") != std::string::npos);
+    }
+    assert(!checkError());
+    try {
+        maybeNumber(9, true);
+        assert(false);
+    } catch (const testException& e) {
+        assert(std::string(e.what()).find("bad number 9") != std::string::npos);
+    }
+
     std::cout << "Testing SIMPLE_CONST" << std::endl;
     assert(SIMPLE_CONST == 123);
 

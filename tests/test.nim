@@ -17,8 +17,35 @@ proc simpleCall(a: int): int =
   ## Returns the integer passed in.
   return a
 
+type testError = object of ValueError
+
+var lastError: ref testError
+
+proc takeError(): string =
+  if lastError == nil:
+    return ""
+  result = lastError.msg
+  lastError = nil
+
+proc checkError(): bool =
+  lastError != nil
+
+proc maybeMessage(message: string, fail: bool): string {.raises: [testError].} =
+  if fail:
+    raise newException(testError, message)
+  "ok:" & message
+
+proc maybeNumber(value: int, fail: bool): int {.raises: [testError].} =
+  if fail:
+    raise newException(testError, "bad number " & $value)
+  value
+
 exportProcs:
   simpleCall
+  checkError
+  takeError
+  maybeMessage
+  maybeNumber
 
 type SimpleObj = object
   simpleA*: int

@@ -42,6 +42,17 @@ class testException extends Error {
   }
 }
 
+exports.testException = testException;
+
+function throwIfError(buffer = null) {
+  if (checkError()) {
+    if (buffer !== null && buffer !== 0 && buffer !== 0n) {
+      test_genny_buffer_unref(buffer);
+    }
+    throw new testException(takeError());
+  }
+}
+
 function runeToInt(value) {
   assert.strictEqual(typeof value, 'string', 'expected rune string');
   const chars = Array.from(value);
@@ -60,6 +71,26 @@ function intToRune(value) {
  */
 function simpleCall(a) {
   return test_simple_call(a);
+}
+
+function checkError() {
+  return test_check_error();
+}
+
+function takeError() {
+  return gennyBufferToString(test_take_error());
+}
+
+function maybeMessage(message, fail) {
+  const result = test_maybe_message(message, fail);
+  throwIfError(result);
+  return gennyBufferToString(result);
+}
+
+function maybeNumber(value, fail) {
+  const result = test_maybe_number(value, fail);
+  throwIfError();
+  return result;
 }
 
 const SimpleObj = koffi.struct('SimpleObj', {
@@ -257,6 +288,10 @@ function getMessage() {
 
 
 const test_simple_call = lib.func('test_simple_call', 'int64', ['int64']);
+const test_check_error = lib.func('test_check_error', 'bool', []);
+const test_take_error = lib.func('test_take_error', 'uint64', []);
+const test_maybe_message = lib.func('test_maybe_message', 'uint64', ['str', 'bool']);
+const test_maybe_number = lib.func('test_maybe_number', 'int64', ['int64', 'bool']);
 const test_simple_ref_obj_unref = lib.func('test_simple_ref_obj_unref', 'void', ['uint64']);
 const test_new_simple_ref_obj = lib.func('test_new_simple_ref_obj', 'uint64', []);
 const test_simple_ref_obj_get_simple_ref_a = lib.func('test_simple_ref_obj_get_simple_ref_a', 'int64', ['uint64']);
@@ -298,6 +333,10 @@ exports.FIRST = 0;
 exports.SECOND = 1;
 exports.THIRD = 2;
 exports.simpleCall = simpleCall;
+exports.checkError = checkError;
+exports.takeError = takeError;
+exports.maybeMessage = maybeMessage;
+exports.maybeNumber = maybeNumber;
 exports.SimpleObj = SimpleObj;
 exports.simpleObj = simpleObj;
 exports.SimpleRefObj = SimpleRefObj;
