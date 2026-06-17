@@ -1,25 +1,9 @@
 nimTitle	common	genny/common.html	module genny/common		0
-nim	ObjectField	genny/common.html#ObjectField	tuple ObjectField		3
-nim	basicTypes	genny/common.html#basicTypes	const basicTypes		9
-nim	toSnakeCase	genny/common.html#toSnakeCase,string	proc toSnakeCase(s: string): string		26
-nim	toCapSnakeCase	genny/common.html#toCapSnakeCase,string	proc toCapSnakeCase(s: string): string		39
-nim	toCamelCase	genny/common.html#toCamelCase,string	proc toCamelCase(s: string): string		51
-nim	toVarCase	genny/common.html#toVarCase,string	proc toVarCase(s: string): string		64
-nim	registerValueObjectTypeAliasRepr	genny/common.html#registerValueObjectTypeAliasRepr,string,string	proc registerValueObjectTypeAliasRepr(name, alias: string)		86
-nim	registerValueObjectTypeAlias	genny/common.html#registerValueObjectTypeAlias,string,NimNode	proc registerValueObjectTypeAlias(name: string; typ: NimNode)		93
-nim	registerValueObjectType	genny/common.html#registerValueObjectType,NimNode	proc registerValueObjectType(sym: NimNode)		96
-nim	exportedValueTypeName	genny/common.html#exportedValueTypeName,NimNode	proc exportedValueTypeName(sym: NimNode): string		109
-nim	getSeqName	genny/common.html#getSeqName,NimNode	proc getSeqName(sym: NimNode): string		119
-nim	getName	genny/common.html#getName,NimNode	proc getName(sym: NimNode): string		126
-nim	getParamName	genny/common.html#getParamName,NimNode	proc getParamName(sym: NimNode): string		135
-nim	usePrefixName	genny/common.html#usePrefixName,NimNode	proc usePrefixName(sym: NimNode): bool		138
-nim	arrayCount	genny/common.html#arrayCount,NimNode	proc arrayCount(sym: NimNode): int		144
-nim	normalizedOperatorName	genny/common.html#normalizedOperatorName,string	proc normalizedOperatorName(name: string): string		152
-nim	isOperatorName	genny/common.html#isOperatorName,string	proc isOperatorName(name: string): bool		157
-nim	operatorProcName	genny/common.html#operatorProcName,string	proc operatorProcName(name: string): string		160
-nim	nimCallableName	genny/common.html#nimCallableName,string	proc nimCallableName(name: string): string		168
-nim	cppOperatorName	genny/common.html#cppOperatorName,string	proc cppOperatorName(name: string): string		175
-nim	pythonOperatorName	genny/common.html#pythonOperatorName,string	proc pythonOperatorName(name: string): string		178
-nim	objectFieldName	genny/common.html#objectFieldName,NimNode	proc objectFieldName(property: NimNode): string		186
-nim	objectFields	genny/common.html#objectFields,NimNode,seq[ObjectField]	proc objectFields(sym: NimNode; explicitFields: seq[ObjectField]): seq[ObjectField]		192
-nim	raises	genny/common.html#raises,NimNode	proc raises(procSym: NimNode): bool		208
+nim	basicTypes	genny/common.html#basicTypes	const basicTypes		3
+nim	toSnakeCase	genny/common.html#toSnakeCase,string	proc toSnakeCase(s: string): string		20
+nim	toCapSnakeCase	genny/common.html#toCapSnakeCase,string	proc toCapSnakeCase(s: string): string		33
+nim	toCamelCase	genny/common.html#toCamelCase,string	proc toCamelCase(s: string): string		45
+nim	toVarCase	genny/common.html#toVarCase,string	proc toVarCase(s: string): string		58
+nim	getSeqName	genny/common.html#getSeqName,NimNode	proc getSeqName(sym: NimNode): string		71
+nim	getName	genny/common.html#getName,NimNode	proc getName(sym: NimNode): string		78
+nim	raises	genny/common.html#raises,NimNode	proc raises(procSym: NimNode): bool		84
