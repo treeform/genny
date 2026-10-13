@@ -1,0 +1,48 @@
+name: Java
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: treeform/setup-nim-action@v6
+    - uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '17'
+    - name: Build standard test DLL with the Java backend
+      run: nim c --mm:arc --app:lib -d:gennyJava -d:noSignalHandler -o:tests/generated/libtest.so tests/test.nim
+    - name: Run Java test against the standard test DLL
+      shell: bash
+      run: |
+        javac -d tests/generated/classes tests/generated/java/genny/*.java tests/TestJavaStandard.java
+        java -Xcheck:jni -cp tests/generated/classes TestJavaStandard tests/generated/libtest.so 2>&1 | tee java_standard.log
+        ! grep -n WARNING java_standard.log
+    - name: Build Java test DLL
+      run: nim c --mm:arc --app:lib -d:gennyJava -d:noSignalHandler -o:tests/generated_java/libtest_java.so tests/test_java.nim
+    - name: Compile Java test
+      run: javac -d tests/generated_java/classes tests/generated_java/java/genny/*.java tests/TestJavaMain.java
+    - name: Run Java test
+      shell: bash
+      run: |
+        java -Xcheck:jni -cp tests/generated_java/classes TestJavaMain tests/generated_java/libtest_java.so 2>&1 | tee java_main.log
+        ! grep -n WARNING java_main.log
+    - name: Build hot reload test libraries and loader
+      shell: bash
+      run: |
+        D=tests/generated_java_reload
+        nim c --mm:arc --app:lib -d:gennyJava -d:noSignalHandler -o:$D/libreload_v1.so tests/test_java_reload.nim
+        nim c --mm:arc --app:lib -d:gennyJava -d:noSignalHandler -d:reloadVersion=2 -o:$D/libreload_v2.so tests/test_java_reload.nim
+        nim c --mm:arc --app:lib -d:gennyJava -d:noSignalHandler -d:reloadDropSymbol -o:$D/libreload_drop.so tests/test_java_reload.nim
+        cc -shared -fPIC -DGENNY_JAVA_HOT_RELOAD -I$JAVA_HOME/include -I$JAVA_HOME/include/linux $D/test_reload_jni.c -ldl -o $D/libreload_loader.so
+        javac -d $D/classes $D/java/genny/*.java tests/TestJavaReload.java
+    - name: Run Java hot reload test
+      shell: bash
+      run: |
+        D=tests/generated_java_reload
+        java -Xcheck:jni -cp $D/classes TestJavaReload $D/libreload_loader.so $D/libreload_v1.so $D/libreload_v2.so $D/libreload_drop.so 2>&1 | tee java_reload.log
+        ! grep -n WARNING java_reload.log

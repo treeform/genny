@@ -64,7 +64,10 @@ proc convertExportFromNim*(sym: NimNode): string =
     return ""
   else:
     if typ.repr == "string":
-      return ".cstring"
+      when defined(gennyJava):
+        return ".gennyJavaCString()"
+      else:
+        return ".cstring"
     elif typ.repr == "Rune":
       return ".int32"
     else:

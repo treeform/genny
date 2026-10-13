@@ -17,3 +17,9 @@ tests/generated/*_native.c
 .*
 !.github/
 !.github/**
+tests/generated/*_jni.c
+tests/generated/java/
+tests/generated_java/
+*.class
+tests/generated_java_reload/
+tests/generated_java_reload_drop/

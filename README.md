@@ -24,6 +24,69 @@ Nim           | {.importc.}   | ✅     | ✅     | ✅          | ✅    | ✅ 
 Python        | ctypes        | ✅     | ✅     | ✅          | ✅    | ✅ |
 Node.js       | ffi-napi      | ✅     | ✅     | ✅          | ✅    | no |
 C             | .h            | ✅     | ✅     | ✅          | ✅    | no |
+Java          | JNI           | ✅     | ✅     | ✅          | ✅    | ✅ |
+
+## Java
+
+Build the library with `JAVA_HOME` pointing at a JDK (9 or newer):
+
+```sh
+nim c --mm:arc --app:lib -d:gennyJava -d:noSignalHandler -o:libpixie.so bindings.nim
+javac -d classes bindings/generated/java/genny/*.java
+```
+
+`-d:noSignalHandler` is required: the JVM uses `SIGSEGV` internally. The package defaults to `genny`; change it with `-d:gennyJavaPackage=com.example.pixie`. Load the library once with `Pixie.load("/absolute/path/libpixie.so")`.
+
+* Ref objects and seqs are `AutoCloseable`. `close()` releases the Nim object right away; otherwise a `Cleaner` queues the release and it runs at the start of the next call into the library (or `Pixie.releasePending()`).
+* Nim's reference counts and the error state of raising procs are not thread-safe: call the library from one thread at a time.
+* Unsigned integers keep their bits in the signed Java type of the same size; Nim `int` is a Java `long`.
+* Strings are converted to and from UTF-8. A string containing `\0` is cut there, like in the C API.
+* `pointer` parameters take direct `ByteBuffer`s (or `null`); Nim gets the buffer's base address in native byte order and must not keep it after the call. Heap buffers throw `IllegalArgumentException`.
+* Value objects are copied in and out as C structs. Objects over 24 bytes must be `{.bycopy.}`; inherited, packed and variant objects are skipped with a warning.
+* Overloads that end up with the same Java signature get the overload prefix appended, e.g. `scaledInt64`.
+* Like the other backends, a ref object built by its exported constructor keeps one extra Nim reference and is never freed.
+
+### Hot reload (development)
+
+The JVM cannot unload a JNI library. For development, build the generated C on its own as a small loader with `-DGENNY_JAVA_HOT_RELOAD`; Java loads the loader once and it `dlopen`s the real Nim library, so the Nim code can be rebuilt and swapped while the JVM keeps running. It uses `dlopen`, so it is not available on Windows:
+
+```sh
+nim c --mm:arc --app:lib -d:gennyJava -d:noSignalHandler -o:build/libpixie-1.so bindings.nim
+cc -shared -fPIC -DGENNY_JAVA_HOT_RELOAD -I$JAVA_HOME/include -I$JAVA_HOME/include/linux \
+  bindings/generated/pixie_jni.c -ldl -o libpixie_loader.so
+```
+
+The generated class provides `prepareReload(path)`, `activateReload()`,
+`rollbackReload()`, `commitReload()` and `cancelReload()`. Preparation checks
+every symbol and the generated ABI fingerprint without changing the active
+table. Activation retains the previous table and library handle; commit
+unloads the previous library, and rollback restores it after the failed
+candidate has been disposed. The caller must quiesce all native calls and
+stop every native thread before retiring a generation. Run untrusted candidate
+initialization in a separate process before calling prepare.
+
+`ABI_FINGERPRINT` covers exported signatures, value layouts, ref-object
+accessors, enums, constants and the error protocol. Incompatible API changes
+are rejected and need new Java bindings. Every activation and rollback
+advances the Java handle generation; rollback never revives old handles.
+Live and queued native references are released before changing generations.
+Nim string results remain owned by a thread-local holder until JNI finishes
+copying them, then JNI releases the holder. This includes error messages and
+string getters; returned pointers never outlive their Nim storage.
+`reload(path)` remains a convenience prepare/activate/commit sequence for
+applications that have already stopped their native runtime.
+
+```java
+Pixie.load("/abs/libpixie_loader.so");
+Pixie.reload("/abs/build/libpixie-1.so"); // and again after every rebuild
+```
+
+* Every call throws `IllegalStateException` until the first successful `reload`. `Pixie.hotReloadable()` tells a loader from a normal build, where `reload` throws `UnsupportedOperationException`.
+* A reload that cannot open the library or finds a missing export throws `IllegalStateException` and keeps the current library.
+* Each activation and rollback starts a new generation. Ref objects and seqs from an older generation throw `IllegalStateException` when used. Their references are released before switching; closing or collecting stale handles does nothing.
+* Copy each build to a new path before reloading: `dlopen` hands back the already loaded library for the same file.
+* Stop every thread that runs Nim code, and every call into the library, before reloading: the old library is unloaded.
+* The exported API must stay the same between reloads; regenerate and rebuild the loader (and restart the JVM) when it changes.
 
 ## Quest for "nice" language binding.
 

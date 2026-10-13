@@ -265,7 +265,18 @@ when (NimMajor, NimMinor, NimPatch) == (1, 6, 2):
 
 proc writeInternal*(dir, lib: string) =
   createDir(dir)
+  let stringHeader = when defined(gennyJava): """
+var gennyJavaReturn {.threadvar.}: string
+
+proc gennyJavaCString(value: string): cstring =
+  gennyJavaReturn = value
+  gennyJavaReturn.cstring
+
+proc $lib_java_release_string*() {.raises: [], cdecl, exportc, dynlib.} =
+  gennyJavaReturn = ""
+
+""" else: ""
   writeFile(
     &"{dir}/internal.nim",
-    header & internal.replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
+    (header & stringHeader & internal).replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
   )
