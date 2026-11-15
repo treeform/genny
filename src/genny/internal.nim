@@ -21,7 +21,7 @@ proc exportProcInternal*(
   let
     procName = sym.repr
     procNameSnaked = toSnakeCase(procName)
-    procType = sym.getTypeInst()
+    procType = sym.exportedProcType()
     procParams = procType[0][1 .. ^1]
     procReturn = procType[0][0]
     procRaises = sym.raises()
@@ -56,7 +56,7 @@ proc exportProcInternal*(
     internal.add "  "
   if procReturnsSeq:
     internal.add &"{procReturn.getSeqName()}(s: "
-  internal.add &"{procName}("
+  internal.add &"`{procName}`("
   for param in procParams:
     for i in 0 .. param.len - 3:
       internal.add &"{toSnakeCase(param[i].repr)}"
@@ -82,7 +82,7 @@ proc exportObjectInternal*(sym: NimNode, constructor: NimNode) =
     objNameSnaked = toSnakeCase(objName)
 
   if constructor != nil:
-    let constructorType = constructor.getTypeInst()
+    let constructorType = constructor.exportedProcType()
 
     internal.add &"proc $lib_{objNameSnaked}*("
     for param in constructorType[0][1 .. ^1]:
@@ -97,29 +97,21 @@ proc exportObjectInternal*(sym: NimNode, constructor: NimNode) =
     internal.add "\n"
   else:
     internal.add &"proc $lib_{objNameSnaked}*("
-    let objType = sym.getType()
-    for fieldSym in objType[2]:
-      let
-        fieldName = fieldSym.repr
-        fieldType = fieldSym.getTypeInst()
-      internal.add &"{toSnakeCase(fieldName)}: {exportTypeNim(fieldType)}, "
+    let fields = sym.getObjectFields()
+    for entry in fields:
+      for property in entry[0 .. ^3]:
+        let fieldName = property[1].strVal
+        internal.add &"{toSnakeCase(fieldName)}: {exportTypeNim(entry[^2])}, "
     internal.removeSuffix ", "
     internal.add &"): {objName} {exportProcPragmas} =\n"
-    for fieldSym in objType[2]:
-      let
-        fieldName = fieldSym.repr
-      internal.add &"  result.{toSnakeCase(fieldName)} = {toSnakeCase(fieldName)}\n"
+    for entry in fields:
+      for property in entry[0 .. ^3]:
+        let fieldName = toSnakeCase(property[1].strVal)
+        internal.add &"  result.{fieldName} = {fieldName}\n"
     internal.add "\n"
 
   internal.add &"proc $lib_{objNameSnaked}_eq*(a, b: {objName}): bool {exportProcPragmas}=\n"
-  let objType = sym.getType()
-  internal.add "  "
-  for fieldSym in objType[2]:
-    let
-      fieldName = fieldSym.repr
-    internal.add &"a.{toSnakeCase(fieldName)} == b.{toSnakeCase(fieldName)} and "
-  internal.removeSuffix " and "
-  internal.add "\n\n"
+  internal.add "  system.`==`(a, b)\n\n"
 
 proc exportRefObjectInternal*(
   sym: NimNode,
@@ -264,7 +256,8 @@ when (NimMajor, NimMinor, NimPatch) == (1, 6, 2):
 """
 
 proc writeInternal*(dir, lib: string) =
-  createDir(dir)
+  if not dirExists(dir):
+    createDir(dir)
   writeFile(
     &"{dir}/internal.nim",
     header & internal.replace("$Lib", lib).replace("$lib", toSnakeCase(lib))

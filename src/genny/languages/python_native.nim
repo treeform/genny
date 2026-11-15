@@ -151,7 +151,9 @@ proc isRefLikeObjectType(sym: NimNode): bool =
   sym.isRefObjectType or sym.isNativeSeqObjectType or sym.isForwardRefObjectType
 
 proc apiProcName(sym: NimNode, owner: NimNode = nil, prefixes: openarray[NimNode] = []): string =
-  result = "$lib_"
+  # Older compile-time VMs can share mutable string literals.
+  result = newStringOfCap(64)
+  result.add "$lib_"
   if owner != nil:
     result.add &"{toSnakeCase(owner.getName())}_"
   for prefix in prefixes:
@@ -167,7 +169,7 @@ proc pyProcName(sym: NimNode, owner: NimNode = nil, prefixes: openarray[NimNode]
   result.add toSnakeCase(sym.repr)
 
 proc getDefaults(sym: NimNode): seq[NimNode] =
-  let procType = sym.getTypeInst()
+  let procType = sym.exportedProcType()
   let procParams = procType[0][1 .. ^1]
   for param in procParams:
     for _ in 0 .. param.len - 3:
@@ -401,7 +403,7 @@ proc exportProcPyNative*(
   prefixes: openarray[NimNode] = []
 ) =
   let
-    procType = sym.getTypeInst()
+    procType = sym.exportedProcType()
     procParams = procType[0][1 .. ^1]
     procReturn = procType[0][0]
     procRaises = sym.raises()
@@ -488,7 +490,7 @@ proc emitValueObjectType(objName: string, fields: seq[FieldInfo], constructor: N
 
   var ctorParams: seq[NimNode]
   if constructor != nil:
-    let ctype = constructor.getTypeInst()
+    let ctype = constructor.exportedProcType()
     ctorParams = ctype[0][1 .. ^1]
     var protoParams: seq[(string, NimNode)]
     for param in ctorParams:
@@ -613,7 +615,7 @@ proc exportObjectPyNative*(sym: NimNode, constructor: NimNode) =
   valueObjectNames.incl(objName)
 
   var fields: seq[FieldInfo]
-  for identDefs in sym.getImpl()[2][2]:
+  for identDefs in sym.getObjectFields():
     for property in identDefs[0 .. ^3]:
       fields.add((property[1].repr, identDefs[^2]))
   valueObjectFields[objName] = fields
@@ -684,7 +686,7 @@ proc emitRefLikeType(objName: string, constructor: NimNode, isSeq = false, entry
   elif constructor != nil:
     let
       constructorApi = "$lib_" & toSnakeCase(constructor.repr)
-      ctype = constructor.getTypeInst()
+      ctype = constructor.exportedProcType()
       ctorParams = ctype[0][1 .. ^1]
       setup = emitParamSetup(ctorParams, getDefaults(constructor), false)
     var protoParams: seq[(string, NimNode)]
@@ -939,7 +941,8 @@ proc toUnixPath(s: string): string =
   s.replace("\\", "/")
 
 proc writePyNative*(dir, lib: string): NimNode =
-  createDir(dir)
+  if not dirExists(dir):
+    createDir(dir)
   let cfg = pyConfig()
   let cPath = (dir / (toSnakeCase(lib) & "_native.c")).toUnixPath
   var finalTypeBlocks = cTypeBlocks

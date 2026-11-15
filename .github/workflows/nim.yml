@@ -7,9 +7,14 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        nim: ['2.0.16', '2.4.0']
     steps:
     - uses: actions/checkout@v4
     - uses: treeform/setup-nim-action@v6
+      with:
+        nim-version: ${{ matrix.nim }}
     - name: Install dependencies
       run: nimble install -y bumpy chroma vmath
     - name: Build test DLL
@@ -18,3 +23,12 @@ jobs:
       run: |
         nim c --mm:arc -o:tests/generated/test_nim tests/test_nim.nim
         cd tests/generated && LD_LIBRARY_PATH=. ./test_nim
+    - name: Run layout and generic signature regressions
+      run: |
+        nim c -r --mm:arc -d:gennyNim -d:gennyPython -d:gennyNode -d:gennyC -d:gennyCpp -d:gennyZig tests/test_layouts.nim
+        nim c -r --mm:orc -d:gennyNim -d:gennyPython -d:gennyNode -d:gennyC -d:gennyCpp -d:gennyZig tests/test_layouts.nim
+    - name: Run reference field regression
+      run: |
+        nim c --mm:arc --app:lib -d:gennyNim -o:tests/generated/librefs.so tests/test_ref_fields.nim
+        nim c --mm:arc -o:tests/generated/test_nim_ref_fields tests/test_nim_ref_fields.nim
+        cd tests/generated && LD_LIBRARY_PATH=. ./test_nim_ref_fields

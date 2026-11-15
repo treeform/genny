@@ -7,6 +7,7 @@ var
   procs {.compiletime.}: string
   exports {.compiletime.}: string
   refObjects {.compiletime.}: HashSet[string]
+  valueObjects {.compiletime.}: HashSet[string]
 
 proc exportTypeNode(sym: NimNode): string =
   if sym.kind == nnkBracketExpr:
@@ -15,7 +16,7 @@ proc exportTypeNode(sym: NimNode): string =
         entryCount = sym[1].repr
         entryType = exportTypeNode(sym[2])
       result = &"koffi.array({entryType}, {entryCount})"
-    elif sym[0].repr == "seq":
+    elif sym[0].repr in ["seq", "openArray"]:
       result = "'uint64'"  # Opaque pointer
     else:
       error(&"Unexpected bracket expression {sym[0].repr}[")
@@ -40,11 +41,17 @@ proc exportTypeNode(sym: NimNode): string =
       of "float": "'double'"
       of "proc () {.cdecl.}": "'pointer'"
       of "Rune": "'int32'"
-      of "Vec2": "Vector2"
-      of "Mat3": "Matrix3"
       of "": "'void'"
       else:
-        "'uint64'"  # Treat ref objects as opaque pointers
+        if sym.repr in valueObjects:
+          sym.repr
+        else:
+          "'uint64'"  # Treat ref objects as opaque pointers
+
+proc isReferenceType(sym: NimNode): bool =
+  ## Identifies handles carried by generated reference wrappers.
+  (sym.kind == nnkBracketExpr and sym[0].repr in ["seq", "openArray"]) or
+    sym.repr in refObjects
 
 proc convertExportFromNode*(sym: NimNode): string =
   discard
@@ -79,7 +86,7 @@ proc exportProcNode*(
   let
     procName = sym.repr
     procNameSnaked = toSnakeCase(procName)
-    procType = sym.getTypeInst()
+    procType = sym.exportedProcType()
     procParams = procType[0][1 .. ^1]
     procReturn = procType[0][0]
     procRaises = sym.raises()
@@ -128,7 +135,7 @@ proc exportProcNode*(
       if prefixes[0].getImpl().kind != nnkNilLIt:
         if prefixes[0].getImpl()[2].kind != nnkEnumTy:
           name.add &"{prefixes[0].repr}_"
-    name.add sym.repr
+    name.add procNameSnaked
     types.add &"{toVarCase(toCamelCase(name))} = function("
   elif onClass:
     # Value object with method - generate as standalone function
@@ -137,12 +144,17 @@ proc exportProcNode*(
       if prefixes[0].getImpl().kind != nnkNilLIt:
         if prefixes[0].getImpl()[2].kind != nnkEnumTy:
           name.add &"{prefixes[0].repr}_"
-    name.add sym.repr
+    name.add procNameSnaked
     types.add &"function {toVarCase(toCamelCase(name))}("
     exports.add &"exports.{toVarCase(toCamelCase(name))} = {toVarCase(toCamelCase(name))};\n"
   else:
-    types.add &"function {sym.repr}("
-    exports.add &"exports.{sym.repr} = {sym.repr};\n"
+    let functionName =
+      if sym.repr in ["+", "-", "*", "/"]:
+        procNameSnaked
+      else:
+        sym.repr
+    types.add &"function {functionName}("
+    exports.add &"exports.{functionName} = {functionName};\n"
 
   for i, param in procParams[0 .. ^1]:
     if isRefObject and i == 0:
@@ -155,44 +167,69 @@ proc exportProcNode*(
   types.add "  "
   if procReturn.kind != nnkEmpty:
     types.add "return "
+    if procReturn.isReferenceType():
+      types.add &"new {procReturn.getName()}("
   types.add &"{apiProcName}("
   for i, param in procParams[0 .. ^1]:
     if isRefObject and i == 0:
       types.add "this.ref"
     else:
       types.add &"{toSnakeCase(param[0].repr)}"
+      if param[^2].isReferenceType():
+        types.add ".ref"
     types.add &", "
   types.removeSuffix ", "
+  if procReturn.isReferenceType():
+    types.add ")"
   types.add ");\n"
   types.add "}\n\n"
 
 proc exportObjectNode*(sym: NimNode, constructor: NimNode) =
   let objName = sym.repr
+  valueObjects.incl objName
 
   # Define struct type with koffi
   types.add &"const {objName} = koffi.struct('{objName}', {{\n"
-  for identDefs in sym.getImpl()[2][2]:
+  for identDefs in sym.getObjectFields():
     for property in identDefs[0 .. ^3]:
       types.add &"  {property[1].repr}: {exportTypeNode(identDefs[^2])},\n"
   types.removeSuffix ",\n"
   types.add "\n});\n\n"
   exports.add &"exports.{objName} = {objName};\n"
 
-  # Constructor function
   exports.add &"exports.{toVarCase(objName)} = {toVarCase(objName)};\n"
-  types.add &"function {toVarCase(objName)}("
-  for identDefs in sym.getImpl()[2][2]:
-    for property in identDefs[0 .. ^3]:
-      types.add &"{toSnakeCase(property[1].repr)}, "
-  types.removeSuffix ", "
-  types.add ") {\n"
-  types.add "  return {\n"
-  for identDefs in sym.getImpl()[2][2]:
-    for property in identDefs[0 .. ^3]:
-      types.add &"    {property[1].repr}: {toSnakeCase(property[1].repr)},\n"
-  types.removeSuffix ",\n"
-  types.add "\n  };\n"
-  types.add "}\n\n"
+  if constructor != nil:
+    let
+      constructorType = constructor.exportedProcType()
+      constructorParams = constructorType[0][1 .. ^1]
+      constructorLibProc = &"$lib_{toSnakeCase(objName)}"
+    declareFunc(constructorLibProc, constructorParams, objName)
+    types.add &"function {toVarCase(objName)}("
+    for param in constructorParams:
+      for name in param[0 .. ^3]:
+        types.add &"{toSnakeCase(name.repr)}, "
+    types.removeSuffix ", "
+    types.add ") {\n"
+    types.add &"  return {constructorLibProc}("
+    for param in constructorParams:
+      for name in param[0 .. ^3]:
+        types.add &"{toSnakeCase(name.repr)}, "
+    types.removeSuffix ", "
+    types.add ");\n}\n\n"
+  else:
+    types.add &"function {toVarCase(objName)}("
+    for identDefs in sym.getObjectFields():
+      for property in identDefs[0 .. ^3]:
+        types.add &"{toSnakeCase(property[1].repr)}, "
+    types.removeSuffix ", "
+    types.add ") {\n"
+    types.add "  return {\n"
+    for identDefs in sym.getObjectFields():
+      for property in identDefs[0 .. ^3]:
+        types.add &"    {property[1].repr}: {toSnakeCase(property[1].repr)},\n"
+    types.removeSuffix ",\n"
+    types.add "\n  };\n"
+    types.add "}\n\n"
 
 proc genRefObject(objName: string) =
   # Track this as a ref object
@@ -265,7 +302,7 @@ proc exportRefObjectNode*(
   if constructor != nil:
     let
       constructorLibProc = &"$lib_{toSnakeCase(constructor.repr)}"
-      constructorType = constructor.getTypeInst()
+      constructorType = constructor.exportedProcType()
       constructorParams = constructorType[0][1 .. ^1]
 
     # Declare constructor C function
@@ -379,9 +416,10 @@ class $LibException extends Error {
 """
 
 proc writeNode*(dir, lib: string) =
-  createDir(dir)
+  if not dirExists(dir):
+    createDir(dir)
   writeFile(
     &"{dir}/{toSnakeCase(lib)}.js",
-    (header & procs & "\n" & types & "\n" & exports)
+    (header & types & "\n" & procs & "\n" & exports)
       .replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
   )

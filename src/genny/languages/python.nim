@@ -58,8 +58,6 @@ proc exportTypePy(sym: NimNode): string =
       of "float64": "c_double"
       of "float": "c_double"
       of "Rune": "c_int"
-      of "Vec2": "Vector2"
-      of "Mat3": "Matrix3"
       of "", "nil": "None"
       else:
         typ.repr
@@ -103,7 +101,7 @@ proc exportProcPy*(
   let
     procName = sym.repr
     procNameSnaked = toSnakeCase(procName)
-    procType = sym.getTypeInst()
+    procType = sym.exportedProcType()
     procParams = procType[0][1 .. ^1]
     procReturn = procType[0][0]
     procRaises = sym.raises()
@@ -124,10 +122,12 @@ proc exportProcPy*(
 
   if onClass:
     types.add "    def "
-    if sym.repr in operators and
+    if procNameSnaked in operators and
       procReturn.kind != nnkEmpty and
       prefixes.len == 0:
-      types.add &"__{sym.repr}__("
+      let operatorName =
+        if procNameSnaked == "div": "truediv" else: procNameSnaked
+      types.add &"__{operatorName}__("
     else:
       if prefixes.len > 0:
         if prefixes[0].getImpl().kind != nnkNilLIt:
@@ -231,7 +231,7 @@ proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
 
   types.add &"class {objName}(Structure):\n"
   types.add "    _fields_ = [\n"
-  for identDefs in sym.getImpl()[2][2]:
+  for identDefs in sym.getObjectFields():
     for property in identDefs[0 .. ^3]:
       types.add &"        (\"{toSnakeCase(property[1].repr)}\""
       types.add ", "
@@ -243,7 +243,7 @@ proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
 
   if constructor != nil:
     let
-      constructorType = constructor.getTypeInst()
+      constructorType = constructor.exportedProcType()
       constructorParams = constructorType[0][1 .. ^1]
     types.add "    def __init__(self, "
     for param in constructorParams:
@@ -257,7 +257,7 @@ proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
       types.add ", "
     types.removeSuffix ", "
     types.add ")\n"
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in sym.getObjectFields():
       for property in identDefs[0 .. ^3]:
         types.add &"        self.{toSnakeCase(property[1].repr)} = "
         types.add &"tmp.{toSnakeCase(property[1].repr)}\n"
@@ -268,12 +268,12 @@ proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
     dllProc(&"dll.$lib_{toSnakeCase(objName)}", toArgTypes(dllParams), objName)
   else:
     types.add "    def __init__(self, "
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in sym.getObjectFields():
       for property in identDefs[0 .. ^3]:
         types.add &"{toSnakeCase(property[1].repr)}, "
     types.removeSuffix ", "
     types.add "):\n"
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in sym.getObjectFields():
       for property in identDefs[0 .. ^3]:
         types.add "        "
         types.add &"self.{toSnakeCase(property[1].repr)} = "
@@ -282,7 +282,7 @@ proc exportObjectPy*(sym: NimNode, constructor: NimNode) =
 
   types.add "    def __eq__(self, obj):\n"
   types.add "        return "
-  for identDefs in sym.getImpl()[2][2]:
+  for identDefs in sym.getObjectFields():
     for property in identDefs[0 .. ^3]:
       if identDefs[^2].len > 0 and identDefs[^2][0].repr == "array":
         for i in 0 ..< identDefs[^2][1].intVal:
@@ -369,7 +369,7 @@ proc exportRefObjectPy*(
   if constructor != nil:
     let
       constructorLibProc = &"dll.$lib_{toSnakeCase(constructor.repr)}"
-      constructorType = constructor.getTypeInst()
+      constructorType = constructor.exportedProcType()
       constructorParams = constructorType[0][1 .. ^1]
       constructorRaises = constructor.raises()
 
@@ -501,7 +501,8 @@ class SeqIterator(object):
 """
 
 proc writePy*(dir, lib: string) =
-  createDir(dir)
+  if not dirExists(dir):
+    createDir(dir)
   writeFile(&"{dir}/{toSnakeCase(lib)}.py", (header & types & procs)
     .replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
   )
