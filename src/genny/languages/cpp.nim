@@ -18,7 +18,7 @@ proc exportTypeCpp(sym: NimNode): string =
         entryCount = sym[1].repr
         entryType = exportTypeCpp(sym[2])
       result = &"{entryType}[{entryCount}]"
-    elif sym[0].repr == "seq":
+    elif sym[0].repr in ["seq", "openArray"]:
       result = sym.getSeqName()
     else:
       error(&"Unexpected bracket expression {sym[0].repr}[")
@@ -42,8 +42,6 @@ proc exportTypeCpp(sym: NimNode): string =
       of "float64": "double"
       of "float": "double"
       of "Rune": "int32_t"
-      of "Vec2": "Vector2"
-      of "Mat3": "Matrix3"
       of "", "nil": "void"
       of "None": "void"
       else:
@@ -59,7 +57,7 @@ proc exportTypeCpp(sym: NimNode, name: string): string =
         entryCount = sym[1].repr
         entryType = exportTypeCpp(sym[2], &"{name}[{entryCount}]")
       result = &"{entryType}"
-    elif sym[0].repr == "seq":
+    elif sym[0].repr in ["seq", "openArray"]:
       result = sym.getSeqName() & " " & name
     else:
       error(&"Unexpected bracket expression {sym[0].repr}[")
@@ -100,9 +98,13 @@ proc exportProcCpp*(
   prefixes: openarray[NimNode] = []
 ) =
   let
-    procName = sym.repr
-    procNameSnaked = toSnakeCase(procName)
-    procType = sym.getTypeInst()
+    procName =
+      if sym.repr in ["+", "-", "*", "/"]:
+        "operator" & sym.repr
+      else:
+        sym.repr
+    procNameSnaked = toSnakeCase(sym.repr)
+    procType = sym.exportedProcType()
     procParams = procType[0][1 .. ^1]
     procReturn = procType[0][0]
 
@@ -196,7 +198,7 @@ proc exportObjectCpp*(sym: NimNode, constructor: NimNode) =
   types.add &"struct {objName};\n\n"
 
   classes.add &"struct {objName} " & "{\n"
-  for identDefs in sym.getImpl()[2][2]:
+  for identDefs in sym.getObjectFields():
     for property in identDefs[0 .. ^3]:
       classes.add &"  {exportTypeCpp(identDefs[^2], toSnakeCase(property[1].repr))};\n"
 
@@ -204,14 +206,14 @@ proc exportObjectCpp*(sym: NimNode, constructor: NimNode) =
     exportProcCpp(constructor)
   else:
     procs.add &"{objName} $lib_{toSnakeCase(objName)}("
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in sym.getObjectFields():
       for property in identDefs[0 .. ^3]:
         procs.add &"{exportTypeCpp(identDefs[^2], toSnakeCase(property[1].repr))}, "
     procs.removeSuffix ", "
     procs.add ");\n\n"
 
     members.add &"{objName} {objName.unCapitalize()}("
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in sym.getObjectFields():
       for property in identDefs[0 .. ^3]:
         members.add &"{exportTypeCpp(identDefs[^2], property[1].repr)}"
         members.add ", "
@@ -220,7 +222,7 @@ proc exportObjectCpp*(sym: NimNode, constructor: NimNode) =
     members.add "{\n"
     members.add &"  return "
     members.add  &"$lib_{toSnakeCase(objName)}("
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in sym.getObjectFields():
       for property in identDefs[0 .. ^3]:
         members.add property[1].repr
         members.add ", "
@@ -267,7 +269,7 @@ proc exportRefObjectCpp*(
   if constructor != nil:
       let
         constructorLibProc = &"$lib_{toSnakeCase(constructor.repr)}"
-        constructorType = constructor.getTypeInst()
+        constructorType = constructor.exportedProcType()
         constructorParams = constructorType[0][1 .. ^1]
         constructorRaises = constructor.raises()
 
@@ -399,7 +401,8 @@ const footer = """
 """
 
 proc writeCpp*(dir, lib: string) =
-  createDir(dir)
+  if not dirExists(dir):
+    createDir(dir)
   writeFile(&"{dir}/{toSnakeCase(lib)}.hpp", (
       header &
       types &

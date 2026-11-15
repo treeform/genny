@@ -12,7 +12,7 @@ proc exportTypeZig(sym: NimNode): string =
         entryCount = sym[1].repr
         entryType = exportTypeZig(sym[2])
       result = &"[{entryCount}]{entryType}"
-    elif sym[0].repr == "seq":
+    elif sym[0].repr in ["seq", "openArray"]:
       result = &"*{sym.getSeqName()}"
     else:
       error(&"Unexpected bracket expression {sym[0].repr}[")
@@ -39,8 +39,6 @@ proc exportTypeZig(sym: NimNode): string =
           of "float64": "f64"
           of "float": "f64"
           of "Rune": "u21"
-          of "Vec2": "Vector2"
-          of "Mat3": "Matrix3"
           of "", "nil": "void"
           else:
             sym.repr
@@ -171,10 +169,14 @@ proc exportProcZig*(
   rename = "",
 ) =
   var
-    procName = sym.repr
+    procName =
+      if sym.repr in ["+", "-", "*", "/"]:
+        toSnakeCase(sym.repr)
+      else:
+        sym.repr
   let
     procNameSnaked = toSnakeCase(procName)
-    procType = sym.getTypeInst()
+    procType = sym.exportedProcType()
     procParams = procType[0][1 .. ^1].toArgSeq()
     procReturn = procType[0][0].exportTypeZig()
     procRaises = sym.raises()
@@ -220,7 +222,7 @@ proc exportObjectZig*(sym: NimNode, constructor: NimNode) =
 
   code.add &"pub const {objName} = extern struct " & "{\n"
 
-  for identDefs in sym.getImpl()[2][2]:
+  for identDefs in sym.getObjectFields():
     for property in identDefs[0 .. ^3]:
       code.add &"    {toSnakeCase(property[1].repr)}"
       code.add ": "
@@ -232,7 +234,7 @@ proc exportObjectZig*(sym: NimNode, constructor: NimNode) =
     exportProcZig(constructor, indent = true, rename = "init")
   else:
     code.add "    pub fn init("
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in sym.getObjectFields():
       for property in identDefs[0 .. ^3]:
         code.add toSnakeCase(property[1].repr)
         code.add ": "
@@ -243,7 +245,7 @@ proc exportObjectZig*(sym: NimNode, constructor: NimNode) =
     code.add objName
     code.add " {\n"
     code.add &"        return {objName}" & "{\n"
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in sym.getObjectFields():
       for property in identDefs[0 .. ^3]:
         code.add &"            .{toSnakeCase(property[1].repr)}"
         code.add " = "
@@ -380,7 +382,8 @@ const std = @import("std");
 """
 
 proc writeZig*(dir, lib: string) =
-  createDir(dir)
+  if not dirExists(dir):
+    createDir(dir)
   writeFile(&"{dir}/{toSnakeCase(lib)}.zig",
     (header & code)
     .replace("$Lib", lib)

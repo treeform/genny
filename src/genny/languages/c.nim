@@ -13,7 +13,7 @@ proc exportTypeC(sym: NimNode): string =
         entryCount = sym[1].repr
         entryType = exportTypeC(sym[2])
       result = &"{entryType}[{entryCount}]"
-    elif sym[0].repr == "seq":
+    elif sym[0].repr in ["seq", "openArray"]:
       result = sym.getSeqName()
     else:
       error(&"Unexpected bracket expression {sym[0].repr}[")
@@ -37,8 +37,6 @@ proc exportTypeC(sym: NimNode): string =
       of "float64": "double"
       of "float": "double"
       of "Rune": "int"
-      of "Vec2": "Vector2"
-      of "Mat3": "Matrix3"
       of "", "nil": "void"
       of "None": "void"
       else:
@@ -51,7 +49,7 @@ proc exportTypeC(sym: NimNode, name: string): string =
         entryCount = sym[1].repr
         entryType = exportTypeC(sym[2], &"{name}[{entryCount}]")
       result = &"{entryType}"
-    elif sym[0].repr == "seq":
+    elif sym[0].repr in ["seq", "openArray"]:
       result = sym.getSeqName() & " " & name
     else:
       error(&"Unexpected bracket expression {sym[0].repr}[")
@@ -94,7 +92,7 @@ proc exportProcC*(
   let
     procName = sym.repr
     procNameSnaked = toSnakeCase(procName)
-    procType = sym.getTypeInst()
+    procType = sym.exportedProcType()
     procParams = procType[0][1 .. ^1]
     procReturn = procType[0][0]
 
@@ -136,7 +134,7 @@ proc exportObjectC*(sym: NimNode, constructor: NimNode) =
   let objName = sym.repr
 
   types.add &"typedef struct {objName} " & "{\n"
-  for identDefs in sym.getImpl()[2][2]:
+  for identDefs in sym.getObjectFields():
     for property in identDefs[0 .. ^3]:
       types.add &"  {exportTypeC(identDefs[^2], toSnakeCase(property[1].repr))};\n"
   types.add "} " & &"{objName};\n\n"
@@ -145,7 +143,7 @@ proc exportObjectC*(sym: NimNode, constructor: NimNode) =
     exportProcC(constructor)
   else:
     procs.add &"{objName} $lib_{toSnakeCase(objName)}("
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in sym.getObjectFields():
       for property in identDefs[0 .. ^3]:
         procs.add &"{exportTypeC(identDefs[^2], toSnakeCase(property[1].repr))}, "
     procs.removeSuffix ", "
@@ -184,7 +182,7 @@ proc exportRefObjectC*(
   if constructor != nil:
       let
         constructorLibProc = &"$lib_{toSnakeCase(constructor.repr)}"
-        constructorType = constructor.getTypeInst()
+        constructorType = constructor.exportedProcType()
         constructorParams = constructorType[0][1 .. ^1]
         constructorRaises = constructor.raises()
 
@@ -244,7 +242,8 @@ const footer = """
 """
 
 proc writeC*(dir, lib: string) =
-  createDir(dir)
+  if not dirExists(dir):
+    createDir(dir)
   writeFile(&"{dir}/{toSnakeCase(lib)}.h", (header & types & procs & footer)
     .replace("$lib", toSnakeCase(lib)).replace("$LIB", lib.toUpperAscii())
   )

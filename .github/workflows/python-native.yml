@@ -7,9 +7,14 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        nim: ['2.0.16', '2.4.0']
     steps:
     - uses: actions/checkout@v4
     - uses: treeform/setup-nim-action@v6
+      with:
+        nim-version: ${{ matrix.nim }}
     - uses: actions/setup-python@v5
       with:
         python-version: '3.12'
@@ -19,6 +24,11 @@ jobs:
         nim c --mm:arc --app:lib -d:gennyPythonNative -o:tests/generated/test${EXT_SUFFIX} tests/test.nim
     - name: Run native Python test
       run: python tests/test_python_native.py
+    - name: Test native generic value layouts
+      run: |
+        EXT_SUFFIX="$(python -c 'import sysconfig; print(sysconfig.get_config_var("EXT_SUFFIX"))')"
+        nim c --mm:arc --app:lib -d:gennyPythonNative -o:tests/generated/layouts${EXT_SUFFIX} tests/test_layouts.nim
+        python tests/test_python_native_layouts.py
     - name: Run non-gating benchmark
       continue-on-error: true
       run: python tests/bench_python_native.py

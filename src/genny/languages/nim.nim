@@ -6,6 +6,7 @@ var
   types {.compiletime.}: string
   procs {.compiletime.}: string
   refObjectNames {.compiletime.}: HashSet[string]
+  wrapperSignatures {.compiletime.}: seq[string]
 
 proc isSeqLike(sym: NimNode): bool =
   ## Returns true for sequence-shaped types that Genny should expose through
@@ -121,7 +122,7 @@ proc exportProcNim*(
   let
     procName = sym.repr
     procNameSnaked = toSnakeCase(procName)
-    procType = sym.getTypeInst()
+    procType = sym.exportedProcType()
     procParams = procType[0][1 .. ^1]
     procReturn = procType[0][0]
     procRaises = sym.raises()
@@ -161,8 +162,12 @@ proc exportProcNim*(
   procs.add "\n"
   procs.add "\n"
 
-  # Nim wrapper proc
-  procs.add &"proc {procName}*("
+  let signature = procName & procType.repr
+  if signature in wrapperSignatures:
+    return
+  wrapperSignatures.add signature
+
+  procs.add &"proc `{procName}`*("
   for i, param in procParams:
     var paramType = param[1]
     if paramType.repr.endsWith(":type"):
@@ -203,11 +208,11 @@ proc exportProcNim*(
 proc exportObjectNim*(sym: NimNode, constructor: NimNode) =
   let objName = sym.repr
 
-  if objName in ["Vector2", "Matrix3", "Rect", "Color"]:
+  if objName in ["Vector2", "Matrix3", "Vec2", "Mat3", "Rect", "Color"]:
     return
 
   types.add &"type {objName}* = object\n"
-  for identDefs in sym.getImpl()[2][2]:
+  for identDefs in sym.getObjectFields():
     for property in identDefs[0 .. ^3]:
       types.add &"  {property.repr}: {identDefs[^2].repr}\n"
   types.add "\n"
@@ -216,12 +221,12 @@ proc exportObjectNim*(sym: NimNode, constructor: NimNode) =
     exportProcNim(constructor)
   else:
     types.add &"proc {toVarCase(objName)}*("
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in sym.getObjectFields():
       for property in identDefs[0 .. ^3]:
         types.add &"{toSnakeCase(property[1].repr)}: {identDefs[^2].repr}, "
     types.removeSuffix ", "
     types.add &"): {objName} =\n"
-    for identDefs in sym.getImpl()[2][2]:
+    for identDefs in sym.getObjectFields():
       for property in identDefs[0 .. ^3]:
         types.add &"  result.{toSnakeCase(property[1].repr)} = "
         types.add &"{toSnakeCase(property[1].repr)}\n"
@@ -245,9 +250,14 @@ proc genRefObject(objName: string) =
   types.add "\n"
   types.add "\n"
 
-  types.add &"proc `=destroy`(x: {objName}Obj) =\n"
-  types.add &"  if x.reference != nil:\n"
-  types.add &"    {apiProcName}(x.reference)\n"
+  types.add "when NimMajor < 2:\n"
+  types.add &"  proc `=destroy`(x: var {objName}Obj) =\n"
+  types.add "    if x.reference != nil:\n"
+  types.add &"      {apiProcName}(x.reference)\n"
+  types.add "else:\n"
+  types.add &"  proc `=destroy`(x: {objName}Obj) =\n"
+  types.add "    if x.reference != nil:\n"
+  types.add &"      {apiProcName}(x.reference)\n"
   types.add "\n"
 
 proc genSeqProcs(objName, niceName, procPrefix, refAccessor, entryName: string) =
@@ -338,6 +348,7 @@ proc exportRefObjectNim*(
 
     if fieldType.kind != nnkBracketExpr:
       let getProcName = &"$lib_{objNameSnaked}_get_{fieldNameSnaked}"
+      let returnsRef = fieldType.repr in refObjectNames
 
       # C import takes pointer
       procs.add &"proc {getProcName}("
@@ -354,9 +365,14 @@ proc exportRefObjectNim*(
       procs.add &"{toVarCase(objName)}: {objName}): "
       procs.add &"{exportTypeNim(fieldType)}"
       procs.add " {.inline.} =\n"
-      procs.add &"  {getProcName}({toVarCase(objName)}.reference)"
-      procs.add convertImportToNim(fieldType)
-      procs.add "\n"
+      if returnsRef:
+        procs.add &"  let reference = {getProcName}({toVarCase(objName)}.reference)\n"
+        procs.add "  if reference != nil:\n"
+        procs.add &"    result = {exportTypeNim(fieldType)}(reference: reference)\n"
+      else:
+        procs.add &"  {getProcName}({toVarCase(objName)}.reference)"
+        procs.add convertImportToNim(fieldType)
+        procs.add "\n"
       procs.add "\n"
 
       let setProcName = &"$lib_{objNameSnaked}_set_{fieldNameSnaked}"
@@ -376,7 +392,10 @@ proc exportRefObjectNim*(
       procs.add &"{toVarCase(objName)}: {objName}, "
       procs.add &"{fieldName}: {fieldType.repr}) =\n"
       procs.add &"  {setProcName}({toVarCase(objName)}.reference, "
-      procs.add &"{fieldName}{convertToPointer(fieldType)})"
+      if returnsRef:
+        procs.add &"(if {fieldName} == nil: nil else: {fieldName}.reference))"
+      else:
+        procs.add &"{fieldName}{convertToPointer(fieldType)})"
       procs.add "\n"
       procs.add "\n"
     else:
@@ -449,7 +468,8 @@ type $LibError = object of ValueError
 """
 
 proc writeNim*(dir, lib: string) =
-  createDir(dir)
+  if not dirExists(dir):
+    createDir(dir)
   writeFile( &"{dir}/{toSnakeCase(lib)}.nim", (header & types & procs)
     .replace("$Lib", lib).replace("$lib", toSnakeCase(lib))
   )

@@ -1,4 +1,4 @@
-import genny/internal, macros, strformat
+import genny/internal, genny/common, macros, strformat
 
 when defined(gennyC): import genny/languages/c
 when defined(gennyCpp): import genny/languages/cpp
@@ -156,6 +156,7 @@ macro exportObjectUntyped(sym, body: untyped) =
   result.add varSection
 
   var
+    fieldsBlock = emptyBlockStmt()
     constructorBlock = emptyBlockStmt()
     procsBlock = emptyBlockStmt()
 
@@ -164,6 +165,14 @@ macro exportObjectUntyped(sym, body: untyped) =
       continue
 
     case section[0].repr:
+    of "fields":
+      for field in section[1]:
+        if field.kind != nnkCall or field[1].kind != nnkStmtList:
+          error("Expected fieldName: FieldType", field)
+        let declaration = newTree(
+          nnkIdentDefs, field[0], field[1][0], newEmptyNode()
+        )
+        fieldsBlock[1].add newTree(nnkVarSection, declaration)
     of "constructor":
       constructorBlock[1].add procUntyped(section[1][0])
     of "procs":
@@ -174,12 +183,20 @@ macro exportObjectUntyped(sym, body: untyped) =
 
   result.add constructorBlock
   result.add procsBlock
+  result.add fieldsBlock
 
 macro exportObjectTyped(body: typed) =
   let
-    sym = body[0][0][1]
+    sym = body[0][0][1].getTypeInst()
     constructorBlock = body[1]
     procsBlock = body[2]
+    fieldsBlock = body[3]
+
+  if fieldsBlock[1].len > 0:
+    let fields = newNimNode(nnkRecList)
+    for entry in fieldsBlock[1].asStmtList:
+      fields.add entry[0]
+    setObjectFields(sym, fields)
 
   let constructor =
     if constructorBlock[1].len > 0:
@@ -205,7 +222,7 @@ macro exportObjectTyped(body: typed) =
       if procSym.repr notin procsSeen:
         procsSeen.add procSym.repr
       else:
-        let procType = procSym.getTypeInst()
+        let procType = procSym.exportedProcType()
         if procType[0].len > 2:
           prefixes.add(procType[0][2][1])
       exportProcInternal(procSym, sym, prefixes)
@@ -346,7 +363,7 @@ macro exportRefObjectTyped(body: typed) =
       if procSym.repr notin procsSeen:
         procsSeen.add procSym.repr
       else:
-        let procType = procSym.getTypeInst()
+        let procType = procSym.exportedProcType()
         if procType[0].len > 2:
           prefixes.add(procType[0][2][1])
       exportProcInternal(procSym, sym, prefixes)
