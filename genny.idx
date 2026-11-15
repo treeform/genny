@@ -2,7 +2,7 @@ nimTitle	genny	genny.html	module genny		0
 nim	exportConsts	genny.html#exportConsts.t,untyped	template exportConsts(body: untyped)		53
 nim	exportEnums	genny.html#exportEnums.t,untyped	template exportEnums(body: untyped)		78
 nim	exportProcs	genny.html#exportProcs.t,untyped	template exportProcs(body: untyped)		146
-nim	exportObject	genny.html#exportObject.t,untyped,untyped	template exportObject(sym, body: untyped)		223
-nim	exportSeq	genny.html#exportSeq.t,untyped,untyped	template exportSeq(sym, body: untyped)		266
-nim	exportRefObject	genny.html#exportRefObject.t,untyped,untyped	template exportRefObject(sym, body: untyped)		364
-nim	writeFiles	genny.html#writeFiles.m,static[string],static[string]	macro writeFiles(dir, lib: static[string])		371
+nim	exportObject	genny.html#exportObject.t,untyped,untyped	template exportObject(sym, body: untyped)		240
+nim	exportSeq	genny.html#exportSeq.t,untyped,untyped	template exportSeq(sym, body: untyped)		283
+nim	exportRefObject	genny.html#exportRefObject.t,untyped,untyped	template exportRefObject(sym, body: untyped)		381
+nim	writeFiles	genny.html#writeFiles.m,static[string],static[string]	macro writeFiles(dir, lib: static[string])		388

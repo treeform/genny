@@ -1,9 +1,13 @@
 nimTitle	common	genny/common.html	module genny/common		0
 nim	basicTypes	genny/common.html#basicTypes	const basicTypes		3
-nim	toSnakeCase	genny/common.html#toSnakeCase,string	proc toSnakeCase(s: string): string		20
-nim	toCapSnakeCase	genny/common.html#toCapSnakeCase,string	proc toCapSnakeCase(s: string): string		33
-nim	toCamelCase	genny/common.html#toCamelCase,string	proc toCamelCase(s: string): string		45
-nim	toVarCase	genny/common.html#toVarCase,string	proc toVarCase(s: string): string		58
-nim	getSeqName	genny/common.html#getSeqName,NimNode	proc getSeqName(sym: NimNode): string		71
-nim	getName	genny/common.html#getName,NimNode	proc getName(sym: NimNode): string		78
-nim	raises	genny/common.html#raises,NimNode	proc raises(procSym: NimNode): bool		84
+nim	toSnakeCase	genny/common.html#toSnakeCase,string	proc toSnakeCase(s: string): string		22
+nim	toCapSnakeCase	genny/common.html#toCapSnakeCase,string	proc toCapSnakeCase(s: string): string		41
+nim	toCamelCase	genny/common.html#toCamelCase,string	proc toCamelCase(s: string): string		53
+nim	toVarCase	genny/common.html#toVarCase,string	proc toVarCase(s: string): string		66
+nim	getSeqName	genny/common.html#getSeqName,NimNode	proc getSeqName(sym: NimNode): string		79
+nim	getName	genny/common.html#getName,NimNode	proc getName(sym: NimNode): string		86
+nim	raises	genny/common.html#raises,NimNode	proc raises(procSym: NimNode): bool		92
+nim	setObjectFields	genny/common.html#setObjectFields,NimNode,NimNode	proc setObjectFields(sym, fields: NimNode)		97
+nim	getObjectFields	genny/common.html#getObjectFields,NimNode	proc getObjectFields(sym: NimNode): NimNode		101
+nim	resolveExportType	genny/common.html#resolveExportType,NimNode	proc resolveExportType(sym: NimNode): NimNode		129
+nim	exportedProcType	genny/common.html#exportedProcType,NimNode	proc exportedProcType(sym: NimNode): NimNode		140
